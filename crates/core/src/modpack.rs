@@ -123,6 +123,7 @@ pub struct PackArchive {
     pub path: PathBuf,
     pub name: String,
     pub version: String,
+    pub summary: Option<String>,
     pub minecraft: String,
     pub loader: Option<LoaderSpec>,
     pub files: BTreeMap<String, PackFile>,
@@ -328,6 +329,7 @@ pub fn read_mrpack(path: &Path) -> Result<PackArchive> {
         path: path.to_path_buf(),
         name: index.name,
         version: index.version_id,
+        summary: index.summary,
         minecraft,
         loader,
         files,
@@ -470,6 +472,73 @@ pub struct ExportReport {
     pub included: usize,
 }
 
+/// Was beim Export mitkommt. Aktive Mods sind immer dabei; `servers.dat`, Welten, Logs,
+/// Screenshots und Account-Daten nie.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportOptions {
+    pub version: String,
+    #[serde(default)]
+    pub summary: Option<String>,
+    #[serde(default = "yes")]
+    pub resourcepacks: bool,
+    #[serde(default = "yes")]
+    pub shaders: bool,
+    /// Ordner `config/`.
+    #[serde(default = "yes")]
+    pub config: bool,
+    /// Spieleinstellungen (`options.txt`, Shader- und OptiFine-Optionen).
+    #[serde(default)]
+    pub options: bool,
+}
+
+impl ExportOptions {
+    pub fn new(version: impl Into<String>) -> Self {
+        Self {
+            version: version.into(),
+            summary: None,
+            resourcepacks: true,
+            shaders: true,
+            config: true,
+            options: false,
+        }
+    }
+
+    fn wants(&self, kind: ContentKind) -> bool {
+        match kind {
+            ContentKind::Mod => true,
+            ContentKind::Resourcepack => self.resourcepacks,
+            ContentKind::Shader => self.shaders,
+        }
+    }
+}
+
+/// Spieleinstellungen, die `ExportOptions::options` mitnimmt.
+const OPTION_FILES: [&str; 3] = ["options.txt", "optionsof.txt", "optionsshaders.txt"];
+
+/// Übersicht über ein Pack vor dem Installieren.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackPreview {
+    pub name: String,
+    pub version: String,
+    pub summary: Option<String>,
+    pub minecraft: String,
+    pub loader: Option<LoaderSpec>,
+    pub mods: usize,
+    pub resourcepacks: usize,
+    pub shaders: usize,
+    /// Configs und sonstige Dateien.
+    pub other_files: usize,
+    /// Summe der zu ladenden Dateien in Bytes (ohne das Archiv selbst).
+    pub download_size: u64,
+    pub archive_size: u64,
+    /// Dateien, die der Nutzer selbst laden muss (CurseForge-Sperre).
+    pub missing: Vec<ManualDownload>,
+    /// Download-Quellen, die Pinecone nicht lädt: Die Installation würde scheitern.
+    pub blocked_hosts: Vec<String>,
+}
+
 #[derive(Clone)]
 pub struct PackManager {
     paths: Paths,
@@ -522,6 +591,54 @@ impl PackManager {
             "modrinth" => read_mrpack(path),
             _ => self.read_curseforge(path).await,
         }
+    }
+
+    /// Liest ein Pack und fasst zusammen, was es installieren würde, ohne etwas zu schreiben.
+    pub async fn preview(&self, path: &Path) -> Result<PackPreview> {
+        let pack = self.read_archive(path).await?;
+        let archive_size = std::fs::metadata(path).map_err(Error::io(path))?.len();
+        let count = |kind: ContentKind| {
+            pack.files
+                .keys()
+                .chain(pack.missing.iter().map(|m| &m.path))
+                .filter(|p| Self::kind_of(p) == Some(kind))
+                .count()
+        };
+        let mut blocked_hosts = BTreeSet::new();
+        let mut download_size = 0;
+        for file in pack.files.values() {
+            if let PackFile::Download { urls, size, .. } = file {
+                download_size += size;
+                if self.allowed_url(urls, &pack.extra_hosts).is_err() {
+                    blocked_hosts.insert(
+                        urls.first()
+                            .and_then(|u| reqwest::Url::parse(u).ok())
+                            .and_then(|u| u.host_str().map(str::to_string))
+                            .unwrap_or_else(|| "–".into()),
+                    );
+                }
+            }
+        }
+        let (mods, resourcepacks, shaders) = (
+            count(ContentKind::Mod),
+            count(ContentKind::Resourcepack),
+            count(ContentKind::Shader),
+        );
+        Ok(PackPreview {
+            other_files: pack.files.len() + pack.missing.len() - mods - resourcepacks - shaders,
+            mods,
+            resourcepacks,
+            shaders,
+            download_size,
+            archive_size,
+            blocked_hosts: blocked_hosts.into_iter().collect(),
+            name: pack.name,
+            version: pack.version,
+            summary: pack.summary,
+            minecraft: pack.minecraft,
+            loader: pack.loader,
+            missing: pack.missing,
+        })
     }
 
     /// CurseForge-Pack: Dateien über die API auflösen; gesperrte kommen in `missing`.
@@ -624,6 +741,7 @@ impl PackManager {
             path: path.to_path_buf(),
             name: manifest.name,
             version: manifest.version,
+            summary: None,
             minecraft: manifest.minecraft.version,
             loader,
             files: pack_files,
@@ -1216,19 +1334,26 @@ impl PackManager {
     }
 
     /// Exportiert ein Profil als `.mrpack`: Modrinth-Inhalte als Links, eigene Dateien und
-    /// `config/` direkt im Archiv. Deaktivierte Inhalte bleiben draußen.
+    /// gewählte Ordner direkt im Archiv. Deaktivierte Inhalte bleiben draußen.
     pub async fn export(
         &self,
         profile: &Profile,
         target: &Path,
-        version_label: &str,
+        opts: &ExportOptions,
     ) -> Result<ExportReport> {
+        let version_label = opts.version.trim();
+        if version_label.is_empty() {
+            return Err(Error::Invalid("Bitte eine Versionsnummer angeben".into()));
+        }
         let game_dir = self.profiles.game_dir(&profile.id);
         let installed = self.content.identify(&profile.id, &game_dir).await?;
         let lock = self.content.load_lock(&profile.id)?;
+        let installed: Vec<_> = installed
+            .into_iter()
+            .filter(|c| c.enabled && opts.wants(c.kind))
+            .collect();
         let version_ids: Vec<String> = installed
             .iter()
-            .filter(|c| c.enabled)
             .filter_map(|c| match &c.source {
                 Source::Modrinth { version_id, .. } => Some(version_id.clone()),
                 _ => None,
@@ -1244,7 +1369,7 @@ impl PackManager {
 
         let mut files = Vec::new();
         let mut include: Vec<String> = Vec::new();
-        for c in installed.iter().filter(|c| c.enabled) {
+        for c in &installed {
             let sha1 = lock
                 .files
                 .get(&c.key)
@@ -1274,7 +1399,17 @@ impl PackManager {
                 None => include.push(c.key.clone()),
             }
         }
-        include.extend(walk_files(&game_dir, "config"));
+        if opts.config {
+            include.extend(walk_files(&game_dir, "config"));
+        }
+        if opts.options {
+            include.extend(
+                OPTION_FILES
+                    .into_iter()
+                    .filter(|f| game_dir.join(f).is_file())
+                    .map(str::to_string),
+            );
+        }
 
         let mut dependencies =
             BTreeMap::from([("minecraft".to_string(), profile.minecraft.clone())]);
@@ -1290,7 +1425,12 @@ impl PackManager {
             game: "minecraft".into(),
             version_id: version_label.to_string(),
             name: profile.name.clone(),
-            summary: None,
+            summary: opts
+                .summary
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string),
             files,
             dependencies,
         };

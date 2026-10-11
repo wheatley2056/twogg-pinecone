@@ -22,6 +22,7 @@ pub mod rules;
 pub mod screenshots;
 pub mod servers;
 pub mod settings;
+pub mod share;
 pub mod stats;
 
 pub use error::{Error, Result};

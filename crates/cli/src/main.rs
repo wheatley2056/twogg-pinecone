@@ -14,12 +14,13 @@ use pinecone_core::launch;
 use pinecone_core::launcher::{Launcher, PrepareEvent, Stage};
 use pinecone_core::loader::{LoaderKind, LoaderSpec};
 use pinecone_core::manifest::VersionJson;
-use pinecone_core::modpack::{PackSource, Resolution};
+use pinecone_core::modpack::{ExportOptions, PackSource, Resolution};
 use pinecone_core::modrinth::{ProjectType, SearchQuery};
 use pinecone_core::msa::{self, MsaClient};
 use pinecone_core::paths::Paths;
 use pinecone_core::profiles::Profile;
 use pinecone_core::servers::{ServerAddress, ping as server_ping, read_servers_dat};
+use pinecone_core::share::ShareLink;
 use pinecone_core::stats::now_secs;
 use std::collections::HashMap;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -261,13 +262,30 @@ enum PackCommand {
         #[arg(long)]
         to: Option<String>,
     },
-    /// Profil als .mrpack exportieren.
+    /// Profil als .mrpack exportieren (Mods immer; servers.dat, Welten und Accounts nie).
     Export {
         profile: String,
         target: PathBuf,
         #[arg(long, default_value = "1.0.0")]
         version: String,
+        /// Kurzbeschreibung im Pack.
+        #[arg(long)]
+        summary: Option<String>,
+        #[arg(long)]
+        no_resourcepacks: bool,
+        #[arg(long)]
+        no_shaders: bool,
+        /// Ordner config/ weglassen.
+        #[arg(long)]
+        no_config: bool,
+        /// options.txt (Spieleinstellungen) mitnehmen.
+        #[arg(long)]
+        with_options: bool,
     },
+    /// Link zum Teilen eines Modrinth- oder CurseForge-Packs (pinecone://…) ausgeben.
+    Share { profile: String },
+    /// Inhalt eines Packs anzeigen, ohne es zu installieren (Datei oder Link).
+    Preview { source: String },
 }
 
 #[derive(Clone, Copy, clap::ValueEnum)]
@@ -639,7 +657,9 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
             version,
             name,
         } => {
-            let (archive, src) = if let Some(slug) = source.strip_prefix("modrinth:") {
+            let (archive, src) = if source.contains("://") {
+                resolve_link(packs, &source).await?
+            } else if let Some(slug) = source.strip_prefix("modrinth:") {
                 packs.download_modrinth(slug, version.as_deref()).await?
             } else if let Some(id) = source.strip_prefix("curseforge:") {
                 let file = version
@@ -778,16 +798,92 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
             profile,
             target,
             version,
+            summary,
+            no_resourcepacks,
+            no_shaders,
+            no_config,
+            with_options,
         } => {
             let p = launcher.profiles().get(&profile)?;
-            let r = packs.export(&p, &target, &version).await?;
+            let opts = ExportOptions {
+                summary,
+                resourcepacks: !no_resourcepacks,
+                shaders: !no_shaders,
+                config: !no_config,
+                options: with_options,
+                ..ExportOptions::new(version)
+            };
+            let r = packs.export(&p, &target, &opts).await?;
             println!(
                 "{} geschrieben: {} verlinkt, {} im Archiv",
                 r.path, r.linked, r.included
             );
         }
+        PackCommand::Share { profile } => {
+            let p = launcher.profiles().get(&profile)?;
+            let info = packs
+                .pack_info(&p.id)?
+                .context("Profil stammt aus keinem Modpack; zum Teilen mit `pack export` als Datei speichern")?;
+            let link = ShareLink::for_source(&info.source).context(
+                "Pack wurde aus einer Datei importiert; zum Teilen mit `pack export` als Datei speichern",
+            )?;
+            println!("{link}");
+        }
+        PackCommand::Preview { source } => {
+            let archive = if source.contains("://") {
+                resolve_link(packs, &source).await?.0
+            } else {
+                PathBuf::from(&source)
+            };
+            let p = packs.preview(&archive).await?;
+            println!("{} {}", p.name, p.version);
+            if let Some(s) = &p.summary {
+                println!("  {s}");
+            }
+            let loader = p
+                .loader
+                .map(|l| format!(" mit {:?} {}", l.kind, l.version))
+                .unwrap_or_default();
+            println!("  Minecraft {}{loader}", p.minecraft);
+            println!(
+                "  {} Mods, {} Ressourcenpakete, {} Shader, {} weitere Dateien",
+                p.mods, p.resourcepacks, p.shaders, p.other_files
+            );
+            println!(
+                "  Download {:.1} MB, Archiv {:.1} MB",
+                p.download_size as f64 / 1e6,
+                p.archive_size as f64 / 1e6
+            );
+            for m in &p.missing {
+                println!("  Manuell herunterladen: {} ({})", m.name, m.url);
+            }
+            if !p.blocked_hosts.is_empty() {
+                println!(
+                    "  Achtung: Downloads von nicht erlaubten Quellen ({}), Installation schlägt fehl",
+                    p.blocked_hosts.join(", ")
+                );
+            }
+        }
     }
     Ok(())
+}
+
+/// Lädt das Pack hinter einem `pinecone://`- oder Modrinth-Link in den Cache.
+async fn resolve_link(
+    packs: &pinecone_core::modpack::PackManager,
+    link: &str,
+) -> Result<(PathBuf, PackSource)> {
+    Ok(match ShareLink::parse(link)? {
+        ShareLink::Modrinth { project, version } => {
+            packs
+                .download_modrinth(&project, version.as_deref())
+                .await?
+        }
+        ShareLink::Curseforge { project, file } => {
+            packs.download_curseforge(project, file, None).await?
+        }
+        ShareLink::Code(_) => bail!("Share-Codes gibt es erst mit dem Share-Dienst"),
+    })
 }
 
 fn format_duration(secs: u64) -> String {
