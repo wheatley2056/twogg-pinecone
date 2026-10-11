@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TwoGG Pinecone</title>
+  </head>
+  <body>
+    <!-- Startanimation nach docs/design/intro (Vorlage „Intro-Animation (Start)“), 960 × 600,
+         ins Fenster skaliert. -->
+    <div class="stage" role="img" aria-label="Pinecone wird gestartet">
+      <div class="w w1"></div>
+      <div class="w w2"></div>
+      <div class="w w3"></div>
+      <div class="w w4"></div>
+
+      <svg class="pat" width="100%" height="100%" aria-hidden="true">
+        <defs>
+          <pattern id="pc-scales-intro" width="28" height="20" patternUnits="userSpaceOnUse">
+            <path d="M0 10 Q7 0 14 10 Q21 0 28 10 M-7 20 Q0 10 7 20 Q14 10 21 20 Q28 10 35 20" fill="none" stroke="#E9A23B" stroke-width="1.2" stroke-opacity="0.07" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#pc-scales-intro)" />
+      </svg>
+
+      <div class="center">
+        <div class="logo">
+          <svg class="sil" width="108" height="156" viewBox="0 0 9 13" shape-rendering="crispEdges" aria-hidden="true">
+            <path fill="currentColor" fill-rule="evenodd" d="M3 0h1v1H3z M5 0h1v1H5z M4 1h1v1H4z M3 2h3v1H3z M2 3h5v1H2z M1 4h7v2H1z M0 6h9v2H0z M1 8h7v2H1z M2 10h5v1H2z M3 11h3v1H3z M4 12h1v1H4z M4 3h1v1H4z M3 4h1v1H3z M5 4h1v1H5z M2 5h1v1H2z M6 5h1v1H6z M3 6h1v1H3z M5 6h1v1H5z M2 7h1v1H2z M6 7h1v1H6z M3 8h1v1H3z M5 8h1v1H5z M4 9h1v1H4z" />
+          </svg>
+          <svg class="col" width="108" height="156" viewBox="0 0 9 13" shape-rendering="crispEdges" aria-hidden="true">
+            <path fill="#8CCB7E" d="M3 0h1v1H3z M5 0h1v1H5z M4 1h1v1H4z" />
+            <path fill="#5A3416" d="M3 2h3v1H3z M2 3h1v1H2z M6 3h1v1H6z M1 4h1v1H1z M7 4h1v1H7z M0 6h1v2H0z M8 6h1v2H8z M1 9h1v1H1z M7 9h1v1H7z M2 10h1v1H2z M6 10h1v1H6z M3 11h1v1H3z M5 11h1v1H5z M4 12h1v1H4z" />
+            <path fill="#E9A23B" d="M3 3h3v1H3z M2 4h5v1H2z M1 5h7v4H1z M2 9h5v1H2z M3 10h3v1H3z M4 11h1v1H4z" />
+            <path fill="#A8641F" d="M4 3h1v1H4z M3 4h1v1H3z M5 4h1v1H5z M2 5h1v1H2z M6 5h1v1H6z M3 6h1v1H3z M5 6h1v1H5z M2 7h1v1H2z M6 7h1v1H6z M3 8h1v1H3z M5 8h1v1H5z M4 9h1v1H4z M4 10h1v1H4z" />
+            <path fill="#F6C77A" d="M4 5h1v1H4z M4 7h1v1H4z" />
+          </svg>
+        </div>
+        <span class="txt">Pinecone</span>
+        <span class="cur"></span>
+      </div>
+
+      <div class="tag">A TWOGG LAUNCHER</div>
+    </div>
+    <script type="module" src="/splash/splash.ts"></script>
+  </body>
+</html>

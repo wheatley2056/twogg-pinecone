@@ -55,6 +55,9 @@
           onchange={(v) => change((x) => (x.language = v as "de" | "en"))}
         />
       </SettingRow>
+      <SettingRow title={t("settings.splash")} hint={t("settings.splashHint")}>
+        <Switch checked={s.splash} label={t("settings.splash")} onchange={(on) => change((x) => (x.splash = on))} />
+      </SettingRow>
       <SettingRow title={t("settings.systemFrame")} hint={t("settings.systemFrameHint")}>
         <Switch checked={s.systemFrame} label={t("settings.systemFrame")} onchange={(on) => change((x) => (x.systemFrame = on))} />
       </SettingRow>

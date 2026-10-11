@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Pinecone – Intro</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#12100D}
+.pc-w{position:absolute;top:0;bottom:0;left:0;width:calc(100% + 90px);clip-path:polygon(0 0,100% 0,calc(100% - 90px) 100%,0 100%);transform:translateX(-105%);animation-duration:5s;animation-iteration-count:infinite;animation-timing-function:cubic-bezier(.75,0,.25,1)}
+.pc-w1{animation-name:pc-w1}.pc-w2{animation-name:pc-w2}.pc-w3{animation-name:pc-w3}.pc-w4{animation-name:pc-w4}
+@keyframes pc-w1{0%,13.75%{transform:translateX(-105%)}18.75%,100%{transform:translateX(0)}}
+@keyframes pc-w2{0%,23.75%{transform:translateX(-105%)}28.75%,100%{transform:translateX(0)}}
+@keyframes pc-w3{0%,33.75%{transform:translateX(-105%)}38.75%,100%{transform:translateX(0)}}
+@keyframes pc-w4{0%,43.75%{transform:translateX(-105%)}48.75%,100%{transform:translateX(0)}}
+
+.pc-logo{animation:pc-pop 5s infinite ease-out}
+@keyframes pc-pop{
+  0%{transform:scale(0);animation-timing-function:steps(5,end)}
+  6.25%,100%{transform:scale(1)}}
+.pc-sil{animation:pc-sil 5s infinite linear}
+@keyframes pc-sil{0%,26.2%{color:#1B1206;opacity:1}26.3%,36.2%{color:#F1E8DA;opacity:1}36.3%,46.2%{color:#1B1206;opacity:1}46.3%,100%{color:#1B1206;opacity:0}}
+.pc-col{opacity:0;animation:pc-col 5s infinite linear}
+@keyframes pc-col{0%,46.2%{opacity:0}46.3%,100%{opacity:1}}
+
+.pc-txt{max-width:0;margin-left:0;animation:pc-type 5s infinite steps(8,end)}
+@keyframes pc-type{0%,52.5%{max-width:0;margin-left:0}62.5%,100%{max-width:470px;margin-left:30px}}
+.pc-cur{opacity:0;animation:pc-cur 5s infinite step-end}
+@keyframes pc-cur{0%{opacity:0}52.5%{opacity:1}55%{opacity:0}56.5%{opacity:1}59%{opacity:0}60.5%{opacity:1}64%{opacity:0}66%{opacity:1}68%{opacity:0}100%{opacity:0}}
+
+.pc-pat{opacity:0;animation:pc-fade-pat 5s infinite ease-out}
+@keyframes pc-fade-pat{0%,48.75%{opacity:0}57.5%,100%{opacity:1}}
+.pc-tag{opacity:0;animation:pc-tag 5s infinite ease-out}
+@keyframes pc-tag{0%,63.75%{opacity:0;transform:translateY(8px)}68.75%,100%{opacity:1;transform:translateY(0)}}
+
+@media (prefers-reduced-motion: reduce){
+  .pc-w,.pc-logo,.pc-sil,.pc-col,.pc-txt,.pc-cur,.pc-pat,.pc-tag{animation:none !important}
+  .pc-w4{transform:none !important}
+  .pc-sil,.pc-cur{opacity:0 !important}
+  .pc-col,.pc-pat,.pc-tag{opacity:1 !important}
+  .pc-txt{max-width:470px !important;margin-left:30px !important}
+}
+</style>
+</helmet>
+<div role="img" aria-label="Startanimation: Pinecone-Logo wechselt durch die Markenfarben, dann erscheint der Schriftzug Pinecone" style="position: relative; width: 960px; height: 600px; overflow: hidden; background: #E9A23B; font-family: 'Pixelify Sans', sans-serif">
+
+  <!-- Farbwischer in Markenfarben -->
+  <div class="pc-w pc-w1" style="background: #8CCB7E"></div>
+  <div class="pc-w pc-w2" style="background: #5A3416"></div>
+  <div class="pc-w pc-w3" style="background: #F1E8DA"></div>
+  <div class="pc-w pc-w4" style="background: #12100D"></div>
+
+  <!-- Zapfenschuppen-Muster im Endbild -->
+  <svg class="pc-pat" width="100%" height="100%" style="position: absolute; inset: 0" aria-hidden="true"><defs><pattern id="pc-scales-intro" width="28" height="20" patternUnits="userSpaceOnUse"><path d="M0 10 Q7 0 14 10 Q21 0 28 10 M-7 20 Q0 10 7 20 Q14 10 21 20 Q28 10 35 20" fill="none" stroke="#E9A23B" stroke-width="1.2" stroke-opacity="0.07"></path></pattern></defs><rect width="100%" height="100%" fill="url(#pc-scales-intro)"></rect></svg>
+
+  <!-- Logo + Schriftzug -->
+  <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center">
+    <div class="pc-logo" style="position: relative; width: 108px; height: 156px; flex: none">
+      <svg class="pc-sil" width="108" height="156" viewBox="0 0 9 13" shape-rendering="crispEdges" style="position: absolute; inset: 0" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M3 0h1v1H3z M5 0h1v1H5z M4 1h1v1H4z M3 2h3v1H3z M2 3h5v1H2z M1 4h7v2H1z M0 6h9v2H0z M1 8h7v2H1z M2 10h5v1H2z M3 11h3v1H3z M4 12h1v1H4z M4 3h1v1H4z M3 4h1v1H3z M5 4h1v1H5z M2 5h1v1H2z M6 5h1v1H6z M3 6h1v1H3z M5 6h1v1H5z M2 7h1v1H2z M6 7h1v1H6z M3 8h1v1H3z M5 8h1v1H5z M4 9h1v1H4z"></path></svg>
+      <svg class="pc-col" width="108" height="156" viewBox="0 0 9 13" shape-rendering="crispEdges" style="position: absolute; inset: 0" aria-hidden="true"><path fill="#8CCB7E" d="M3 0h1v1H3z M5 0h1v1H5z M4 1h1v1H4z"></path><path fill="#5A3416" d="M3 2h3v1H3z M2 3h1v1H2z M6 3h1v1H6z M1 4h1v1H1z M7 4h1v1H7z M0 6h1v2H0z M8 6h1v2H8z M1 9h1v1H1z M7 9h1v1H7z M2 10h1v1H2z M6 10h1v1H6z M3 11h1v1H3z M5 11h1v1H5z M4 12h1v1H4z"></path><path fill="#E9A23B" d="M3 3h3v1H3z M2 4h5v1H2z M1 5h7v4H1z M2 9h5v1H2z M3 10h3v1H3z M4 11h1v1H4z"></path><path fill="#A8641F" d="M4 3h1v1H4z M3 4h1v1H3z M5 4h1v1H5z M2 5h1v1H2z M6 5h1v1H6z M3 6h1v1H3z M5 6h1v1H5z M2 7h1v1H2z M6 7h1v1H6z M3 8h1v1H3z M5 8h1v1H5z M4 9h1v1H4z M4 10h1v1H4z"></path><path fill="#F6C77A" d="M4 5h1v1H4z M4 7h1v1H4z"></path></svg>
+    </div>
+    <span class="pc-txt" style="display: block; overflow: hidden; white-space: nowrap; font-weight: 700; font-size: 96px; line-height: 1; letter-spacing: 2px; color: #F1E8DA">Pinecone</span>
+    <span class="pc-cur" style="display: block; width: 14px; height: 76px; margin-left: 8px; background: #E9A23B; flex: none"></span>
+  </div>
+
+  <!-- Claim -->
+  <div class="pc-tag" style="position: absolute; left: 0; right: 0; top: calc(50% + 104px); text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 5px; color: #B5A790">A TWOGG LAUNCHER</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

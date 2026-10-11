@@ -738,6 +738,8 @@ const en: Record<MessageKey, string> = {
   "settings.sourcesAccounts": "Sign-in",
   "settings.sourcesContent": "Content",
   "settings.sourcesLead": "Where Pinecone gets content from.",
+  "settings.splash": "Startup animation",
+  "settings.splashHint": "Pinecone logo when the launcher opens (about three seconds).",
   "settings.systemFrame": "System window frame",
   "settings.systemFrameHint": "Instead of the custom title bar; helps if the window cannot be moved on Linux.",
   "settings.twogg": "TwoGG link",
