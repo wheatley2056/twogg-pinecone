@@ -152,8 +152,15 @@ Vorgaben: `docs/design/design-system.md` (Regeln, Tokens, Komponenten) und der P
   - Kontraste (4.5:1) in allen drei Themes und mit allen Akzenten prüfen, Tastaturbedienung und Fokusrahmen, `aria`-Rollen, „Animationen reduzieren“ und `prefers-reduced-motion`.
   - Englische Texte nachziehen; deutsche UI in Du-Form.
 
+*Stand*: 11a–11h umgesetzt (Branch `phase-11-redesign`). Alle Screens aus dem Prototyp sind 1:1 nachgebaut, die alten Seiten entfernt. Events und Skins sind im Stil des Design-Systems neu entworfen (im Prototyp nicht gestaltet).
+
+*Entscheidungen*
+- **Freunde**: eigene Pinecone-Freundesliste auf dem Pinecone-Server, Identität über das Minecraft-Konto (Mojang `join`/`hasJoined`), Anfragen per Spielername, Präsenz mit Aktivität alle 45 s.
+- **twogg.app**: Events, Anmeldungen, Teilnahme und Freunde direkt über `api.twogg.app` (Discord-Login per Webview-Handoff oder E-Mail). Die API kennt nur die Client-Typen web/desktop/mobile; Pinecone meldet sich als `desktop`. Ein eigener Typ `pinecone` in der twogg.app-API wäre sauberer.
+- **TwoGG-Auswahl** und **Community-Server** werden in der Admin-Seite gepflegt; Packs bekommen optional eine twogg.app-Event-ID.
+- Unter Linux lässt sich der System-Fensterrahmen einschalten.
+
 *Offene Punkte*
-- **Freunde in der Spielleiste**: Es gibt keine Datenquelle. Möglich wären die Xbox-Freundesliste (Social-API mit dem vorhandenen Xbox-Token, zeigt aber nicht, wer Minecraft spielt) oder Spieler auf dem TwoGG-Server. Bis zur Entscheidung zeigt die Stelle die Spielerzahl des TwoGG-Servers.
 - **Gilde** im Instanz-Header und „Gilde wählen“: brauchen eine Schnittstelle zu twogg.app; bis dahin nur Link zur Anmeldung.
 - **TwoGG-Server-Adresse und Event-Daten** kommen vom Pinecone-Server und werden nicht im Launcher fest eingetragen (Platzhalter `[SERVER-ADRESSE]`, solange nichts gepflegt ist).
 

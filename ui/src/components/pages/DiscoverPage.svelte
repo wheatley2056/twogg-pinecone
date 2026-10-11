@@ -14,6 +14,7 @@
     ModrinthVersion,
     Profile,
     ProjectType,
+    Recommendation,
     SearchArgs,
     SearchHit,
     SortIndex,
@@ -48,6 +49,7 @@
     tags: string[];
     url: string;
     twogg?: TwoggPack;
+    motif?: string | null;
   }
 
   const CF_PATHS: Record<ProjectType, string> = { mod: "mc-mods", resourcepack: "texture-packs", shader: "shaders", modpack: "modpacks", datapack: "data-packs" };
@@ -81,7 +83,28 @@
   const target = $derived(profiles.find((p) => p.id === targetId) ?? null);
   const contentKind = $derived(type === "modpack" || type === "datapack" ? null : (type as ContentKind));
   const vanillaBlocked = $derived(type === "mod" && !!target && !target.loader);
-  const featured = $derived(twoggPacks.filter((p) => p.featured).slice(0, 3));
+  // TwoGG-Auswahl vom Server; für Modpacks ersatzweise die hervorgehobenen TwoGG-Packs.
+  let recommendations = $state<Recommendation[]>([]);
+  $effect(() => {
+    const ty = type;
+    api
+      .recommendations(ty)
+      .then((list) => ty === type && (recommendations = list))
+      .catch(() => (recommendations = []));
+  });
+  // Datenpakete brauchen eine Weltauswahl, die gibt es nur in der Ergebnisliste.
+  const picks = $derived<Card[]>(
+    type === "datapack"
+      ? []
+      : recommendations.length > 0
+      ? recommendations.slice(0, 3).map(fromRecommendation)
+      : type === "modpack"
+        ? twoggPacks
+            .filter((p) => p.featured)
+            .slice(0, 3)
+            .map(fromTwogg)
+        : [],
+  );
 
   onMount(async () => {
     [categories, gameVersions, twoggPacks] = await Promise.all([
@@ -149,6 +172,23 @@
       tags: p.latest ? [`${p.latest.loader ? p.latest.loader[0].toUpperCase() + p.latest.loader.slice(1) : "Vanilla"} ${p.latest.minecraft}`] : [],
       url: "",
       twogg: p,
+    };
+  }
+
+  function fromRecommendation(r: Recommendation): Card {
+    const pack = r.source === "twogg" ? twoggPacks.find((p) => p.id === r.projectId) : undefined;
+    return {
+      key: `${r.source}:${r.projectId}`,
+      source: r.source,
+      projectId: r.projectId,
+      title: r.title,
+      author: "TwoGG",
+      description: r.subtitle,
+      iconUrl: r.iconUrl ?? pack?.iconUrl ?? null,
+      tags: [],
+      url: r.source === "modrinth" ? `https://modrinth.com/project/${r.projectId}` : "",
+      twogg: pack,
+      motif: r.motif,
     };
   }
 
@@ -360,18 +400,27 @@
     <Dropdown label={t("discover.sortBy")} value={sort} options={sortOptions} align="right" onchange={(v) => (sort = v)} />
   </div>
 
-  {#if type === "modpack" && featured.length > 0}
+  {#if picks.length > 0}
     <div class="picks">
       <div class="picks-label scales">
         <span class="picks-title">{t("discover.picks")}</span>
         <span class="picks-sub">{t("discover.picksHint")}</span>
       </div>
-      {#each featured as p (p.id)}
-        <button class="pick" onclick={() => install(fromTwogg(p))} disabled={installing.has(`twogg:${p.id}`)}>
-          {#if p.iconUrl}<img src={p.iconUrl} alt="" width="38" height="38" />{:else}<ProfileIcon profile={{ name: p.title, icon: "motif:shield" }} size={38} />{/if}
+      {#each picks as card (card.key)}
+        <button
+          class="pick"
+          onclick={() => install(card)}
+          disabled={installing.has(card.key) || (type !== "modpack" && !targetId)}
+          title={type !== "modpack" && !targetId ? t("discover.chooseTarget") : card.title}
+        >
+          {#if card.iconUrl}
+            <img src={card.iconUrl} alt="" width="38" height="38" />
+          {:else}
+            <ProfileIcon profile={{ name: card.title, icon: `motif:${card.motif ?? "shield"}` }} size={38} />
+          {/if}
           <span class="pick-text">
-            <span class="pick-name">{p.title}</span>
-            <span class="pick-sub">{p.summary}</span>
+            <span class="pick-name">{card.title}</span>
+            <span class="pick-sub">{installing.has(card.key) ? t("discover.loading") : card.description}</span>
           </span>
         </button>
       {/each}

@@ -40,6 +40,8 @@ export interface Profile {
   running: boolean;
   /** Herkunft, falls aus einem Modpack; nur in der Profil-Liste gesetzt. */
   packSource?: "twogg" | "modrinth" | "curseforge" | "file" | null;
+  /** Pack-ID bei TwoGG-Packs. */
+  packId?: string | null;
   lastPlayed?: number | null;
 }
 
@@ -444,6 +446,20 @@ export interface TwoggPack {
   latest: TwoggVersion | null;
   descriptionHtml?: string | null;
   versions?: TwoggVersion[] | null;
+  /** Event auf twogg.app, zu dem das Pack gehört. */
+  eventId?: string | null;
+}
+
+/** Eintrag der TwoGG-Auswahl in „Entdecken“. */
+export interface Recommendation {
+  id: string;
+  projectType: ProjectType;
+  source: "twogg" | "modrinth" | "curseforge";
+  projectId: string;
+  title: string;
+  subtitle: string;
+  iconUrl: string | null;
+  motif: string | null;
 }
 
 export interface NewsItem {

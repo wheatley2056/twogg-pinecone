@@ -768,6 +768,9 @@ const de = {
   "discover.datapackInstalled": "{file} ist jetzt in der Welt „{world}“.",
   "discover.chooseWorld": "In welche Welt?",
   "discover.noWorlds": "Diese Instanz hat noch keine Welt. Starte sie einmal und lege eine an.",
+  "events.pack": "Event-Pack",
+  "events.openInstance": "Instanz öffnen",
+  "events.installPack": "Event-Pack installieren",
 };
 
 export default de;

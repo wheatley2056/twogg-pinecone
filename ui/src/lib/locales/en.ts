@@ -770,6 +770,9 @@ const en: Record<MessageKey, string> = {
   "discover.datapackInstalled": "{file} is now in the world “{world}”.",
   "discover.chooseWorld": "Which world?",
   "discover.noWorlds": "This instance has no world yet. Start it once and create one.",
+  "events.pack": "Event pack",
+  "events.openInstance": "Open instance",
+  "events.installPack": "Install event pack",
 };
 
 export default en;

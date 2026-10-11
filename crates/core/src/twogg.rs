@@ -64,6 +64,27 @@ pub struct Pack {
     /// Nur in der Detailansicht; neueste zuerst.
     #[serde(default)]
     pub versions: Option<Vec<PackVersion>>,
+    /// Event auf twogg.app, zu dem das Pack gehört.
+    #[serde(default)]
+    pub event_id: Option<String>,
+}
+
+/// Eintrag der TwoGG-Auswahl in „Entdecken“.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Recommendation {
+    pub id: String,
+    pub project_type: String,
+    /// `twogg`, `modrinth` oder `curseforge`.
+    pub source: String,
+    pub project_id: String,
+    pub title: String,
+    #[serde(default)]
+    pub subtitle: String,
+    #[serde(default)]
+    pub icon_url: Option<String>,
+    #[serde(default)]
+    pub motif: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -203,6 +224,14 @@ impl TwoggClient {
     async fn send_empty(&self, req: reqwest::RequestBuilder, url: &str) -> Result<()> {
         let _: serde_json::Value = self.send(req, url).await?;
         Ok(())
+    }
+
+    pub async fn recommendations(&self, project_type: &str) -> Result<Vec<Recommendation>> {
+        if !valid_id(project_type) {
+            return Err(Error::Invalid("Ungültige Inhaltsart".into()));
+        }
+        let url = format!("{}/api/v1/recommendations?type={project_type}", self.base);
+        self.send(self.http.get(&url), &url).await
     }
 
     pub async fn info(&self) -> Result<ServerInfo> {

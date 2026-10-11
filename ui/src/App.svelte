@@ -294,7 +294,10 @@
     {:else if view === "events"}
       <EventsPage
         initialId={eventId}
+        {profiles}
         hasInstance={!!selected}
+        onInstalled={onImported}
+        onOpenInstance={(id) => openProfile(id)}
         onJoin={(address) => selected && play(selected.id, address)}
         onLink={() => ((settingsSection = "twogg"), (view = "settings"))}
       />

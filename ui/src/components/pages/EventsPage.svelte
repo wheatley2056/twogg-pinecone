@@ -6,18 +6,26 @@
   import { api, errorText } from "../../lib/api";
   import { badgeText, calendarLine, eventDate, featured, loadTwogg, participationOf, twogg, typeLabel } from "../../lib/events.svelte";
   import { t } from "../../lib/i18n.svelte";
-  import type { AppEvent, JoinInfo } from "../../lib/types";
+  import type { AppEvent, ImportResult, JoinInfo, Profile, TwoggPack } from "../../lib/types";
   import EventIcon from "../EventIcon.svelte";
   import Icon from "../Icon.svelte";
   import Forest from "../ui/Forest.svelte";
 
   interface Props {
     initialId: string | null;
+    profiles: Profile[];
     hasInstance: boolean;
     onJoin: (address: string) => void;
     onLink: () => void;
+    onInstalled: (result: ImportResult) => void;
+    onOpenInstance: (id: string) => void;
   }
-  let { initialId, hasInstance, onJoin, onLink }: Props = $props();
+  let { initialId, profiles, hasInstance, onJoin, onLink, onInstalled, onOpenInstance }: Props = $props();
+
+  // TwoGG-Packs, die in der Admin-Seite einem Event zugeordnet sind.
+  let packs = $state<TwoggPack[]>([]);
+  let installing = $state(false);
+  let packError = $state<string | null>(null);
 
   let chosen = $state<string | null>(null);
   let now = $state(Date.now());
@@ -27,6 +35,10 @@
 
   onMount(() => {
     loadTwogg();
+    api
+      .twoggPacks()
+      .then((list) => (packs = list))
+      .catch(() => {});
     timer = setInterval(() => (now = Date.now()), 30_000);
   });
   onDestroy(() => clearInterval(timer));
@@ -36,6 +48,20 @@
   const past = $derived(events.filter((e) => e.ended));
   const current = $derived(events.find((e) => e.id === (chosen ?? initialId)) ?? featured(events));
   const participation = $derived(current ? participationOf(current.id) : null);
+  const eventPack = $derived(current ? (packs.find((p) => p.eventId === current.id) ?? null) : null);
+  const packInstance = $derived(eventPack ? (profiles.find((p) => p.packId === eventPack.id) ?? null) : null);
+
+  async function installPack(pack: TwoggPack) {
+    installing = true;
+    packError = null;
+    try {
+      onInstalled(await api.packInstallTwogg(pack.id, null));
+    } catch (e) {
+      packError = errorText(e);
+    } finally {
+      installing = false;
+    }
+  }
 
   // Server-Adresse erst nachfragen, wenn angemeldet und das Event nicht vorbei ist.
   $effect(() => {
@@ -131,6 +157,26 @@
         {/if}
 
         {#if current.summary}<p class="summary">{current.summary}</p>{/if}
+
+        {#if eventPack}
+          <section class="status">
+            <h3 class="section-label">{t("events.pack")}</h3>
+            <div class="row">
+              <span class="grow">
+                <span class="title">{eventPack.title}</span>
+                <span class="hint">{eventPack.latest ? `${eventPack.latest.version} · ${eventPack.latest.loader ?? "Vanilla"} ${eventPack.latest.minecraft}` : eventPack.summary}</span>
+              </span>
+              {#if packInstance}
+                <button onclick={() => onOpenInstance(packInstance.id)}>{t("events.openInstance")}</button>
+              {:else}
+                <button class="primary cut" disabled={installing} onclick={() => installPack(eventPack)}>
+                  <Icon name="download" size={16} />{installing ? t("discover.loading") : t("events.installPack")}
+                </button>
+              {/if}
+            </div>
+            {#if packError}<p class="error">{packError}</p>{/if}
+          </section>
+        {/if}
 
         <section class="status">
           <h3 class="section-label">{t("events.yourStatus")}</h3>

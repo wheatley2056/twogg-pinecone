@@ -8,7 +8,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const loginHandlers: ((r: { user?: AppUser; error?: string }) => void)[] = [];
 
 let profiles: Profile[] = [
-  { id: "fabric-test", name: "REVIVAL: Avalon", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 6144, jvmArgs: [], java: null, color: null, icon: "motif:shield", running: false, packSource: "twogg", lastPlayed: null },
+  { id: "fabric-test", packId: "horizons-unbound", name: "REVIVAL: Avalon", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 6144, jvmArgs: [], java: null, color: null, icon: "motif:shield", running: false, packSource: "twogg", lastPlayed: null },
   { id: "latest-2026", name: "LATEST 2026", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 4096, jvmArgs: [], java: null, color: null, icon: "motif:waves", running: false, packSource: "twogg", lastPlayed: null },
   { id: "survival", name: "Survival", minecraft: "26.2", loader: null, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:block", running: false, packSource: null, lastPlayed: null },
   { id: "quilt-1-21-1", name: "Bauteam-Welt", minecraft: "26.2", loader: { kind: "quilt", version: "0.30.1" }, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:house", running: false, packSource: null, lastPlayed: null },
@@ -101,7 +101,7 @@ let mockShots = [200, 30, 260, 180, 320, 90].map((hue, i) => ({
 }));
 const TWOGG_PACK = {
   id: "horizons-unbound", title: "Horizons Unbound", summary: "Das Modpack für unseren Survival-Server", iconUrl: null, featured: true,
-  updatedAt: now - 86400, downloads: 128,
+  updatedAt: now - 86400, downloads: 128, eventId: "revival-avalon",
   latest: { id: "v2", version: "2.0.0", minecraft: "1.20.1", loader: "fabric", loaderVersion: "0.19.5", channel: "release",
     changelogHtml: "<ul><li>Neue Farmwelt</li><li>Create 6</li></ul>", size: 2_400_000, sha1: "0", publishedAt: now - 86400 },
 };
@@ -174,6 +174,14 @@ Object.assign(api, {
     { name: "TwoGG Community", address: "mc.twogg.de", icon: null },
     { name: "Avalon (Event)", address: "avalon.twogg.de", icon: null },
   ],
+  recommendations: async (type: string) =>
+    type === "modpack"
+      ? [
+          { id: "r1", projectType: "modpack", source: "twogg", projectId: "horizons-unbound", title: "Avalon Event-Pack", subtitle: "Alles für REVIVAL: Avalon", iconUrl: null, motif: "shield" },
+          { id: "r2", projectType: "modpack", source: "modrinth", projectId: "1KVo5zza", title: "Pinecone Performance", subtitle: "Schlankes Basis-Pack vom Team", iconUrl: null, motif: "bolt" },
+          { id: "r3", projectType: "modpack", source: "modrinth", projectId: "x", title: "WINTERLAND-Shader", subtitle: "Schneelicht für das Winter-Event", iconUrl: null, motif: "snowflake" },
+        ]
+      : [],
   serverInfo: async () => ({ gameServer: { name: "TwoGG Server", address: "mc.twogg.de" } }),
   friends: async () => mockFriends,
   friendsPresence: async () => {},

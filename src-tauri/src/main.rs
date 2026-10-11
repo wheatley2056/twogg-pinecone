@@ -204,6 +204,7 @@ fn main() {
             friends::friends_decline,
             friends::friends_remove,
             friends::twogg_server_info,
+            friends::twogg_recommendations,
             twogg_app::twogg_app_events,
             twogg_app::twogg_app_me,
             twogg_app::twogg_app_login_discord,

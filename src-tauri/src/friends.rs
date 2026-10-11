@@ -125,6 +125,18 @@ pub async fn friends_remove(state: State<'_, AppState>, uuid: String) -> CmdResu
     with_session!(&state, |token| c.friend_remove(&token, &uuid))
 }
 
+/// TwoGG-Auswahl für eine Inhaltsart (leer, wenn der Server nicht erreichbar ist).
+#[tauri::command]
+pub async fn twogg_recommendations(
+    state: State<'_, AppState>,
+    project_type: String,
+) -> CmdResult<Vec<pinecone_core::twogg::Recommendation>> {
+    client(&state)?
+        .recommendations(&project_type)
+        .await
+        .map_err(err)
+}
+
 /// Angaben des Pinecone-Servers (z. B. Community-Server für den Schnellbeitritt).
 #[tauri::command]
 pub async fn twogg_server_info(state: State<'_, AppState>) -> CmdResult<ServerInfo> {
