@@ -2,7 +2,7 @@
 
 import type { LoaderKind, Profile } from "./types";
 
-const LOADERS: Record<LoaderKind, string> = { fabric: "Fabric", quilt: "Quilt" };
+export const LOADERS: Record<LoaderKind, string> = { fabric: "Fabric", quilt: "Quilt", forge: "Forge", neoforge: "NeoForge" };
 
 export function loaderName(kind: LoaderKind | null | undefined): string {
   return kind ? LOADERS[kind] : "Vanilla";

@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { LOADERS } from "../lib/profiles";
   import { onMount, untrack } from "svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
-  import type { ImportResult, OpenRequest, PreviewResult } from "../lib/types";
+  import type { ImportResult, LoaderKind, OpenRequest, PreviewResult } from "../lib/types";
   import Icon from "./Icon.svelte";
 
   interface Props {
@@ -73,7 +74,7 @@
     return bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} kB`;
   }
 
-  const loaderName = (kind: string) => (kind === "fabric" ? "Fabric" : "Quilt");
+  const loaderName = (kind: string) => LOADERS[kind as LoaderKind] ?? kind;
 </script>
 
 <dialog bind:this={dialog} oncancel={(e) => (e.preventDefault(), close())}>

@@ -54,8 +54,10 @@ impl ClassKind {
 
 pub fn loader_type(kind: LoaderKind) -> u32 {
     match kind {
+        LoaderKind::Forge => 1,
         LoaderKind::Fabric => 4,
         LoaderKind::Quilt => 5,
+        LoaderKind::NeoForge => 6,
     }
 }
 

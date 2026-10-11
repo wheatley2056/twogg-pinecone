@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { LOADERS } from "../lib/profiles";
   import { onMount, untrack } from "svelte";
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
@@ -113,7 +114,7 @@
   }
 
   function loaderLabel(l: LoaderSpec | null) {
-    return l ? `${l.kind === "fabric" ? "Fabric" : "Quilt"} ${l.version}` : t("common.vanilla");
+    return l ? `${LOADERS[l.kind]} ${l.version}` : t("common.vanilla");
   }
 
   const groups = $derived(
@@ -154,6 +155,8 @@
             <option value="none">{t("common.vanilla")}</option>
             <option value="fabric">Fabric</option>
             <option value="quilt">Quilt</option>
+            <option value="forge">Forge</option>
+            <option value="neoforge">NeoForge</option>
           </select>
         </label>
       </div>

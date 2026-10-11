@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { LOADERS } from "../../lib/profiles";
   // Felder einer Instanz: Name, Symbol, Minecraft-Version, Loader, Arbeitsspeicher, Java.
   // Genutzt vom Tab „Einstellungen“ und vom Dialog „Neue Instanz“.
   import type { Snippet } from "svelte";
@@ -44,7 +45,7 @@
   let saved = $state(false);
 
   const recommended = $derived(loaderVersions.find((v) => v.stable) ?? loaderVersions[0]);
-  const loaderName = $derived(loader === "fabric" ? "Fabric" : "Quilt");
+  const loaderName = $derived(loader === "none" ? "" : LOADERS[loader]);
 
   onMount(async () => {
     try {
@@ -183,6 +184,8 @@
           { id: "none", label: t("common.vanilla") },
           { id: "fabric", label: "Fabric" },
           { id: "quilt", label: "Quilt" },
+          { id: "forge", label: "Forge" },
+          { id: "neoforge", label: "NeoForge" },
         ]}
         value={loader}
         label={t("dialog.loader")}

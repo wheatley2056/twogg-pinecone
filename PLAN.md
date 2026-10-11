@@ -45,7 +45,7 @@ Crates: tokio, reqwest (rustls), serde/serde_json, sha1, zip, thiserror/anyhow, 
 7c. **Versionswechsel + Sync-Packs**: Profil/Modpack auf andere Minecraft-Version oder anderen Loader umziehen (Mods automatisch passend suchen), dann Sync-Packs (Vorlagen und schaltbare Zusatz-Inhalte je Profil). Wechsel auf Forge/NeoForge erst mit deren Loader-Unterstützung (siehe 10, dafür vorziehen).
 8. **Screenshots + Skins**: Galerie mit Watcher, Skin-Upload/Bibliothek/Capes, dann Skin-Editor mit 3D-Vorschau.
 9. **Politur**: Logfile-Export, Self-Update, Installer/Bundles (MSI/NSIS, AppImage/deb).
-10. **Optional**: Forge/NeoForge, eigenes TwoGG-Server-Profil mit Auto-Update (z. B. Horizons Unbound).
+10. **Optional**: Forge/NeoForge (umgesetzt, `crates/core/src/forge.rs`), eigenes TwoGG-Server-Profil mit Auto-Update (z. B. Horizons Unbound).
 11. **Redesign**: Neue Oberfläche nach dem Pinecone-Design-System (`docs/design/`), in Schritten 11a–11h (siehe unten).
 12. **Beta**: Server in eigenes Repo, Aufräumen, Version 0.9.0 als erste öffentliche Beta (siehe `RELEASING.md`, `CHANGELOG.md`). Betas zählen als 0.9.x hoch, 1.0.0 nach der Beta.
 

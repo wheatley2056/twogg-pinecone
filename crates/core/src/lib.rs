@@ -7,6 +7,7 @@ pub mod curseforge;
 pub mod diagnostics;
 pub mod download;
 pub mod error;
+pub mod forge;
 pub mod install;
 pub mod java;
 pub mod launch;

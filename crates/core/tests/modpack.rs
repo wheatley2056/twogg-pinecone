@@ -9,6 +9,7 @@ use std::path::Path;
 use common::MockServer;
 use pinecone_core::content::ContentManager;
 use pinecone_core::download::Downloader;
+use pinecone_core::loader::LoaderKind;
 use pinecone_core::modpack::{
     ChangeAction, ConflictReason, ExportOptions, PackManager, PackSource, Resolution, read_mrpack,
 };
@@ -281,12 +282,8 @@ async fn rejects_unsafe_packs() {
         &[],
         json!({ "minecraft": "1.20.1", "forge": "47.2.0" }),
     );
-    assert!(
-        read_mrpack(&forge)
-            .unwrap_err()
-            .to_string()
-            .contains("Forge")
-    );
+    let forge_pack = read_mrpack(&forge).unwrap();
+    assert_eq!(forge_pack.loader.unwrap().kind, LoaderKind::Forge);
 
     // Download-Host nicht erlaubt: Import scheitert, es bleibt kein halbes Profil zurück.
     let strict = PackManager::new(

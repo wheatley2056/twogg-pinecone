@@ -1,5 +1,7 @@
-//! Mod-Loader (Fabric, Quilt): Versionen abfragen und Loader-Profile als Version-JSON installieren.
-//! Das Profil erbt per `inheritsFrom` von der Vanilla-Version, der Rest läuft über den Installer.
+//! Mod-Loader: Versionen abfragen und Loader-Profile als Version-JSON installieren. Das Profil erbt
+//! per `inheritsFrom` von der Vanilla-Version, der Rest läuft über den Installer. Fabric und Quilt
+//! liefern das Profil fertig über ihre Meta-API; Forge und NeoForge kommen über ihre Installer
+//! (siehe [`crate::forge`]).
 
 use serde::{Deserialize, Serialize};
 
@@ -12,13 +14,23 @@ use crate::{Error, Result};
 pub enum LoaderKind {
     Fabric,
     Quilt,
+    Forge,
+    #[serde(rename = "neoforge")]
+    NeoForge,
 }
 
 impl LoaderKind {
+    pub const ALL: [LoaderKind; 4] = [
+        LoaderKind::Fabric,
+        LoaderKind::Quilt,
+        LoaderKind::Forge,
+        LoaderKind::NeoForge,
+    ];
+
     fn meta(self) -> &'static str {
         match self {
-            LoaderKind::Fabric => "https://meta.fabricmc.net/v2",
             LoaderKind::Quilt => "https://meta.quiltmc.org/v3",
+            _ => "https://meta.fabricmc.net/v2",
         }
     }
 
@@ -26,7 +38,24 @@ impl LoaderKind {
         match self {
             LoaderKind::Fabric => "Fabric",
             LoaderKind::Quilt => "Quilt",
+            LoaderKind::Forge => "Forge",
+            LoaderKind::NeoForge => "NeoForge",
         }
+    }
+
+    /// Schlüssel bei Modrinth und in `.mrpack`-Abhängigkeiten (ohne `-loader`).
+    pub fn id(self) -> &'static str {
+        match self {
+            LoaderKind::Fabric => "fabric",
+            LoaderKind::Quilt => "quilt",
+            LoaderKind::Forge => "forge",
+            LoaderKind::NeoForge => "neoforge",
+        }
+    }
+
+    /// Forge und NeoForge laufen über deren Installer.
+    pub fn is_forge(self) -> bool {
+        matches!(self, LoaderKind::Forge | LoaderKind::NeoForge)
     }
 
     /// ID der installierten Version, z. B. `fabric-loader-0.19.5-26.3`.
@@ -34,6 +63,8 @@ impl LoaderKind {
         match self {
             LoaderKind::Fabric => format!("fabric-loader-{loader}-{minecraft}"),
             LoaderKind::Quilt => format!("quilt-loader-{loader}-{minecraft}"),
+            LoaderKind::Forge => format!("forge-{loader}-{minecraft}"),
+            LoaderKind::NeoForge => format!("neoforge-{loader}-{minecraft}"),
         }
     }
 }
@@ -45,8 +76,10 @@ impl std::str::FromStr for LoaderKind {
         match s.to_ascii_lowercase().as_str() {
             "fabric" => Ok(LoaderKind::Fabric),
             "quilt" => Ok(LoaderKind::Quilt),
+            "forge" => Ok(LoaderKind::Forge),
+            "neoforge" => Ok(LoaderKind::NeoForge),
             other => Err(Error::Invalid(format!(
-                "Unbekannter Mod-Loader {other:?} (fabric, quilt)"
+                "Unbekannter Mod-Loader {other:?} (fabric, quilt, forge, neoforge)"
             ))),
         }
     }
@@ -129,6 +162,9 @@ impl LoaderInstaller {
 
     /// Loader-Versionen für eine Minecraft-Version, neueste zuerst. Leer, wenn nicht unterstützt.
     pub async fn versions(&self, kind: LoaderKind, minecraft: &str) -> Result<Vec<LoaderVersion>> {
+        if kind.is_forge() {
+            return crate::forge::versions(&self.downloader, kind, minecraft).await;
+        }
         let url = format!("{}/versions/loader/{minecraft}", kind.meta());
         let bytes = self.downloader.fetch_bytes(&url).await?;
         let entries: Vec<MetaEntry> = serde_json::from_slice(&bytes).map_err(Error::json(&url))?;
@@ -149,6 +185,9 @@ impl LoaderInstaller {
 
     /// Neueste stabile Version, sonst die neueste überhaupt (z. B. Quilt-Betas für neue Versionen).
     pub async fn recommended(&self, kind: LoaderKind, minecraft: &str) -> Result<LoaderVersion> {
+        if kind.is_forge() {
+            return crate::forge::recommended(&self.downloader, kind, minecraft).await;
+        }
         let versions = self.versions(kind, minecraft).await?;
         let pick = versions
             .iter()
@@ -169,6 +208,18 @@ impl LoaderInstaller {
         let id = spec.kind.version_id(minecraft, &spec.version);
         let path = self.paths.version_json(&id);
         if path.exists() {
+            return Ok(id);
+        }
+        if spec.kind.is_forge() {
+            crate::forge::install_profile(
+                &self.paths,
+                &self.downloader,
+                spec.kind,
+                minecraft,
+                &spec.version,
+                &id,
+            )
+            .await?;
             return Ok(id);
         }
         let url = format!(
@@ -208,6 +259,22 @@ impl LoaderInstaller {
     }
 }
 
+impl LoaderInstaller {
+    /// Forge/NeoForge: Prozessoren nach dem Laden der Libraries ausführen (einmalig).
+    pub async fn finish(
+        &self,
+        spec: &LoaderSpec,
+        id: &str,
+        minecraft: &str,
+        java: &std::path::Path,
+    ) -> Result<()> {
+        if !spec.kind.is_forge() {
+            return Ok(());
+        }
+        crate::forge::run_processors(&self.paths, &self.downloader, id, minecraft, java).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,7 +290,15 @@ mod tests {
             "quilt-loader-0.26.4-1.21.1"
         );
         assert_eq!("Fabric".parse::<LoaderKind>().unwrap(), LoaderKind::Fabric);
-        assert!("forge".parse::<LoaderKind>().is_err());
+        assert_eq!(
+            "NeoForge".parse::<LoaderKind>().unwrap(),
+            LoaderKind::NeoForge
+        );
+        assert!("rift".parse::<LoaderKind>().is_err());
+        assert_eq!(
+            serde_json::to_string(&LoaderKind::NeoForge).unwrap(),
+            "\"neoforge\""
+        );
     }
 
     #[test]

@@ -208,6 +208,9 @@ pub fn loaders_for(profile: &Profile, kind: ContentKind) -> Option<Vec<String>> 
             Some(LoaderKind::Fabric) => Some(vec!["fabric".into()]),
             // Quilt lädt auch Fabric-Mods.
             Some(LoaderKind::Quilt) => Some(vec!["quilt".into(), "fabric".into()]),
+            Some(LoaderKind::Forge) => Some(vec!["forge".into()]),
+            // NeoForge lädt viele Forge-Mods (bis 1.20.x) weiterhin.
+            Some(LoaderKind::NeoForge) => Some(vec!["neoforge".into()]),
             None => None,
         },
         ContentKind::Resourcepack => Some(vec!["minecraft".into()]),
