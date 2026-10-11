@@ -332,13 +332,18 @@ mod tests {
         assert_eq!(substitute("ohne", &vars), "ohne");
     }
 
+    /// Die Tests laufen auch unter Windows, wo `Path::join` Backslashes einsetzt.
+    fn unix_paths(args: &[String]) -> Vec<String> {
+        args.iter().map(|a| a.replace('\\', "/")).collect()
+    }
+
     #[test]
     fn modern_command() {
         let paths = Paths::new("/data");
         let v: VersionJson =
             serde_json::from_str(include_str!("../tests/fixtures/modern.json")).unwrap();
         let cmd = build_command(&paths, &v, &opts(Path::new("/data")), &linux()).unwrap();
-        let args = &cmd.args;
+        let args = &unix_paths(&cmd.args);
 
         assert_eq!(args[0], "-Xmx4096M");
         assert!(args.contains(&"-Djava.library.path=/data/versions/1.21.1/natives".to_string()));
@@ -373,7 +378,7 @@ mod tests {
         let mut o = opts(Path::new("/data"));
         o.resolution = Some((1280, 720));
         let cmd = build_command(&paths, &v, &o, &linux()).unwrap();
-        let args = &cmd.args;
+        let args = &unix_paths(&cmd.args);
 
         assert!(args.contains(&"-Djava.library.path=/data/versions/1.8.9/natives".to_string()));
         let cp = after(args, "-cp");
