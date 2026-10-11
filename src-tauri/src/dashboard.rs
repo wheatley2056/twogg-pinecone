@@ -179,6 +179,12 @@ pub fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
     state.launcher.settings().load().map_err(err)
 }
 
+/// Eingebaute JVM-Presets (Aikar's Flags usw.) im Originalzustand, zum Vergleichen und Zurücksetzen.
+#[tauri::command]
+pub fn jvm_builtin_presets() -> Vec<pinecone_core::jvm::JvmPreset> {
+    pinecone_core::jvm::builtin()
+}
+
 #[tauri::command]
 pub fn save_settings(
     app: AppHandle,

@@ -23,6 +23,7 @@ import type {
   Profile,
   ProfileInput,
   ServerStatus,
+  JvmPreset,
   Settings,
   Dashboard,
   VersionInfo,
@@ -184,6 +185,7 @@ export const api = {
   onOpenPack: (handler: (request: string) => void) => listen<string>("open-pack", (e) => handler(e.payload)),
 
   getSettings: () => invoke<Settings>("get_settings"),
+  jvmBuiltinPresets: () => invoke<JvmPreset[]>("jvm_builtin_presets"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
   exportTheme: (path: string) => invoke<void>("export_theme", { path }),
   importTheme: (path: string) => invoke<Settings>("import_theme", { path }),

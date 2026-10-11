@@ -122,6 +122,17 @@ async fn apply_input(
         other => other,
     };
     profile.memory_mb = input.memory_mb;
+    profile.jvm_preset = match input.jvm_preset.filter(|p| !p.is_empty()) {
+        Some(id) if id == pinecone_core::jvm::NONE => Some(id),
+        Some(id) => {
+            let jvm = state.launcher.settings().load().map_err(err)?.jvm;
+            if jvm.find(&id).is_none() {
+                return Err(format!("Unbekanntes JVM-Preset {id:?}"));
+            }
+            Some(id)
+        }
+        None => None,
+    };
     profile.jvm_args = input
         .jvm_args
         .into_iter()

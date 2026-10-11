@@ -1,10 +1,13 @@
 # Änderungen
 
-## 0.9.3
+## 0.9.4
 
-- **Forge und NeoForge:** Instanzen mit Forge (ab 1.13 und ältere bis 1.12.2) und NeoForge,
-  installiert über die offiziellen Installer. Modpacks mit Forge/NeoForge von Modrinth und
-  CurseForge lassen sich importieren, die Suche filtert passend.
+- **JVM-Optimierungen:** Fertige Flag-Sätze für Java unter Einstellungen → Java & Arbeitsspeicher:
+  Aikar's Flags, MeowIce's Flags (ab Java 17) und Generational ZGC (ab Java 21). Einer gilt als
+  Standard für alle Instanzen, jede Instanz kann im Instanz-Dialog einen anderen oder keinen wählen.
+  Die Sätze lassen sich anpassen und zurücksetzen, eigene Presets kommen dazu. Ist das Java einer
+  Instanz zu alt für einen Satz, startet das Spiel ohne ihn; eigene JVM-Argumente der Instanz
+  gelten zusätzlich und haben Vorrang.
 - **TwoGG-Modpack-Seiten:** Jedes TwoGG-Pack hat eine eigene Seite auf dem Pinecone-Server
   (`pinecone.twogg.app/packs/<id>`), aufgebaut wie bei CurseForge mit Beschreibung, Versionen und
   „In Pinecone installieren“. In „Entdecken“ und auf der Event-Seite öffnet der Pack-Name sie.
@@ -16,6 +19,12 @@
 - **Skin-Vorschau mit eigenen Animationen:** Ruhe, Gehen, Laufen, Winken, Jubeln und Tanzen mit
   weichen Übergängen; der Kopf folgt dem Mauszeiger, Drehen lässt sich zuschalten. Mit
   „Animationen reduzieren“ bewegt sich die Figur nur sanft.
+
+## 0.9.3
+
+- **Forge und NeoForge:** Instanzen mit Forge (ab 1.13 und ältere bis 1.12.2) und NeoForge,
+  installiert über die offiziellen Installer. Modpacks mit Forge/NeoForge von Modrinth und
+  CurseForge lassen sich importieren, die Suche filtert passend.
 
 ## 0.9.2
 

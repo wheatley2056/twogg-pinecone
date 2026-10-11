@@ -193,6 +193,7 @@ fn main() {
             dashboard::ping_server,
             dashboard::open_screenshot,
             dashboard::get_settings,
+            dashboard::jvm_builtin_presets,
             dashboard::save_settings,
             dashboard::export_theme,
             content::datapack_install,

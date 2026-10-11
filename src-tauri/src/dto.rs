@@ -39,6 +39,8 @@ pub struct ProfileDto {
     pub loader: Option<LoaderSpec>,
     pub memory_mb: Option<u32>,
     pub jvm_args: Vec<String>,
+    /// JVM-Preset der Instanz; `None` = globaler Standard.
+    pub jvm_preset: Option<String>,
     pub java: Option<String>,
     pub color: Option<String>,
     pub icon: Option<String>,
@@ -60,6 +62,7 @@ impl ProfileDto {
             loader: p.loader,
             memory_mb: p.memory_mb,
             jvm_args: p.jvm_args,
+            jvm_preset: p.jvm_preset,
             java: p.java.map(|j| j.display().to_string()),
             color: p.color,
             icon: p.icon,
@@ -81,6 +84,8 @@ pub struct ProfileInput {
     pub memory_mb: Option<u32>,
     #[serde(default)]
     pub jvm_args: Vec<String>,
+    #[serde(default)]
+    pub jvm_preset: Option<String>,
     pub java: Option<String>,
     #[serde(default)]
     pub color: Option<String>,
