@@ -69,7 +69,10 @@ cargo run -p pinecone-cli -- pack import ~/Downloads/pack.mrpack         # oder 
 cargo run -p pinecone-cli -- pack update "Fabulously Optimized"          # Plan anzeigen
 cargo run -p pinecone-cli -- pack update "Fabulously Optimized" --apply  # einspielen (mit Snapshot)
 cargo run -p pinecone-cli -- pack rollback "Fabulously Optimized" --to <snapshot>
-cargo run -p pinecone-cli -- pack export Fabric fabric.mrpack --version 1.0.0
+cargo run -p pinecone-cli -- pack export Fabric fabric.mrpack --version 1.0.0 --with-options
+cargo run -p pinecone-cli -- pack share "Fabulously Optimized"    # pinecone://modrinth/<projekt>/<version>
+cargo run -p pinecone-cli -- pack preview pinecone://modrinth/fabulously-optimized   # oder Datei
+cargo run -p pinecone-cli -- pack import pinecone://modrinth/1KVo5zza/ssWn7YI0
 cargo run -p pinecone-cli -- account login           # Microsoft-Login (siehe unten)
 cargo run -p pinecone-cli -- account offline Tobi     # Offline-Account für Tests/LAN
 cargo run -p pinecone-cli -- account list             # Accounts, * = aktiv
@@ -124,6 +127,25 @@ bleiben, vom Pack entfernte Dateien werden gelöscht; bei echten Konflikten wäh
 (Vorschlag: Configs und `options.txt` behalten, Mods aus dem Pack nehmen). Vorher wird ein Snapshot
 unter `instances/<id>/snapshots/` angelegt (die letzten drei bleiben), aus dem man zurückrollen kann.
 `.mrpack`-Downloads sind auf die von Modrinth erlaubten Hosts beschränkt.
+
+## Modpacks teilen
+
+„Teilen …“ im Profilmenü bietet zwei Wege:
+
+- **Link** (nur für Packs von Modrinth oder CurseForge): `pinecone://modrinth/<projekt>/<version>` bzw.
+  `pinecone://curseforge/<projekt>/<datei>`. Der Link verweist auf genau die installierte Version bei
+  der Originalquelle; eigene Änderungen sind nicht enthalten. Freunde fügen ihn unter
+  Bibliothek → „Link öffnen“ ein, oder klicken ihn an, falls Pinecone installiert ist.
+  Modrinth-Adressen (`https://modrinth.com/modpack/<slug>`) funktionieren dort auch.
+- **Datei** (`.mrpack`): für eigene Zusammenstellungen. Aktive Mods sind immer dabei,
+  Ressourcenpakete, Shader, `config/` und `options.txt` sind wählbar. Welten, `servers.dat`,
+  Screenshots, Logs und Accounts werden nie exportiert. Mods von Modrinth werden nur verlinkt.
+
+Vor jeder Installation aus Datei oder Link zeigt Pinecone eine Vorschau (Version, Loader, Anzahl der
+Inhalte, Download-Größe) und warnt bei Dateien von Dritten sowie bei Download-Quellen, die Pinecone
+nicht lädt. Die App registriert sich für `pinecone://`-Links und `.mrpack`-Dateien; läuft sie schon,
+übernimmt das offene Fenster den Link. `pinecone://pack/<code>` ist für einen späteren Share-Dienst
+reserviert.
 
 ## CurseForge
 

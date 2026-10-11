@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type {
   Account,
   AppInfo,
@@ -22,6 +23,7 @@ import type {
   SearchArgs,
   SearchResult,
   UpdateInfo,
+  ExportOptions,
   ExportReport,
   ImportResult,
   PackInfo,
@@ -29,6 +31,7 @@ import type {
   Resolution,
   SnapshotInfo,
   UpdatePlan,
+  PreviewResult,
 } from "./types";
 
 export const api = {
@@ -80,7 +83,11 @@ export const api = {
 
   packInstallModrinth: (project: string, version: string | null = null) => invoke<ImportResult>("pack_install_modrinth", { project, version }),
   packInstallCurseforge: (project: number, file: number | null = null) => invoke<ImportResult>("pack_install_curseforge", { project, file }),
-  packImportFile: (path: string) => invoke<ImportResult>("pack_import_file", { path }),
+  packPreviewFile: (path: string) => invoke<PreviewResult>("pack_preview_file", { path }),
+  packPreviewLink: (link: string) => invoke<PreviewResult>("pack_preview_link", { link }),
+  packPreviewCancel: (token: string) => invoke<void>("pack_preview_cancel", { token }),
+  packImportPending: (token: string, name: string | null) => invoke<ImportResult>("pack_import_pending", { token, name }),
+  packShareLink: (id: string) => invoke<string | null>("pack_share_link", { id }),
   curseforgeSearch: (args: SearchArgs) => invoke<SearchResult>("curseforge_search", { args }),
   curseforgeFiles: (project: number, profileId: string | null, projectType: ProjectType) =>
     invoke<ModrinthVersion[]>("curseforge_files", { project, profileId, projectType }),
@@ -94,7 +101,10 @@ export const api = {
   packApplyUpdate: (id: string, resolutions: Record<string, Resolution>) => invoke<SnapshotInfo>("pack_apply_update", { id, resolutions }),
   packSnapshots: (id: string) => invoke<SnapshotInfo[]>("pack_snapshots", { id }),
   packRollback: (id: string, snapshot: string) => invoke<void>("pack_rollback", { id, snapshot }),
-  packExport: (id: string, path: string, version: string) => invoke<ExportReport>("pack_export", { id, path, version }),
+  packExport: (id: string, path: string, options: ExportOptions) => invoke<ExportReport>("pack_export", { id, path, options }),
+  /** Beim Start übergebene Links/Dateien (einmalig) und später geöffnete. */
+  takeOpenRequests: () => invoke<string[]>("take_open_requests"),
+  onOpenPack: (handler: (request: string) => void) => listen<string>("open-pack", (e) => handler(e.payload)),
 
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),

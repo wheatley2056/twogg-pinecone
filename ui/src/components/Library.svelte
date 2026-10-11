@@ -1,9 +1,8 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
-  import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
   import { runOf } from "../lib/runs.svelte";
-  import type { ImportResult, Profile } from "../lib/types";
+  import type { OpenRequest, Profile } from "../lib/types";
   import Icon from "./Icon.svelte";
   import ProfileIcon from "./ProfileIcon.svelte";
 
@@ -13,25 +12,14 @@
     onOpen: (id: string) => void;
     onPlay: (id: string) => void;
     onCreate: () => void;
-    onImported: (result: ImportResult) => void;
+    /** Modpack aus Datei oder Link: zeigt erst eine Vorschau. */
+    onOpenPack: (request: OpenRequest) => void;
   }
-  let { profiles, hasAccount, onOpen, onPlay, onCreate, onImported }: Props = $props();
+  let { profiles, hasAccount, onOpen, onPlay, onCreate, onOpenPack }: Props = $props();
 
-  let importing = $state(false);
-  let error = $state<string | null>(null);
-
-  async function importPack() {
-    const path = await open({ multiple: false, filters: [{ name: t("pack.filter"), extensions: ["mrpack"] }] });
-    if (typeof path !== "string") return;
-    importing = true;
-    error = null;
-    try {
-      onImported(await api.packImportFile(path));
-    } catch (e) {
-      error = errorText(e);
-    } finally {
-      importing = false;
-    }
+  async function importFile() {
+    const path = await open({ multiple: false, filters: [{ name: t("pack.filterAny"), extensions: ["mrpack", "zip"] }] });
+    if (typeof path === "string") onOpenPack({ kind: "file", path });
   }
 
   let filter = $state("");
@@ -58,12 +46,11 @@
         <Icon name="search" size={16} />
         <input bind:value={filter} placeholder={t("library.search")} aria-label={t("library.search")} />
       </label>
-      <button onclick={importPack} disabled={importing}><Icon name="file" size={16} />{importing ? t("pack.importing") : t("pack.import")}</button>
+      <button onclick={() => onOpenPack({ kind: "link", link: "" })}><Icon name="link" size={16} />{t("import.openLink")}</button>
+      <button onclick={importFile}><Icon name="file" size={16} />{t("pack.import")}</button>
       <button class="primary" onclick={onCreate}><Icon name="plus" size={16} />{t("nav.newProfile").replace("+ ", "")}</button>
     </div>
   </header>
-  {#if error}<p class="error">{error}</p>{/if}
-
   {#if shown.length === 0}
     <p class="muted">{profiles.length === 0 ? t("nav.noProfiles") : t("library.noMatch")}</p>
   {/if}

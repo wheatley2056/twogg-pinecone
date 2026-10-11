@@ -7,7 +7,7 @@
   import type { ContentKind, PackInfo, PackUpdate, Profile } from "../lib/types";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import ContentTab from "./ContentTab.svelte";
-  import ExportDialog from "./ExportDialog.svelte";
+  import ShareDialog from "./ShareDialog.svelte";
   import PackUpdateDialog from "./PackUpdateDialog.svelte";
   import Icon from "./Icon.svelte";
   import ProfileDialog from "./ProfileDialog.svelte";
@@ -38,7 +38,7 @@
   let packMessage = $state<string | null>(null);
   // null: geschlossen; target null: nur gesicherte Stände.
   let updateDialog = $state<{ target: { version: string | null; file: string | null } | null } | null>(null);
-  let exporting = $state(false);
+  let sharing = $state(false);
   // Neu zeichnen der Inhalte nach Pack-Update oder Rollback.
   let contentKey = $state(0);
 
@@ -161,8 +161,8 @@
             <button role="menuitem" onclick={() => menuAction(() => api.openProfileFolder(profile.id))}>
               <Icon name="folder" size={16} />{t("profile.openFolder")}
             </button>
-            <button role="menuitem" onclick={() => menuAction(() => (exporting = true))}>
-              <Icon name="download" size={16} />{t("pack.export")}
+            <button role="menuitem" onclick={() => menuAction(() => (sharing = true))}>
+              <Icon name="share" size={16} />{t("share.menu")}
             </button>
             <button role="menuitem" class="danger" disabled={run.status !== "idle"} onclick={() => menuAction(() => (confirmDelete = true))}>
               <Icon name="trash" size={16} />{t("profile.delete")}
@@ -274,8 +274,8 @@
   />
 {/if}
 
-{#if exporting}
-  <ExportDialog {profile} onClose={() => (exporting = false)} />
+{#if sharing}
+  <ShareDialog {profile} onClose={() => (sharing = false)} />
 {/if}
 
 {#if confirmDelete}

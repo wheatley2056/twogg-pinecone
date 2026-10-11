@@ -6,6 +6,7 @@ mod content;
 mod dashboard;
 mod dto;
 mod game;
+mod open;
 mod packs;
 
 use std::collections::HashMap;
@@ -29,6 +30,11 @@ pub struct AppState {
     /// Geplante Modpack-Updates: Profil-ID → (Archiv, Quelle). Die Oberfläche schickt nur Entscheidungen.
     pub pending_updates:
         Mutex<HashMap<String, (std::path::PathBuf, pinecone_core::modpack::PackSource)>>,
+    /// Angezeigte Import-Vorschauen: Token → (Archiv, Quelle).
+    pub pending_imports:
+        Mutex<HashMap<String, (std::path::PathBuf, pinecone_core::modpack::PackSource)>>,
+    /// Beim Start übergebene Links/Dateien, bis die Oberfläche sie abholt.
+    pub open_requests: Mutex<Vec<String>>,
 }
 
 fn main() {
@@ -64,14 +70,34 @@ fn main() {
         running: Mutex::default(),
         login: Mutex::default(),
         pending_updates: Mutex::default(),
+        pending_imports: Mutex::default(),
+        open_requests: Mutex::new(open::requests(
+            &std::env::args().collect::<Vec<_>>(),
+            &std::env::current_dir().unwrap_or_default(),
+        )),
     };
 
     tauri::Builder::default()
+        // Muss als erstes Plugin kommen: Eine zweite Instanz (Link oder Datei geöffnet)
+        // beendet sich sofort und übergibt ihre Argumente an die laufende.
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            open::forward(app, args, cwd)
+        }))
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
         .setup(|app| {
             dashboard::allow_assets(app.handle());
+            // Installer tragen `pinecone://` selbst ein; beim Entwickeln und für AppImages
+            // registriert sich die App hier (Windows: Registry des Nutzers, Linux: .desktop-Datei).
+            #[cfg(any(windows, target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                if let Err(e) = app.deep_link().register_all() {
+                    tracing::warn!("pinecone://-Links nicht registriert: {e}");
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -117,7 +143,11 @@ fn main() {
             content::content_install_curseforge,
             packs::pack_install_modrinth,
             packs::pack_install_curseforge,
-            packs::pack_import_file,
+            packs::pack_preview_file,
+            packs::pack_preview_link,
+            packs::pack_preview_cancel,
+            packs::pack_import_pending,
+            packs::pack_share_link,
             packs::pack_info,
             packs::pack_check_update,
             packs::pack_updates_all,
@@ -126,6 +156,7 @@ fn main() {
             packs::pack_snapshots,
             packs::pack_rollback,
             packs::pack_export,
+            open::take_open_requests,
             game::launch,
             game::stop_game,
         ])

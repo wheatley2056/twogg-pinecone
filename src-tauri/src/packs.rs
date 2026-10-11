@@ -1,12 +1,14 @@
-//! Befehle für Modpacks: installieren, importieren, Updates mit Konfliktauswahl, Rollback, Export.
+//! Befehle für Modpacks: installieren, importieren (mit Vorschau), Updates mit Konfliktauswahl,
+//! Rollback, Export und Teilen.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use pinecone_core::modpack::{
-    ExportReport, ImportResult, ManualDownload, PackSource, PackUpdate, Resolution, SnapshotInfo,
-    UpdatePlan,
+    ExportOptions, ExportReport, ImportResult, ManualDownload, PackPreview, PackSource, PackUpdate,
+    Resolution, SnapshotInfo, UpdatePlan,
 };
+use pinecone_core::share::ShareLink;
 use serde::Serialize;
 use tauri::State;
 
@@ -77,17 +79,6 @@ pub async fn pack_install_curseforge(
 }
 
 #[tauri::command]
-pub async fn pack_import_file(state: State<'_, AppState>, path: String) -> CmdResult<ImportDto> {
-    Ok(state
-        .launcher
-        .packs()
-        .import(Path::new(&path), PackSource::File, None)
-        .await
-        .map_err(err)?
-        .into())
-}
-
-#[tauri::command]
 pub fn pack_info(state: State<'_, AppState>, id: String) -> CmdResult<Option<PackInfoDto>> {
     Ok(state
         .launcher
@@ -97,12 +88,113 @@ pub fn pack_info(state: State<'_, AppState>, id: String) -> CmdResult<Option<Pac
         .map(|p| PackInfoDto {
             name: p.name,
             version: p.version,
-            source: match p.source {
-                PackSource::Modrinth { .. } => "modrinth",
-                PackSource::Curseforge { .. } => "curseforge",
-                PackSource::File => "file",
-            },
+            source: source_name(&p.source),
         }))
+}
+
+fn source_name(source: &PackSource) -> &'static str {
+    match source {
+        PackSource::Modrinth { .. } => "modrinth",
+        PackSource::Curseforge { .. } => "curseforge",
+        PackSource::File => "file",
+    }
+}
+
+/// Vorschau vor dem Import. Installiert wird erst mit `pack_import_pending(token)`, und nur,
+/// was vorher angezeigt wurde.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewDto {
+    token: String,
+    preview: PackPreview,
+    /// `modrinth`, `curseforge` oder `file`.
+    source: &'static str,
+}
+
+async fn preview(state: &AppState, archive: PathBuf, source: PackSource) -> CmdResult<PreviewDto> {
+    let preview = state
+        .launcher
+        .packs()
+        .preview(&archive)
+        .await
+        .map_err(err)?;
+    let token = archive.display().to_string();
+    let dto = PreviewDto {
+        token: token.clone(),
+        preview,
+        source: source_name(&source),
+    };
+    state
+        .pending_imports
+        .lock()
+        .unwrap()
+        .insert(token, (archive, source));
+    Ok(dto)
+}
+
+#[tauri::command]
+pub async fn pack_preview_file(state: State<'_, AppState>, path: String) -> CmdResult<PreviewDto> {
+    preview(&state, PathBuf::from(path), PackSource::File).await
+}
+
+/// Lädt das Pack hinter einem `pinecone://`- oder Modrinth-Link und zeigt die Vorschau.
+#[tauri::command]
+pub async fn pack_preview_link(state: State<'_, AppState>, link: String) -> CmdResult<PreviewDto> {
+    let packs = state.launcher.packs();
+    let (archive, source) = match ShareLink::parse(&link).map_err(err)? {
+        ShareLink::Modrinth { project, version } => packs
+            .download_modrinth(&project, version.as_deref())
+            .await
+            .map_err(err)?,
+        ShareLink::Curseforge { project, file } => packs
+            .download_curseforge(project, file, None)
+            .await
+            .map_err(err)?,
+        ShareLink::Code(_) => {
+            return Err("Share-Codes funktionieren erst mit dem Share-Dienst. Bitte das Pack als Datei schicken lassen.".into());
+        }
+    };
+    preview(&state, archive, source).await
+}
+
+#[tauri::command]
+pub async fn pack_import_pending(
+    state: State<'_, AppState>,
+    token: String,
+    name: Option<String>,
+) -> CmdResult<ImportDto> {
+    let (archive, source) = state
+        .pending_imports
+        .lock()
+        .unwrap()
+        .remove(&token)
+        .ok_or("Keine Vorschau zu diesem Modpack. Bitte erneut öffnen.")?;
+    let name = name.map(|n| n.trim().to_string()).filter(|n| !n.is_empty());
+    Ok(state
+        .launcher
+        .packs()
+        .import(&archive, source, name)
+        .await
+        .map_err(err)?
+        .into())
+}
+
+/// Vorschau geschlossen, ohne zu installieren.
+#[tauri::command]
+pub fn pack_preview_cancel(state: State<'_, AppState>, token: String) {
+    state.pending_imports.lock().unwrap().remove(&token);
+}
+
+/// Link auf genau die installierte Pack-Version, falls es eine Online-Quelle gibt.
+#[tauri::command]
+pub fn pack_share_link(state: State<'_, AppState>, id: String) -> CmdResult<Option<String>> {
+    Ok(state
+        .launcher
+        .packs()
+        .pack_info(&id)
+        .map_err(err)?
+        .and_then(|p| ShareLink::for_source(&p.source))
+        .map(|l| l.to_string()))
 }
 
 #[tauri::command]
@@ -254,13 +346,13 @@ pub async fn pack_export(
     state: State<'_, AppState>,
     id: String,
     path: String,
-    version: String,
+    options: ExportOptions,
 ) -> CmdResult<ExportReport> {
     let profile = state.launcher.profiles().get(&id).map_err(err)?;
     state
         .launcher
         .packs()
-        .export(&profile, Path::new(&path), version.trim())
+        .export(&profile, Path::new(&path), &options)
         .await
         .map_err(err)
 }

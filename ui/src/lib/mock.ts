@@ -43,6 +43,18 @@ const update: UpdateInfo = { key: "mods/sodium.jar", name: "Sodium", current: "m
 // Kleines grünes Quadrat als Server-Icon (PNG, 2×2).
 const ICON = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGPwWR/gsz6AAUIBACQyBS0TyzOPAAAAAElFTkSuQmCC";
 
+function preview(token: string, source: "modrinth" | "curseforge" | "file") {
+  return {
+    token,
+    source,
+    preview: {
+      name: "Fabulously Optimized", version: "14.1.0", summary: "Improve your graphics and performance with this simple modpack.",
+      minecraft: "26.2", loader: { kind: "fabric" as const, version: "0.19.5" }, mods: 49, resourcepacks: 3, shaders: 0, otherFiles: 49,
+      downloadSize: 44_900_000, archiveSize: 210_000, missing: [], blockedHosts: [],
+    },
+  };
+}
+
 function toProfile(id: string, input: ProfileInput): Profile {
   return { id, running: false, ...input, loader: input.loader && { ...input.loader, version: input.loader.version || "0.19.5" } };
 }
@@ -173,7 +185,17 @@ Object.assign(api, {
   packSnapshots: async () => [{ id: "1791660000", created: now - 86400, packVersion: "6.3.3", files: 12 }],
   packRollback: async () => {},
   packExport: async () => (await wait(400), { path: "/tmp/x.mrpack", linked: 48, included: 7 }),
-  packImportFile: async () => ({ profile: profiles[0], missing: [] }),
+  packPreviewFile: async (path: string) => (await wait(300), preview(path, "file")),
+  packPreviewLink: async (link: string) => {
+    await wait(600);
+    if (!link.startsWith("pinecone://") && !link.startsWith("https://modrinth.com/")) throw `Kein gültiger Modpack-Link: ${link}`;
+    return preview(link, link.includes("curseforge") ? "curseforge" : "modrinth");
+  },
+  packPreviewCancel: async () => {},
+  packImportPending: async () => (await wait(800), { profile: profiles[0], missing: [] }),
+  packShareLink: async (id: string) => (id === "fabric-test" ? "pinecone://modrinth/1KVo5zza/ssWn7YI0" : null),
+  takeOpenRequests: async () => [],
+  onOpenPack: async () => () => {},
   packInstallModrinth: async () => (await wait(800), { profile: profiles[0], missing: [] }),
   packInstallCurseforge: async () => (await wait(800), {
     profile: profiles[0],

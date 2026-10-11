@@ -4,10 +4,11 @@
   import { t } from "./lib/i18n.svelte";
   import { runOf, startGame } from "./lib/runs.svelte";
   import { loadSettings } from "./lib/settings.svelte";
-  import type { Account, AppInfo, ContentKind, ImportResult, Profile, ProjectType } from "./lib/types";
+  import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType } from "./lib/types";
   import AccountMenu from "./components/AccountMenu.svelte";
   import Discover from "./components/Discover.svelte";
   import Home from "./components/Home.svelte";
+  import ImportDialog from "./components/ImportDialog.svelte";
   import Icon, { type IconName } from "./components/Icon.svelte";
   import Library from "./components/Library.svelte";
   import MissingDialog from "./components/MissingDialog.svelte";
@@ -31,6 +32,23 @@
   let discoverTarget = $state<{ profileId: string | null; type: ProjectType }>({ profileId: null, type: "mod" });
   let profileTab = $state<"content" | "log">("content");
   let missing = $state<ImportResult | null>(null);
+  // Modpack-Vorschau: aus der Bibliothek, per pinecone://-Link oder beim Öffnen einer .mrpack-Datei.
+  let openRequest = $state<OpenRequest | null>(null);
+  let openQueue: OpenRequest[] = [];
+
+  function openPack(request: OpenRequest) {
+    if (openRequest) openQueue.push(request);
+    else openRequest = request;
+  }
+
+  function closeOpenRequest() {
+    openRequest = openQueue.shift() ?? null;
+  }
+
+  /** Vom System übergeben: Link oder Dateipfad. */
+  function openExternal(value: string) {
+    openPack(value.startsWith("pinecone://") ? { kind: "link", link: value } : { kind: "file", path: value });
+  }
 
   async function onImported(result: ImportResult) {
     await reloadProfiles();
@@ -66,6 +84,8 @@
     await loadSettings().catch((e) => (loadError = errorText(e)));
     info = await api.appInfo().catch(() => null);
     await Promise.all([reloadProfiles(), reloadAccounts()]);
+    await api.onOpenPack(openExternal).catch(() => {});
+    for (const r of await api.takeOpenRequests().catch(() => [])) openExternal(r);
   });
 
   function openProfile(id: string, tab: "content" | "log" = "content") {
@@ -149,7 +169,7 @@
         onOpen={(id) => openProfile(id)}
         onPlay={play}
         onCreate={() => (creating = true)}
-        {onImported}
+        onOpenPack={openPack}
       />
     {:else if view === "discover"}
       {#key discoverTarget}
@@ -181,6 +201,12 @@
 
 {#if missing}
   <MissingDialog profileId={missing.profile.id} missing={missing.missing} onClose={() => (missing = null)} />
+{/if}
+
+{#if openRequest}
+  {#key openRequest}
+    <ImportDialog request={openRequest} onClose={closeOpenRequest} {onImported} />
+  {/key}
 {/if}
 
 {#if creating}

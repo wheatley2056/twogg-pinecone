@@ -10,7 +10,7 @@ use common::MockServer;
 use pinecone_core::content::ContentManager;
 use pinecone_core::download::Downloader;
 use pinecone_core::modpack::{
-    ChangeAction, ConflictReason, PackManager, PackSource, Resolution, read_mrpack,
+    ChangeAction, ConflictReason, ExportOptions, PackManager, PackSource, Resolution, read_mrpack,
 };
 use pinecone_core::modrinth::Modrinth;
 use pinecone_core::paths::Paths;
@@ -343,7 +343,10 @@ async fn exports_links_and_own_files() {
 
     // a1.jar ist deaktiviert und wird daher nicht exportiert; Unbekanntes kommt ins Archiv.
     let out = dir.path().join("export.mrpack");
-    let report = packs.export(&profile, &out, "1.0.0").await.unwrap();
+    let report = packs
+        .export(&profile, &out, &ExportOptions::new("1.0.0"))
+        .await
+        .unwrap();
     assert_eq!(
         (report.linked, report.included),
         (0, 2),
@@ -354,6 +357,140 @@ async fn exports_links_and_own_files() {
     assert_eq!(pack.loader.unwrap().version, "0.19.3");
     let keys: Vec<&String> = pack.files.keys().collect();
     assert_eq!(keys, ["config/mod.json", "mods/eigene.jar"]);
+}
+
+#[tokio::test]
+async fn export_options_choose_folders_and_never_share_servers() {
+    let (server, dir, packs) = setup().await;
+    let deps = json!({ "minecraft": "1.21.1", "fabric-loader": "0.19.3" });
+    let v1 = dir.path().join("v1.mrpack");
+    mrpack(&v1, &server, "1", &[], &[("config/mod.json", "cfg")], deps);
+    let profile = packs
+        .import(&v1, PackSource::File, None)
+        .await
+        .unwrap()
+        .profile;
+    let game = dir
+        .path()
+        .join("data/instances")
+        .join(&profile.id)
+        .join(".minecraft");
+    for (rel, body) in [
+        ("mods/eigene.jar", "jar"),
+        ("resourcepacks/rp.zip", "rp"),
+        ("shaderpacks/sh.zip", "sh"),
+        ("options.txt", "fov:90"),
+        ("servers.dat", "geheim"),
+        ("saves/Welt/level.dat", "welt"),
+    ] {
+        let path = game.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, body).unwrap();
+    }
+    let export = |opts: ExportOptions| {
+        let out = dir.path().join(format!("{}.mrpack", opts.version));
+        let packs = packs.clone();
+        let profile = profile.clone();
+        async move {
+            packs.export(&profile, &out, &opts).await.unwrap();
+            let pack = read_mrpack(&out).unwrap();
+            (pack.summary, pack.files.into_keys().collect::<Vec<_>>())
+        }
+    };
+
+    let (summary, keys) = export(ExportOptions {
+        summary: Some("  Für Freunde  ".into()),
+        ..ExportOptions::new("standard")
+    })
+    .await;
+    assert_eq!(summary.as_deref(), Some("Für Freunde"));
+    assert_eq!(
+        keys,
+        [
+            "config/mod.json",
+            "mods/eigene.jar",
+            "resourcepacks/rp.zip",
+            "shaderpacks/sh.zip"
+        ]
+    );
+
+    let (_, keys) = export(ExportOptions {
+        resourcepacks: false,
+        shaders: false,
+        config: false,
+        options: true,
+        ..ExportOptions::new("minimal")
+    })
+    .await;
+    assert_eq!(keys, ["mods/eigene.jar", "options.txt"]);
+
+    let err = packs
+        .export(
+            &profile,
+            &dir.path().join("x.mrpack"),
+            &ExportOptions::new(" "),
+        )
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("Versionsnummer"), "{err}");
+}
+
+#[tokio::test]
+async fn preview_counts_content_and_flags_foreign_hosts() {
+    let (server, dir, packs) = setup().await;
+    let deps = json!({ "minecraft": "1.21.1", "quilt-loader": "0.26.4" });
+    let v1 = dir.path().join("v1.mrpack");
+    mrpack(
+        &v1,
+        &server,
+        "2.1",
+        &["a1.jar", "b.jar"],
+        &[
+            ("config/mod.json", "cfg"),
+            ("resourcepacks/rp.zip", "rp"),
+            ("options.txt", "o"),
+        ],
+        deps.clone(),
+    );
+    let preview = packs.preview(&v1).await.unwrap();
+    assert_eq!(
+        (preview.name.as_str(), preview.version.as_str()),
+        ("Test-Pack", "2.1")
+    );
+    assert_eq!(preview.minecraft, "1.21.1");
+    assert_eq!(preview.loader.unwrap().version, "0.26.4");
+    assert_eq!(
+        (
+            preview.mods,
+            preview.resourcepacks,
+            preview.shaders,
+            preview.other_files
+        ),
+        (2, 1, 0, 2)
+    );
+    assert_eq!(
+        preview.download_size,
+        ("inhalt-a1.jar".len() + "inhalt-b.jar".len()) as u64
+    );
+    assert!(preview.archive_size > 0);
+    assert!(preview.blocked_hosts.is_empty());
+    // Vorschau legt kein Profil an.
+    assert!(!dir.path().join("data/instances").exists());
+
+    // Ein Pack, das von einem fremden Host laden will, wird schon in der Vorschau gemeldet.
+    let strict = PackManager::new(
+        Paths::new(dir.path().join("strict")),
+        Downloader::new().unwrap(),
+        ContentManager::new(
+            Paths::new(dir.path().join("strict")),
+            Downloader::new().unwrap(),
+            Modrinth::with_base(format!("{}/v2", server.base)).unwrap(),
+        ),
+        Modrinth::with_base(format!("{}/v2", server.base)).unwrap(),
+        ProfileStore::new(Paths::new(dir.path().join("strict"))),
+    );
+    let preview = strict.preview(&v1).await.unwrap();
+    assert_eq!(preview.blocked_hosts, ["127.0.0.1"]);
 }
 
 /// CurseForge-Pack (ZIP mit manifest.json) gegen eine nachgebaute CurseForge-API.

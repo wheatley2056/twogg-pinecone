@@ -272,3 +272,40 @@ export interface ImportResult {
 }
 
 export type Platform = "modrinth" | "curseforge";
+
+/** Was beim Export als Datei mitkommt (Mods immer; Welten, Serverliste und Accounts nie). */
+export interface ExportOptions {
+  version: string;
+  summary: string | null;
+  resourcepacks: boolean;
+  shaders: boolean;
+  config: boolean;
+  /** options.txt und Shader-/OptiFine-Einstellungen. */
+  options: boolean;
+}
+
+export interface PackPreview {
+  name: string;
+  version: string;
+  summary: string | null;
+  minecraft: string;
+  loader: LoaderSpec | null;
+  mods: number;
+  resourcepacks: number;
+  shaders: number;
+  otherFiles: number;
+  downloadSize: number;
+  archiveSize: number;
+  missing: ManualDownload[];
+  /** Nicht erlaubte Download-Quellen: Installation würde scheitern. */
+  blockedHosts: string[];
+}
+
+export interface PreviewResult {
+  token: string;
+  preview: PackPreview;
+  source: "modrinth" | "curseforge" | "file";
+}
+
+/** Von außen geöffnet (Link, Datei) oder in der Bibliothek gewählt; leerer Link = Eingabefeld. */
+export type OpenRequest = { kind: "file"; path: string } | { kind: "link"; link: string };
