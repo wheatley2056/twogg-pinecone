@@ -1,6 +1,6 @@
 # Änderungen
 
-## 0.9.4
+## 0.9.5
 
 - **Sync-Packs: Steuerung und Optionen.** Tastenbelegungen und Spieleinstellungen lassen sich aus
   einer Instanz übernehmen („Aus Instanz übernehmen …“) und in andere Instanzen synchronisieren;
@@ -12,6 +12,9 @@
   `options.txt` bekommt eine Versionszeile, sonst verwarf Minecraft wegen der Tastennamen alle
   Einstellungen. Ein fehlerhaftes Sync-Pack hält beim Start die anderen nicht mehr auf, und nach dem
   Ein- und Ausschalten zeigt die Instanz, was installiert, entfernt oder nicht verfügbar ist.
+
+## 0.9.4
+
 - **JVM-Optimierungen:** Fertige Flag-Sätze für Java unter Einstellungen → Java & Arbeitsspeicher:
   Aikar's Flags, MeowIce's Flags (ab Java 17) und Generational ZGC (ab Java 21). Einer gilt als
   Standard für alle Instanzen, jede Instanz kann im Instanz-Dialog einen anderen oder keinen wählen.
