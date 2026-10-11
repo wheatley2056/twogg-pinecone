@@ -2,43 +2,76 @@
   import { onMount } from "svelte";
   import { api, errorText } from "./lib/api";
   import { t } from "./lib/i18n.svelte";
+  import { notify } from "./lib/notifications.svelte";
+  import { hasUnread } from "./lib/notifications.svelte";
+  import { startFriends } from "./lib/friends.svelte";
+  import { byRecent, versionLabel } from "./lib/profiles";
   import { runOf, startGame } from "./lib/runs.svelte";
-  import { loadSettings } from "./lib/settings.svelte";
+  import { loadSettings, settings } from "./lib/settings.svelte";
   import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
-  import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType } from "./lib/types";
-  import AccountMenu from "./components/AccountMenu.svelte";
-  import Discover from "./components/Discover.svelte";
-  import Home from "./components/Home.svelte";
+  import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType, SyncPack } from "./lib/types";
+  import DiscoverPage from "./components/pages/DiscoverPage.svelte";
+  import PlayPage from "./components/pages/PlayPage.svelte";
   import ImportDialog from "./components/ImportDialog.svelte";
-  import Icon, { type IconName } from "./components/Icon.svelte";
-  import Library from "./components/Library.svelte";
+  import InstanceView, { type InstanceTab } from "./components/library/InstanceView.svelte";
+  import NewSyncDialog from "./components/library/NewSyncDialog.svelte";
+  import SyncPackView from "./components/library/SyncPackView.svelte";
+  import EventsPage from "./components/pages/EventsPage.svelte";
+  import LibraryPage from "./components/pages/LibraryPage.svelte";
   import MissingDialog from "./components/MissingDialog.svelte";
   import ProfileDialog from "./components/ProfileDialog.svelte";
-  import ProfileIcon from "./components/ProfileIcon.svelte";
-  import ProfileView from "./components/ProfileView.svelte";
-  import Settings from "./components/Settings.svelte";
-  import SyncPacks from "./components/SyncPacks.svelte";
-  import Skins from "./components/Skins.svelte";
-  import Screenshots from "./components/Screenshots.svelte";
+  import SettingsPage, { type SettingsSection } from "./components/pages/SettingsPage.svelte";
+  import SkinsPage from "./components/pages/SkinsPage.svelte";
+  import Friends from "./components/shell/Friends.svelte";
+  import Panels from "./components/shell/Panels.svelte";
+  import PlayBar from "./components/shell/PlayBar.svelte";
+  import TitleBar, { type Tab } from "./components/shell/TitleBar.svelte";
 
-  type View = "home" | "library" | "discover" | "syncpacks" | "skins" | "screenshots" | "profile" | "settings";
+  type View = Tab | "settings";
+
+  const SELECTED_KEY = "pinecone.selected";
 
   let info = $state<AppInfo | null>(null);
   let profiles = $state<Profile[]>([]);
   let accounts = $state<Account[]>([]);
-  let selectedId = $state<string | null>(null);
+  // Gewählte Instanz: gilt für Spielleiste und Bibliothek gleichermaßen.
+  let selectedId = $state<string | null>(readSelected());
   let view = $state<View>("home");
+  let panel = $state<"activity" | "notifications" | null>(null);
   let creating = $state(false);
   let loadError = $state<string | null>(null);
   // Neu laden der Startseite nach Spielende (Spielzeit, letzter Server).
   let homeKey = $state(0);
   // Entdecken aus einem Profil heraus: Ziel und Inhaltsart vorbelegen.
-  let discoverTarget = $state<{ profileId: string | null; type: ProjectType }>({ profileId: null, type: "mod" });
-  let profileTab = $state<"content" | "log">("content");
+  let discoverTarget = $state<{ profileId: string | null; type: ProjectType }>({ profileId: null, type: "modpack" });
+  let instanceTab = $state<InstanceTab>("content");
+  // Rechts in der Bibliothek: Instanz (selectedId) oder ein Sync-Pack.
+  let syncId = $state<string | null>(null);
+  let syncPacks = $state<SyncPack[]>([]);
+  let creatingSync = $state(false);
+  let settingsSection = $state<SettingsSection>("general");
+  let eventId = $state<string | null>(null);
   let missing = $state<ImportResult | null>(null);
   // Modpack-Vorschau: aus der Bibliothek, per pinecone://-Link oder beim Öffnen einer .mrpack-Datei.
   let openRequest = $state<OpenRequest | null>(null);
   let openQueue: OpenRequest[] = [];
+
+  function readSelected(): string | null {
+    try {
+      return localStorage.getItem(SELECTED_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  function select(id: string) {
+    selectedId = id;
+    try {
+      localStorage.setItem(SELECTED_KEY, id);
+    } catch {
+      // Ohne Speicher bleibt die Wahl nur bis zum Neustart.
+    }
+  }
 
   function openPack(request: OpenRequest) {
     if (openRequest) openQueue.push(request);
@@ -62,14 +95,17 @@
 
   const selected = $derived(profiles.find((p) => p.id === selectedId) ?? null);
   const hasAccount = $derived(accounts.some((a) => a.active));
-  const running = $derived(profiles.filter((p) => runOf(p.id).status !== "idle"));
+  const tab = $derived<Tab | null>(view === "settings" ? null : view);
+  const syncPack = $derived(syncId ? (syncPacks.find((s) => s.id === syncId) ?? null) : null);
+  const activity = $derived(profiles.filter((p) => runOf(p.id).status === "preparing").length);
+  const customFrame = $derived(!(settings.current?.systemFrame ?? false));
 
   async function reloadProfiles() {
     try {
       profiles = await api.profiles();
-      if (selectedId && !profiles.some((p) => p.id === selectedId)) {
-        selectedId = null;
-        if (view === "profile") view = "library";
+      if (!profiles.some((p) => p.id === selectedId)) {
+        const first = [...profiles].sort(byRecent)[0];
+        selectedId = first?.id ?? null;
       }
     } catch (e) {
       loadError = errorText(e);
@@ -93,21 +129,67 @@
     if (info?.updatesConfigured) checkUpdates(true);
   });
 
-  function openProfile(id: string, tab: "content" | "log" = "content") {
-    selectedId = id;
-    profileTab = tab;
-    view = "profile";
+  // Freundesliste: Status melden (gewählte Instanz, ob gespielt wird, Server beim Schnellbeitritt).
+  onMount(() =>
+    startFriends(() => {
+      const p = selected;
+      const run = p ? runOf(p.id) : null;
+      return {
+        instance: p?.name ?? null,
+        version: p ? versionLabel(p) : null,
+        server: run?.status === "running" ? run.server : null,
+        playing: run?.status === "running",
+      };
+    }),
+  );
+
+  // Gefundenes App-Update als Benachrichtigung anbieten.
+  $effect(() => {
+    const u = updates.info;
+    if (!u) return;
+    notify({
+      id: `app-update-${u.version}`,
+      kind: "update",
+      title: t("notice.appUpdate", { version: u.version }),
+      action: { label: t("notice.install"), run: installUpdate },
+    });
+  });
+
+  function openProfile(id: string, tab: InstanceTab = "content") {
+    select(id);
+    syncId = null;
+    instanceTab = tab;
+    view = "library";
   }
 
-  function onGameExit() {
+  async function reloadSyncPacks() {
+    syncPacks = await api.syncpackList().catch(() => []);
+  }
+
+  $effect(() => {
+    if (view === "library") reloadSyncPacks();
+  });
+
+  function onGameExit(id: string) {
+    const run = runOf(id);
+    if (run.error) {
+      const name = profiles.find((p) => p.id === id)?.name ?? id;
+      notify({
+        id: `game-${id}-${Date.now()}`,
+        kind: "error",
+        title: t("notice.gameError", { name }),
+        text: run.error,
+        action: { label: t("profile.tabLog"), run: () => openProfile(id, "logs") },
+      });
+    }
     reloadProfiles();
     homeKey++;
   }
 
-  /** Starten: zum Profil mit Log wechseln, damit Fortschritt und Ausgabe sichtbar sind. */
+  /** Starten aus Spielleiste, Startseite oder Server-Schnellbeitritt. */
   function play(id: string, server?: string) {
-    openProfile(id, "log");
-    startGame(id, onGameExit, server ?? null);
+    select(id);
+    startGame(id, () => onGameExit(id), server ?? null);
   }
 
   function discover(profileId: string | null, kind: ContentKind) {
@@ -115,117 +197,136 @@
     view = "discover";
   }
 
-  const nav: [View, IconName, () => string][] = [
-    ["home", "home", () => t("nav.home")],
-    ["library", "library", () => t("nav.library")],
-    ["discover", "discover", () => t("nav.discover")],
-    ["syncpacks", "layers", () => t("nav.syncpacks")],
-    ["skins", "shirt", () => t("nav.skins")],
-    ["screenshots", "image", () => t("nav.screenshots")],
-  ];
+  function togglePanel(p: "activity" | "notifications") {
+    panel = panel === p ? null : p;
+  }
+
 </script>
 
-<div class="shell">
-  <nav class="rail" aria-label="Navigation">
-    <img class="logo" src="/pinecone.svg" alt="TwoGG Pinecone" width="34" height="34" />
-    {#each nav as [id, icon, label] (id)}
-      <button class="rail-item" class:active={view === id || (id === "library" && view === "profile")} onclick={() => (view = id)}>
-        <Icon name={icon} size={22} />
-        <span>{label()}</span>
-      </button>
-    {/each}
+<div class="app" class:framed={customFrame}>
+  <TitleBar
+    {tab}
+    settingsOpen={view === "settings"}
+    {activity}
+    unread={hasUnread()}
+    {customFrame}
+    {panel}
+    onTab={(id) => ((view = id), (panel = null))}
+    onSettings={() => ((view = "settings"), (panel = null))}
+    onPanel={togglePanel}
+  />
 
-    {#if running.length > 0}
-      <div class="rail-sep"></div>
-      {#each running as p (p.id)}
-        <button class="rail-running" title={`${p.name} · ${t("nav.running")}`} onclick={() => openProfile(p.id, "log")}>
-          <ProfileIcon profile={p} size={34} />
-          <span class="pulse"></span>
-        </button>
-      {/each}
-    {/if}
-
-    <div class="spacer"></div>
-    <button class="rail-item" class:active={view === "settings"} onclick={() => (view = "settings")}>
-      <Icon name="settings" size={22} />
-      <span>{t("nav.settings")}</span>
-    </button>
-    <AccountMenu {accounts} msaConfigured={info?.msaConfigured ?? false} onChange={reloadAccounts} compact />
-  </nav>
-
-  <main class="view">
+  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library" || view === "discover" || view === "settings" || view === "events" || view === "skins"}>
     {#if loadError}
       <p class="error">{loadError}</p>
-    {/if}
-    {#if updates.info && !updates.dismissed && view !== "settings"}
-      <div class="update-banner">
-        <span>{t("appUpdate.available", { version: updates.info.version })}</span>
-        {#if updates.progress !== null}
-          <progress max="1" value={updates.progress}></progress>
-          <span class="muted">{updates.installing ? t("appUpdate.installing") : t("appUpdate.downloading")}</span>
-        {:else}
-          <button class="primary" onclick={installUpdate}>{t("appUpdate.install")}</button>
-          <button class="ghost" onclick={() => (view = "settings")}>{t("appUpdate.details")}</button>
-          <button class="ghost" onclick={() => (updates.dismissed = true)}>{t("appUpdate.later")}</button>
-        {/if}
-        {#if updates.error}<span class="error-text">{updates.error}</span>{/if}
-      </div>
     {/if}
     {#if view === "home"}
       {#if profiles.length === 0}
         <div class="welcome">
-          <img src="/pinecone.svg" alt="" width="96" height="96" />
           <h2>{t("welcome.title")}</h2>
           <p class="muted">{t("welcome.text")}</p>
-          <button class="primary" onclick={() => (creating = true)}>{t("welcome.create")}</button>
+          <button class="primary cut" onclick={() => (creating = true)}>{t("welcome.create")}</button>
         </div>
       {:else}
         {#key homeKey}
-          <Home {profiles} {hasAccount} onPlay={play} onOpen={(id) => openProfile(id)} />
+          <PlayPage
+            {profiles}
+            {selectedId}
+            onSelect={select}
+            onJoin={(address) => selected && play(selected.id, address)}
+            onLibrary={() => (view = "library")}
+            onEvents={(id) => ((eventId = id ?? null), (view = "events"))}
+          />
         {/key}
       {/if}
     {:else if view === "library"}
-      <Library
+      <LibraryPage
         {profiles}
-        {hasAccount}
-        onOpen={(id) => openProfile(id)}
-        onPlay={play}
+        {syncPacks}
+        current={syncId ? `sync:${syncId}` : selectedId}
+        onSelect={(id) => openProfile(id, instanceTab)}
+        onSelectSync={(id) => (syncId = id)}
         onCreate={() => (creating = true)}
-        onOpenPack={openPack}
-      />
+        onCreateSync={() => (creatingSync = true)}
+        onImport={() => openPack({ kind: "link", link: "" })}
+      >
+        {#if syncPack}
+          {#key syncPack.id}
+            <SyncPackView
+              pack={syncPack}
+              {profiles}
+              onChanged={async (p) => {
+                await reloadSyncPacks();
+                if (!p) syncId = null;
+              }}
+            />
+          {/key}
+        {:else if selected}
+          {#key selected.id}
+            <InstanceView
+              profile={selected}
+              bind:tab={instanceTab}
+              onChanged={() => onGameExit(selected.id)}
+              onDeleted={reloadProfiles}
+              onAddContent={(kind) => discover(selected.id, kind)}
+              onCreated={onImported}
+              onJoin={(address) => play(selected.id, address)}
+            />
+          {/key}
+        {:else}
+          <div class="welcome">
+            <h2>{t("welcome.title")}</h2>
+            <p class="muted">{t("welcome.text")}</p>
+            <button class="primary cut" onclick={() => (creating = true)}>{t("welcome.create")}</button>
+          </div>
+        {/if}
+      </LibraryPage>
     {:else if view === "discover"}
       {#key discoverTarget}
-        <Discover
+        <DiscoverPage
           {profiles}
-          initialProfileId={discoverTarget.profileId}
+          initialProfileId={discoverTarget.profileId ?? selectedId}
           initialType={discoverTarget.type}
           curseforge={info?.curseforgeConfigured ?? false}
           onPackInstalled={onImported}
         />
       {/key}
-    {:else if view === "screenshots"}
-      <Screenshots {profiles} />
+    {:else if view === "events"}
+      <EventsPage
+        initialId={eventId}
+        {profiles}
+        hasInstance={!!selected}
+        onInstalled={onImported}
+        onOpenInstance={(id) => openProfile(id)}
+        onJoin={(address) => selected && play(selected.id, address)}
+        onLink={() => ((settingsSection = "twogg"), (view = "settings"))}
+      />
     {:else if view === "skins"}
-      <Skins {accounts} />
-    {:else if view === "syncpacks"}
-      <SyncPacks {profiles} />
-    {:else if view === "profile" && selected}
-      {#key selected.id}
-        <ProfileView
-          profile={selected}
-          {hasAccount}
-          bind:tab={profileTab}
-          onPlay={() => play(selected.id)}
-          onChanged={onGameExit}
-          onDeleted={reloadProfiles}
-          onAddContent={(kind) => discover(selected.id, kind)}
-          onCreated={onImported}
-        />
-      {/key}
+      <SkinsPage {accounts} />
     {:else if view === "settings"}
-      <Settings {info} />
+      <SettingsPage {info} {accounts} bind:section={settingsSection} onAccountsChange={reloadAccounts} />
+    {/if}
+
+    {#if panel}
+      <Panels {panel} {profiles} onClose={() => (panel = null)} onOpenProfile={(id) => openProfile(id, "logs")} />
     {/if}
   </main>
+
+  <PlayBar
+    {profiles}
+    {selected}
+    {accounts}
+    msaConfigured={info?.msaConfigured ?? false}
+    onSelect={select}
+    onPlay={(id) => play(id)}
+    onCreate={() => (creating = true)}
+    onLibrary={() => (selected ? openProfile(selected.id) : (view = "library"))}
+    onAccountsChange={reloadAccounts}
+  >
+    {#snippet friends()}
+      <Friends onJoin={(server) => selected && play(selected.id, server)} />
+    {/snippet}
+  </PlayBar>
 </div>
 
 {#if missing}
@@ -236,6 +337,18 @@
   {#key openRequest}
     <ImportDialog request={openRequest} onClose={closeOpenRequest} {onImported} />
   {/key}
+{/if}
+
+{#if creatingSync}
+  <NewSyncDialog
+    onClose={() => (creatingSync = false)}
+    onCreated={async (p) => {
+      creatingSync = false;
+      await reloadSyncPacks();
+      syncId = p.id;
+      view = "library";
+    }}
+  />
 {/if}
 
 {#if creating}
@@ -250,94 +363,19 @@
 {/if}
 
 <style>
-  .shell {
+  .app {
     display: grid;
-    grid-template-columns: 84px 1fr;
+    grid-template-rows: 52px minmax(0, 1fr) 88px;
     height: 100%;
+    background: var(--bg);
   }
 
-  .rail {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 14px 8px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  :global([data-background="on"]) .rail {
-    background: color-mix(in srgb, var(--surface) 82%, transparent);
-    backdrop-filter: blur(14px);
-  }
-
-  .logo {
-    image-rendering: pixelated;
-    margin-bottom: 14px;
-  }
-
-  .rail-item {
-    width: 68px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 9px 4px 7px;
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    font-size: 11px;
-    border-radius: 10px;
-  }
-
-  .rail-item:hover:not(:disabled) {
-    color: var(--text);
-  }
-
-  .rail-item.active {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent);
-  }
-
-  .rail-sep {
-    width: 36px;
-    height: 1px;
-    background: var(--border);
-    margin: 8px 0;
-  }
-
-  .rail-running {
-    position: relative;
-    padding: 2px;
-    border: none;
-    background: transparent;
-  }
-
-  .pulse {
-    position: absolute;
-    right: -1px;
-    bottom: -1px;
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    background: var(--accent);
-    border: 2px solid var(--surface);
-    animation: pulse 1.6s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    50% {
-      opacity: 0.45;
-    }
-  }
-
-  .spacer {
-    flex: 1;
+  .app.framed {
+    border: 1px solid var(--line-strong);
   }
 
   .view {
+    position: relative;
     min-width: 0;
     min-height: 0;
     padding: 22px 28px;
@@ -347,24 +385,8 @@
     overflow: hidden;
   }
 
-  .update-banner {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding: 8px 12px;
-    border-radius: var(--radius);
-    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-    font-size: 13px;
-  }
-
-  .update-banner progress {
-    width: 160px;
-  }
-
-  .error-text {
-    color: var(--danger);
+  .view.bleed {
+    padding: 0;
   }
 
   .welcome {
@@ -373,11 +395,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     max-width: 420px;
   }
 
-  .welcome img {
-    image-rendering: pixelated;
+  .welcome h2 {
+    font-size: 28px;
   }
 </style>

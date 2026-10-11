@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
+  import { open } from "@tauri-apps/plugin-dialog";
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
   import type { ImportResult, OpenRequest, PreviewResult } from "../lib/types";
@@ -26,6 +27,11 @@
     dialog.showModal();
     if (!asking) load(request);
   });
+
+  async function chooseFile() {
+    const path = await open({ multiple: false, filters: [{ name: t("pack.filterAny"), extensions: ["mrpack", "zip"] }] });
+    if (typeof path === "string") load({ kind: "file", path });
+  }
 
   async function load(r: OpenRequest) {
     loading = true;
@@ -82,6 +88,7 @@
           <input bind:value={linkInput} placeholder="pinecone://modrinth/…" spellcheck="false" autofocus />
         </label>
         <p class="muted small">{t("import.linkHint")}</p>
+        <button type="button" class="dashed" onclick={chooseFile} disabled={loading}><Icon name="file" size={16} />{t("import.chooseFile")}</button>
       </form>
     {/if}
 
@@ -174,7 +181,7 @@
   }
 
   .summary {
-    color: var(--muted);
+    color: var(--text-muted);
   }
 
   dl {
@@ -183,12 +190,11 @@
     gap: 6px 14px;
     margin: 0;
     padding: 10px 12px;
-    border-radius: var(--radius);
     background: var(--surface-2);
   }
 
   dt {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 13px;
   }
 
@@ -201,7 +207,6 @@
     align-items: flex-start;
     gap: 8px;
     padding: 8px 12px;
-    border-radius: var(--radius);
     border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     background: color-mix(in srgb, var(--accent) 10%, transparent);
     font-size: 13px;

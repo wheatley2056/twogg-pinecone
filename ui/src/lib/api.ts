@@ -2,6 +2,17 @@ import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
   Account,
+  AppEvent,
+  AppFriend,
+  AppUser,
+  FriendActivity,
+  FriendsState,
+  JoinInfo,
+  Recommendation,
+  SavedServer,
+  World,
+  ServerInfo,
+  Participation,
   AppInfo,
   JavaInstallation,
   LaunchEvent,
@@ -170,11 +181,35 @@ export const api = {
 
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
-  setBackground: (path: string) => invoke<Settings>("set_background", { path }),
-  clearBackground: () => invoke<Settings>("clear_background"),
   exportTheme: (path: string) => invoke<void>("export_theme", { path }),
   importTheme: (path: string) => invoke<Settings>("import_theme", { path }),
   stopGame: (id: string) => invoke<void>("stop_game", { id }),
+
+  datapackInstall: (id: string, world: string, project: string, version: string | null = null) =>
+    invoke<string>("datapack_install", { id, world, project, version }),
+  worlds: (id: string) => invoke<World[]>("worlds_list", { id }),
+  worldBackup: (id: string, folder: string) => invoke<string>("world_backup", { id, folder }),
+  worldDelete: (id: string, folder: string) => invoke<void>("world_delete", { id, folder }),
+  worldOpenFolder: (id: string, folder: string) => invoke<void>("world_open_folder", { id, folder }),
+  savedServers: (id: string) => invoke<SavedServer[]>("servers_list", { id }),
+  recommendations: (projectType: ProjectType) => invoke<Recommendation[]>("twogg_recommendations", { projectType }),
+  serverInfo: () => invoke<ServerInfo>("twogg_server_info"),
+  friends: () => invoke<FriendsState>("friends_list"),
+  friendsPresence: (activity: FriendActivity) => invoke<void>("friends_presence", { activity }),
+  friendRequest: (name: string) => invoke<"requested" | "friends">("friends_request", { name }),
+  friendAccept: (uuid: string) => invoke<void>("friends_accept", { uuid }),
+  friendDecline: (uuid: string) => invoke<void>("friends_decline", { uuid }),
+  friendRemove: (uuid: string) => invoke<void>("friends_remove", { uuid }),
+  appEvents: () => invoke<AppEvent[]>("twogg_app_events"),
+  appMe: () => invoke<AppUser | null>("twogg_app_me"),
+  appLoginDiscord: () => invoke<void>("twogg_app_login_discord"),
+  appLoginPassword: (email: string, password: string) => invoke<AppUser>("twogg_app_login_password", { email, password }),
+  appLogout: () => invoke<void>("twogg_app_logout"),
+  appParticipations: () => invoke<Participation[]>("twogg_app_participations"),
+  appJoin: (eventId: string) => invoke<JoinInfo>("twogg_app_join", { eventId }),
+  appFriends: () => invoke<AppFriend[]>("twogg_app_friends"),
+  onAppLogin: (handler: (result: { user?: AppUser; error?: string }) => void) =>
+    listen<{ user?: AppUser; error?: string }>("twogg-app-login", (e) => handler(e.payload)),
 };
 
 /** Lokale Datei für `<img src>`; `data:`-URLs (Mock-Modus) bleiben unverändert. */

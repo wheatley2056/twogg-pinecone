@@ -76,11 +76,24 @@ fn is_running(state: &AppState, id: &str) -> bool {
 #[tauri::command]
 pub fn list_profiles(state: State<'_, AppState>) -> CmdResult<Vec<ProfileDto>> {
     let profiles = state.launcher.profiles().list().map_err(err)?;
+    let stats = state.launcher.stats().load().unwrap_or_default();
+    let packs = state.launcher.packs();
     Ok(profiles
         .into_iter()
         .map(|p| {
             let running = is_running(&state, &p.id);
-            ProfileDto::new(p, running)
+            let info = packs.pack_info(&p.id).ok().flatten();
+            let source = info.as_ref().map(|i| crate::packs::source_name(&i.source));
+            let pack_id = match info.map(|i| i.source) {
+                Some(pinecone_core::modpack::PackSource::Twogg { pack_id, .. }) => Some(pack_id),
+                _ => None,
+            };
+            let last_played = stats.profiles.get(&p.id).and_then(|s| s.last_played);
+            let mut dto = ProfileDto::new(p, running);
+            dto.pack_source = source;
+            dto.pack_id = pack_id;
+            dto.last_played = last_played;
+            dto
         })
         .collect())
 }

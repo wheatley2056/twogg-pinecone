@@ -1,41 +1,43 @@
 <script lang="ts">
+  // Tab „Screenshots“: Galerie der Instanz nach Tagen, Vollbild mit Kopieren, Speichern,
+  // Ordner, extern öffnen, Löschen. Neue Bilder erscheinen von selbst.
   import { onDestroy, onMount } from "svelte";
   import { save } from "@tauri-apps/plugin-dialog";
-  import { api, errorText, fileSrc } from "../lib/api";
-  import { t, locale } from "../lib/i18n.svelte";
-  import type { Profile, ScreenshotItem } from "../lib/types";
-  import ConfirmDialog from "./ConfirmDialog.svelte";
-  import Icon from "./Icon.svelte";
+  import { api, errorText, fileSrc } from "../../lib/api";
+  import { locale, t } from "../../lib/i18n.svelte";
+  import type { Profile, ScreenshotItem } from "../../lib/types";
+  import ConfirmDialog from "../ConfirmDialog.svelte";
+  import Icon from "../Icon.svelte";
 
-  let { profiles }: { profiles: Profile[] } = $props();
+  let { profile }: { profile: Profile } = $props();
 
-  let shots = $state<ScreenshotItem[]>([]);
+  let shots = $state<ScreenshotItem[] | null>(null);
   let thumbs = $state<Record<string, string>>({});
-  let filter = $state<string>("all");
   let open = $state<ScreenshotItem | null>(null);
   let error = $state<string | null>(null);
   let notice = $state<string | null>(null);
   let confirmDelete = $state<ScreenshotItem | null>(null);
   let unlisten: (() => void) | null = null;
 
-  const shown = $derived(filter === "all" ? shots : shots.filter((s) => s.profileId === filter));
+  const list = $derived(shots ?? []);
   const groups = $derived.by(() => {
     const out: { day: string; items: ScreenshotItem[] }[] = [];
-    for (const s of shown) {
-      const day = new Date(s.modified * 1000).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    for (const s of list) {
+      const day = new Date(s.modified * 1000).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" });
       const last = out.at(-1);
       if (last?.day === day) last.items.push(s);
       else out.push({ day, items: [s] });
     }
     return out;
   });
-  const index = $derived(open ? shown.findIndex((s) => s.path === open!.path) : -1);
+  const index = $derived(open ? list.findIndex((s) => s.path === open!.path) : -1);
 
   async function load() {
     try {
-      shots = await api.screenshotsList();
+      shots = (await api.screenshotsList()).filter((s) => s.profileId === profile.id);
     } catch (e) {
       error = errorText(e);
+      shots = [];
     }
   }
 
@@ -67,9 +69,8 @@
   onDestroy(() => unlisten?.());
 
   function step(delta: number) {
-    if (index < 0) return;
-    const next = shown[index + delta];
-    if (next) open = next;
+    const next = list[index + delta];
+    if (index >= 0 && next) open = next;
   }
 
   function onKey(e: KeyboardEvent) {
@@ -103,7 +104,7 @@
 
   async function remove(s: ScreenshotItem) {
     confirmDelete = null;
-    const next = shown[index + 1] ?? shown[index - 1] ?? null;
+    const next = list[index + 1] ?? list[index - 1] ?? null;
     await act(() => api.screenshotDelete(s.path));
     if (open?.path === s.path) open = next && next.path !== s.path ? next : null;
     await load();
@@ -116,58 +117,44 @@
 
 <svelte:window onkeydown={onKey} />
 
-<section class="shots">
-  <header>
-    <div>
-      <h1>{t("shots.title")}</h1>
-      <span class="muted">{t("shots.count", { count: shown.length })}</span>
-    </div>
-    <label class="filter">
-      {t("shots.profile")}
-      <select bind:value={filter}>
-        <option value="all">{t("shots.allProfiles")}</option>
-        {#each profiles as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
-      </select>
-    </label>
-  </header>
+<div class="tab">
   {#if error}<p class="error">{error}</p>{/if}
   {#if notice}<p class="notice">{notice}</p>{/if}
 
-  {#if shown.length === 0}
-    <div class="empty">
-      <Icon name="image" size={40} />
-      <p class="muted">{t("shots.empty")}</p>
-    </div>
+  {#if shots === null}
+    <p class="empty">{t("common.loading")}</p>
+  {:else if list.length === 0}
+    <p class="empty">{t("shots.emptyInstance")}</p>
   {/if}
 
   {#each groups as g (g.day)}
-    <h2>{g.day}</h2>
+    <h3 class="section-label">{g.day}</h3>
     <div class="grid">
       {#each g.items as s (s.path)}
-        <button class="tile" onclick={() => (open = s)} use:lazyThumb={s.path} title={`${s.profileName} · ${time(s)}`}>
+        <button class="tile" onclick={() => (open = s)} use:lazyThumb={s.path} title={time(s)}>
           {#if thumbs[s.path]}<img src={thumbs[s.path]} alt="" loading="lazy" />{:else}<span class="placeholder"></span>{/if}
-          <span class="caption"><span>{s.profileName}</span><span>{time(s)}</span></span>
+          <span class="caption mono">{time(s)}</span>
         </button>
       {/each}
     </div>
   {/each}
-</section>
+</div>
 
 {#if open}
   <div class="lightbox" role="dialog" aria-modal="true" aria-label={t("shots.title")}>
     <button class="backdrop" aria-label={t("common.close")} onclick={() => (open = null)}></button>
     <img src={fileSrc(open.path)} alt="" />
-    <button class="nav prev" onclick={() => step(-1)} disabled={index <= 0} aria-label={t("shots.prev")}>‹</button>
-    <button class="nav next" onclick={() => step(1)} disabled={index >= shown.length - 1} aria-label={t("shots.next")}>›</button>
+    <button class="nav prev" onclick={() => step(-1)} disabled={index <= 0} aria-label={t("shots.prev")}><Icon name="chevron" size={22} /></button>
+    <button class="nav next" onclick={() => step(1)} disabled={index >= list.length - 1} aria-label={t("shots.next")}><Icon name="chevron" size={22} /></button>
     <div class="bar">
-      <span class="info">{open.profileName} · {new Date(open.modified * 1000).toLocaleString(locale())}</span>
-      <div class="spacer"></div>
+      <span class="info mono">{new Date(open.modified * 1000).toLocaleString(locale())}</span>
+      <span class="spacer"></span>
       <button onclick={() => copy(open!)}>{t("shots.copy")}</button>
       <button onclick={() => saveAs(open!)}>{t("shots.saveAs")}</button>
-      <button onclick={() => act(() => api.screenshotReveal(open!.path))}><Icon name="folder" size={15} />{t("shots.reveal")}</button>
-      <button onclick={() => act(() => api.openScreenshot(open!.path))}><Icon name="external" size={15} />{t("shots.openExternal")}</button>
-      <button class="danger" onclick={() => (confirmDelete = open)}><Icon name="trash" size={15} /></button>
-      <button onclick={() => (open = null)} aria-label={t("common.close")}><Icon name="close" size={15} /></button>
+      <button class="icon-btn" aria-label={t("shots.reveal")} title={t("shots.reveal")} onclick={() => act(() => api.screenshotReveal(open!.path))}><Icon name="folder" size={17} /></button>
+      <button class="icon-btn" aria-label={t("shots.openExternal")} title={t("shots.openExternal")} onclick={() => act(() => api.openScreenshot(open!.path))}><Icon name="external" size={17} /></button>
+      <button class="icon-btn danger" aria-label={t("shots.delete")} title={t("shots.delete")} onclick={() => (confirmDelete = open)}><Icon name="trash" size={17} /></button>
+      <button class="icon-btn" aria-label={t("common.close")} onclick={() => (open = null)}><Icon name="close" size={17} /></button>
     </div>
   </div>
 {/if}
@@ -179,67 +166,35 @@
 {/if}
 
 <style>
-  .shots {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+  .tab {
+    flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding-right: 4px;
-  }
-
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  h1 {
-    font-size: 24px;
-  }
-
-  h2 {
-    font-size: 14px;
-    margin: 8px 0 0;
-    color: var(--muted);
-    font-weight: 600;
-  }
-
-  .filter {
-    min-width: 220px;
-  }
-
-  .notice {
-    color: var(--accent);
-    margin: 0;
-  }
-
-  .empty {
-    margin: 60px auto;
+    padding: 16px 28px;
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 10px;
-    color: var(--muted);
-    text-align: center;
-    max-width: 360px;
+  }
+
+  h3 {
+    margin: 6px 0 0;
+    font-weight: 400;
   }
 
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
+    gap: 12px;
   }
 
   .tile {
     position: relative;
     padding: 0;
-    border-radius: 10px;
-    overflow: hidden;
+    min-height: 0;
     aspect-ratio: 16 / 9;
-    background: var(--surface-2);
+    overflow: hidden;
+    background: var(--surface);
+    clip-path: var(--cut-2);
   }
 
   .tile img,
@@ -252,74 +207,70 @@
 
   .caption {
     position: absolute;
-    left: 0;
     right: 0;
     bottom: 0;
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 14px 8px 5px;
+    padding: 3px 8px;
     font-size: 11px;
-    color: #fff;
-    background: linear-gradient(transparent, rgb(0 0 0 / 0.65));
-    opacity: 0;
-    transition: opacity 0.12s;
+    font-weight: 400;
+    background: var(--bar-glass);
+    color: var(--text-soft);
   }
 
-  .tile:hover .caption,
-  .tile:focus-visible .caption {
-    opacity: 1;
+  .empty {
+    color: var(--text-dim);
+  }
+
+  .notice {
+    margin: 0;
+    font-size: 13px;
+    color: var(--nadel);
   }
 
   .lightbox {
     position: fixed;
     inset: 0;
-    z-index: 40;
+    z-index: 50;
     display: grid;
     place-items: center;
-    padding: 24px 24px 72px;
+    background: rgb(8 6 4 / 0.92);
   }
 
   .backdrop {
     position: absolute;
     inset: 0;
-    border: none;
-    border-radius: 0;
-    background: rgb(0 0 0 / 0.85);
+    background: transparent;
   }
 
   .backdrop:hover:not(:disabled) {
-    background: rgb(0 0 0 / 0.85);
+    background: transparent;
   }
 
   .lightbox img {
     position: relative;
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 8px;
-    box-shadow: 0 10px 40px rgb(0 0 0 / 0.5);
+    max-width: calc(100% - 140px);
+    max-height: calc(100% - 140px);
+    object-fit: contain;
   }
 
   .nav {
     position: absolute;
     top: 50%;
-    transform: translateY(-50%);
-    font-size: 32px;
-    line-height: 1;
     width: 44px;
-    height: 64px;
+    height: 44px;
+    min-height: 0;
     padding: 0;
-    background: rgb(0 0 0 / 0.4);
-    color: #fff;
-    border: none;
+    translate: 0 -50%;
+    background: var(--surface-2);
   }
 
   .prev {
-    left: 12px;
+    left: 20px;
+    rotate: 90deg;
   }
 
   .next {
-    right: 12px;
+    right: 20px;
+    rotate: -90deg;
   }
 
   .bar {
@@ -330,23 +281,22 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 16px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-  }
-
-  .bar button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    padding: 12px 20px;
+    background: var(--bar-glass);
+    border-top: 1px solid var(--line);
   }
 
   .info {
-    font-size: 13px;
-    color: var(--muted);
+    font-size: 12px;
+    color: var(--text-muted);
   }
 
   .spacer {
     flex: 1;
+  }
+
+  .icon-btn {
+    width: 38px;
+    padding: 0;
   }
 </style>

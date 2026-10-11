@@ -142,7 +142,7 @@ pub fn pack_info(state: State<'_, AppState>, id: String) -> CmdResult<Option<Pac
         }))
 }
 
-fn source_name(source: &PackSource) -> &'static str {
+pub fn source_name(source: &PackSource) -> &'static str {
     match source {
         PackSource::Modrinth { .. } => "modrinth",
         PackSource::Curseforge { .. } => "curseforge",

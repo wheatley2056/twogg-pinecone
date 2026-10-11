@@ -102,7 +102,6 @@
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    border-radius: var(--radius);
     background: var(--surface-2);
     font-size: 13px;
     color: var(--text);

@@ -3653,6 +3653,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "directories",
+ "flate2",
  "futures",
  "hickory-resolver",
  "image",
@@ -3685,6 +3686,7 @@ dependencies = [
  "pinecone-core",
  "pulldown-cmark",
  "rand 0.8.8",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha1",

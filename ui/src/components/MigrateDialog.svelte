@@ -2,6 +2,7 @@
   import { onMount, untrack } from "svelte";
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
+  import Icon from "./Icon.svelte";
   import type { ImportResult, LoaderKind, LoaderSpec, MigrationPlan, MissingChoice, Profile, VersionInfo } from "../lib/types";
 
   interface Props {
@@ -175,9 +176,9 @@
       {/if}
 
       <div class="summary">
-        <span class="ok">✓ {t("migrate.found", { count: groups.update.length + groups.compatible.length })}</span>
-        {#if groups.substitute.length}<span class="ok">↺ {t("migrate.substituted", { count: groups.substitute.length })}</span>{/if}
-        {#if groups.missing.length}<span class="bad">✗ {t("migrate.missingCount", { count: groups.missing.length })}</span>{/if}
+        <span class="chip ok"><Icon name="check" size={13} stroke={2.4} />{t("migrate.found", { count: groups.update.length + groups.compatible.length })}</span>
+        {#if groups.substitute.length}<span class="chip ok"><Icon name="refresh" size={13} />{t("migrate.substituted", { count: groups.substitute.length })}</span>{/if}
+        {#if groups.missing.length}<span class="chip bad"><Icon name="close" size={13} stroke={2.4} />{t("migrate.missingCount", { count: groups.missing.length })}</span>{/if}
         {#if groups.kept.length}<span class="muted">· {t("migrate.keptCount", { count: groups.kept.length })}</span>{/if}
       </div>
 
@@ -295,7 +296,6 @@
     justify-content: space-between;
     gap: 12px;
     padding: 10px 12px;
-    border-radius: var(--radius);
     border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     background: color-mix(in srgb, var(--accent) 10%, transparent);
     font-size: 13px;
@@ -347,7 +347,6 @@
     align-items: center;
     gap: 10px;
     padding: 5px 10px;
-    border-radius: var(--radius);
     background: var(--surface-2);
     font-size: 13px;
   }

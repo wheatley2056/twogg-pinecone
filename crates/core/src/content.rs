@@ -51,7 +51,7 @@ impl ContentKind {
             ProjectType::Mod => Some(ContentKind::Mod),
             ProjectType::Resourcepack => Some(ContentKind::Resourcepack),
             ProjectType::Shader => Some(ContentKind::Shader),
-            ProjectType::Modpack => None,
+            ProjectType::Modpack | ProjectType::Datapack => None,
         }
     }
 
@@ -216,6 +216,64 @@ impl ContentManager {
 
     pub fn modrinth(&self) -> &Modrinth {
         &self.modrinth
+    }
+
+    /// Lädt ein Datenpaket von Modrinth in `saves/<welt>/datapacks` und gibt den Dateinamen zurück.
+    /// Ohne `version` die neueste stabile Version für die Minecraft-Version der Instanz.
+    pub async fn install_datapack(
+        &self,
+        game_dir: &Path,
+        world: &str,
+        project: &str,
+        version: Option<&str>,
+        minecraft: &str,
+    ) -> Result<String> {
+        if !crate::worlds::valid_folder(world)
+            || !game_dir
+                .join("saves")
+                .join(world)
+                .join("level.dat")
+                .is_file()
+        {
+            return Err(Error::Invalid(format!("Welt {world:?} nicht gefunden")));
+        }
+        let chosen = match version {
+            Some(id) => self.modrinth.version(id).await?,
+            None => {
+                let versions = self
+                    .modrinth
+                    .versions(project, &["datapack".into()], &[minecraft.into()])
+                    .await?;
+                crate::modrinth::best_version(&versions)
+                    .cloned()
+                    .ok_or_else(|| {
+                        Error::Invalid(format!("Kein Datenpaket für Minecraft {minecraft}"))
+                    })?
+            }
+        };
+        let file = chosen.primary_file().ok_or_else(|| {
+            Error::Invalid(format!("Version {} hat keine Datei", chosen.version_number))
+        })?;
+        let name = file.filename.replace(['/', '\\'], "_");
+        if !name.ends_with(".zip") {
+            return Err(Error::Invalid(format!(
+                "{name} ist kein Datenpaket (ZIP erwartet)"
+            )));
+        }
+        let dest = game_dir
+            .join("saves")
+            .join(world)
+            .join("datapacks")
+            .join(&name);
+        self.downloader
+            .download(&crate::download::DownloadTask {
+                url: file.url.clone(),
+                dest,
+                sha1: Some(file.hashes.sha1.clone()),
+                size: Some(file.size),
+            })
+            .await?;
+        Ok(name)
     }
 
     pub fn curseforge(&self) -> Option<&CurseForge> {

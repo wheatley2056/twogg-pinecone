@@ -98,6 +98,8 @@ enum Command {
     /// Server abfragen.
     #[command(subcommand)]
     Server(ServerCommand),
+    /// Events von twogg.app anzeigen.
+    Events,
     /// Spielzeit je Profil anzeigen.
     Stats,
     /// Mods, Ressourcenpakete und Shader eines Profils verwalten.
@@ -594,6 +596,23 @@ async fn main() -> Result<()> {
                 }
             }
             anyhow::ensure!(status.success(), "Minecraft wurde mit {status} beendet");
+            Ok(())
+        }
+        Command::Events => {
+            let app = pinecone_core::twogg_app::TwoggApp::new(std::sync::Arc::new(
+                pinecone_core::accounts::KeyringStore,
+            ))?;
+            for e in app.events().await? {
+                let when = match (&e.event_date, e.ended) {
+                    (_, true) => "beendet".to_string(),
+                    (Some(d), _) => d.chars().take(10).collect(),
+                    (None, _) => "Termin folgt".to_string(),
+                };
+                println!("{:<36} {:<12} {:<9} {}", e.title, when, e.event_type, e.url);
+                if !e.summary.is_empty() {
+                    println!("  {}", e.summary);
+                }
+            }
             Ok(())
         }
         Command::Server(ServerCommand::Ping { address }) => {

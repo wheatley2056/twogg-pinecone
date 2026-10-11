@@ -224,7 +224,6 @@
     justify-content: space-between;
     gap: 10px;
     padding: 8px 10px;
-    border-radius: var(--radius);
     background: var(--surface-2);
   }
 
@@ -242,8 +241,7 @@
 
   .segmented {
     display: flex;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border: 1px solid var(--line-strong);
     overflow: hidden;
     flex-shrink: 0;
   }
@@ -257,18 +255,18 @@
   }
 
   .segmented button + button {
-    border-left: 1px solid var(--border);
+    border-left: 1px solid var(--line-strong);
   }
 
   .segmented button.selected {
     background: var(--accent);
-    color: var(--accent-text);
+    color: var(--ink);
     font-weight: 600;
   }
 
   details summary {
     cursor: pointer;
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 13px;
   }
 

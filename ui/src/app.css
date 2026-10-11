@@ -1,60 +1,136 @@
+/* Pinecone-Design-System (docs/design/design-system.md): Tokens, Themes und Grundbausteine. */
+
+@import "@fontsource/figtree/400.css";
+@import "@fontsource/figtree/500.css";
+@import "@fontsource/figtree/600.css";
+@import "@fontsource/figtree/700.css";
+@import "@fontsource/pixelify-sans/500.css";
+@import "@fontsource/pixelify-sans/600.css";
+@import "@fontsource/pixelify-sans/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+/* Theme „Rinde“ (Standard) */
 :root {
-  --bg: #121518;
-  --surface: #1a1e22;
-  --surface-2: #22272c;
-  --surface-3: #2b3137;
-  --border: #30363d;
-  --text: #e6e9eb;
-  --muted: #9aa3ab;
-  --accent: #4caf50;
-  --accent-strong: color-mix(in srgb, var(--accent) 82%, black);
-  --accent-text: #10140f;
-  --danger: #e5534b;
-  --warning: #d29922;
-  --log-bg: #0d0f11;
-  --radius: 8px;
-  --shadow: 0 8px 32px rgb(0 0 0 / 0.45);
+  --bg: #12100d;
+  --bar: #0d0b09;
+  --bar-glass: rgb(13 11 9 / 0.88);
+  --side: #0f0d0b;
+  --stage: #17120d;
+  --surface: #1c1814;
+  --surface-2: #241f19;
+  --surface-active: #2a2219;
+  --surface-past: #17130f;
+  --surface-locked: #1a140d;
+  --line: #2a231b;
+  --line-row: #221c16;
+  --line-strong: #33281f;
+  --line-dashed: #4a3d2e;
+
+  --text: #f1e8da;
+  --text-soft: #d2c4ac;
+  --text-muted: #b5a790;
+  --text-dim: #8f8270;
+
+  /* Akzent: wird in settings.svelte.ts aus der gewählten Farbe gesetzt. */
+  --accent: #e9a23b;
+  --accent-hover: #f3bc64;
+  --accent-split: #d48f2c;
+  --accent-edge: #b8742a;
+  --accent-light: #f6c77a;
+  --accent-fg: var(--accent);
+  --ink: #1b1206;
+  --nadel: #8ccb7e;
+  --danger: #e0705a;
+  --switch-off: #33281f;
+  --toggle-knob-off: #8f8270;
+  --selected-tile: #3a2a18;
+  --segment-active: #3a2f22;
+  --forest-back: #2e2318;
+  --forest-front: #0e0b08;
+  --forest-hill: #211910;
+  --forest-moon: #f3d9a4;
+
+  --font-pixel: "Pixelify Sans", "Figtree", sans-serif;
+  --font-ui: "Figtree", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --cut-1: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+  --cut-2: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --cut-play: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  --edge-accent: inset 0 -3px 0 var(--accent-edge);
+  --edge-dark: inset 0 -3px 0 var(--bar);
+
   color-scheme: dark;
-  font-family: "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
+  font-variant-ligatures: none;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--text);
   background: var(--bg);
 }
 
-:root[data-theme="light"] {
-  --bg: #f3f4f2;
+/* Theme „Kiefer“: tiefes Waldgrün */
+:root[data-theme="kiefer"] {
+  --bg: #0e1512;
+  --bar: #0a0f0d;
+  --bar-glass: rgb(10 15 13 / 0.88);
+  --side: #0c120f;
+  --stage: #111a16;
+  --surface: #16201b;
+  --surface-2: #1c2822;
+  --surface-active: #22302a;
+  --surface-past: #121a16;
+  --surface-locked: #131d17;
+  --line: #1f2b25;
+  --line-row: #1a241f;
+  --line-strong: #26352d;
+  --line-dashed: #3a4d43;
+  --text: #e9efe9;
+  --text-soft: #c8d4cb;
+  --text-muted: #9db0a4;
+  --text-dim: #7e9187;
+  --switch-off: #26352d;
+  --toggle-knob-off: #7e9187;
+  --selected-tile: #24342b;
+  --segment-active: #2a3a31;
+  --forest-back: #1d2c24;
+  --forest-front: #070c09;
+  --forest-hill: #15201a;
+  --forest-moon: #e3ecd9;
+}
+
+/* Theme „Winterland“: hell */
+:root[data-theme="winterland"] {
+  --bg: #edf1f0;
+  --bar: #d5dedc;
+  --bar-glass: rgb(213 222 220 / 0.9);
+  --side: #e2e8e6;
+  --stage: #e6ecea;
   --surface: #ffffff;
-  --surface-2: #eef0ec;
-  --surface-3: #e2e6df;
-  --border: #d3d8cf;
-  --text: #1d2420;
-  --muted: #5e6a62;
-  --log-bg: #1a1e22;
-  --shadow: 0 8px 32px rgb(0 0 0 / 0.18);
+  --surface-2: #e3e9e7;
+  --surface-active: #d6e1dd;
+  --surface-past: #e9eeec;
+  --surface-locked: #f0f2ee;
+  --line: #cbd5d2;
+  --line-row: #dde4e1;
+  --line-strong: #bac6c2;
+  --line-dashed: #8e9f99;
+  --text: #14211c;
+  --text-soft: #2e3f38;
+  --text-muted: #4b5f56;
+  --text-dim: #56685f;
+  --nadel: #3e7a4a;
+  --danger: #b4412b;
+  --switch-off: #bac6c2;
+  --toggle-knob-off: #56685f;
+  --selected-tile: #d6e1dd;
+  --segment-active: #c9d6d1;
+  --forest-back: #c3d1cc;
+  --forest-front: #8fa59c;
+  --forest-hill: #d3dfdb;
+  --forest-moon: #ffffff;
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: light) {
-  :root[data-theme="system"] {
-    --bg: #f3f4f2;
-    --surface: #ffffff;
-    --surface-2: #eef0ec;
-    --surface-3: #e2e6df;
-    --border: #d3d8cf;
-    --text: #1d2420;
-    --muted: #5e6a62;
-    --log-bg: #1a1e22;
-    --shadow: 0 8px 32px rgb(0 0 0 / 0.18);
-    color-scheme: light;
-  }
-}
-
-/* Hintergrundbild: abgedunkelt bzw. aufgehellt, Flächen leicht durchscheinend. */
-:root[data-background="on"] body {
-  background:
-    linear-gradient(color-mix(in srgb, var(--bg) var(--bg-dim), transparent), color-mix(in srgb, var(--bg) var(--bg-dim), transparent)),
-    var(--bg-image) center / cover no-repeat fixed;
 }
 
 * {
@@ -71,6 +147,7 @@ body,
 body {
   overflow: hidden;
   user-select: none;
+  background: var(--bg);
 }
 
 h1,
@@ -78,21 +155,64 @@ h2,
 h3 {
   margin: 0;
   font-weight: 600;
+  line-height: 1;
 }
 
+/* Pixel-Überschriften (abschaltbar in Einstellungen › Darstellung) */
+.pixel,
+h1,
+h2 {
+  font-family: var(--font-pixel);
+  /* Pixelify Sans hat eine fehlerhafte fi-Ligatur. */
+  font-variant-ligatures: none;
+}
+
+:root[data-pixel="off"] {
+  --font-pixel: var(--font-ui);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Abschnitts-Label: TWOGG EVENTS, THEMA … */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+a {
+  color: var(--accent-fg);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+/* Buttons: Standard ist sekundär (Rinde), .primary ist Harz. */
 button {
   font: inherit;
-  color: inherit;
+  font-weight: 600;
+  color: var(--text);
   cursor: pointer;
-  border: 1px solid var(--border);
+  border: 0;
   background: var(--surface-2);
-  border-radius: var(--radius);
-  padding: 7px 14px;
-  transition: background 0.12s, border-color 0.12s;
+  padding: 0 14px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.12s, color 0.12s;
 }
 
 button:hover:not(:disabled) {
-  background: var(--surface-3);
+  background: var(--surface-active);
 }
 
 button:disabled {
@@ -100,23 +220,74 @@ button:disabled {
   cursor: default;
 }
 
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 button.primary {
   background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
-  font-weight: 600;
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: var(--edge-accent);
 }
 
 button.primary:hover:not(:disabled) {
-  background: var(--accent-strong);
+  background: var(--accent-hover);
+}
+
+button.cut,
+.cut-2 {
+  clip-path: var(--cut-2);
+}
+
+.cut-1 {
+  clip-path: var(--cut-1);
+}
+
+button.edge {
+  box-shadow: var(--edge-dark);
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+button.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+button.link {
+  background: transparent;
+  color: var(--accent-fg);
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+button.link:hover:not(:disabled) {
+  background: transparent;
+  color: var(--accent-hover);
+}
+
+button.dashed {
+  background: transparent;
+  border: 1px dashed var(--line-dashed);
+  color: var(--text-muted);
+}
+
+button.dashed:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text);
+}
+
+button.icon {
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  padding: 0;
+  color: var(--text-soft);
 }
 
 button.danger {
@@ -125,42 +296,59 @@ button.danger {
 
 button.danger-solid {
   background: var(--danger);
-  border-color: var(--danger);
-  color: #fff;
-  font-weight: 600;
+  color: var(--ink);
+  font-weight: 700;
 }
 
 button.danger-solid:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 85%, black);
-}
-
-button.ghost {
-  background: transparent;
-  border-color: transparent;
-}
-
-button.ghost:hover:not(:disabled) {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--danger) 85%, white);
 }
 
 input,
 select,
 textarea {
   font: inherit;
-  color: inherit;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 7px 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 0;
+  border-radius: 0;
+  padding: 0 12px;
+  min-height: 36px;
   width: 100%;
   user-select: text;
+}
+
+textarea {
+  padding: 8px 12px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-dim);
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  min-height: 0;
+  accent-color: var(--accent);
+}
+
+input[type="color"] {
+  padding: 2px;
+  height: 36px;
+}
+
+select {
+  background-color: var(--surface-2);
+  cursor: pointer;
 }
 
 label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  color: var(--muted);
+  gap: 5px;
+  color: var(--text-dim);
   font-size: 12px;
 }
 
@@ -172,15 +360,14 @@ label > :is(input, select, textarea) {
 dialog {
   color: var(--text);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
   padding: 0;
   width: min(520px, calc(100vw - 32px));
 }
 
 dialog::backdrop {
-  background: rgb(0 0 0 / 0.55);
+  background: rgb(8 6 4 / 0.7);
 }
 
 .dialog-body {
@@ -190,36 +377,115 @@ dialog::backdrop {
   gap: 14px;
 }
 
+.dialog-body > h2 {
+  font-size: 22px;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   padding: 14px 22px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-2);
-  border-radius: 0 0 12px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--bar);
 }
 
 .error {
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
-  border-radius: var(--radius);
   padding: 8px 12px;
   user-select: text;
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
+/* Meta-Chip (Mono, eckig) und Tag */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 8px;
+  background: var(--surface-2);
+  color: var(--text-soft);
+}
+
+.chip.ok {
+  color: var(--nadel);
+}
+
+.tag,
 .badge {
   display: inline-block;
   font-size: 11px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--surface-3);
-  color: var(--muted);
+  padding: 3px 8px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+/* Event-Badge: TWOGG EVENT · TERMIN FOLGT */
+.event-badge {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 6px 12px 6px 14px;
+  background: var(--accent);
+  color: var(--ink);
+  clip-path: polygon(7px 0, 100% 0, 100% 100%, 0 100%, 0 7px);
+}
+
+.new-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 6px;
+  background: var(--accent);
+  color: var(--ink);
+}
+
+/* Fortschrittsbalken: 4 px, Akzent auf Linie */
+progress {
+  appearance: none;
+  height: 4px;
+  border: 0;
+  background: var(--line-strong);
+}
+
+progress::-webkit-progress-bar {
+  background: var(--line-strong);
+}
+
+progress::-webkit-progress-value {
+  background: var(--accent);
+}
+
+progress::-moz-progress-bar {
+  background: var(--accent);
+}
+
+/* Zapfenschuppen-Muster als Fläche (Farbe folgt dem Akzent). */
+.scales {
+  position: relative;
+}
+
+.scales::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--accent);
+  opacity: var(--scales-opacity, 0.1);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='20'%3E%3Cpath d='M0 10 Q7 0 14 10 Q21 0 28 10 M-7 20 Q0 10 7 20 Q14 10 21 20 Q28 10 35 20' fill='none' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E") repeat;
+}
+
+:root[data-pattern="off"] .scales::before {
+  display: none;
 }
 
 ::-webkit-scrollbar {
@@ -228,8 +494,30 @@ dialog::backdrop {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--surface-3);
-  border-radius: 5px;
+  background: var(--line-strong);
   border: 2px solid transparent;
   background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Animationen reduzieren: Einstellung oder Systemvorgabe */
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0s !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+  }
 }

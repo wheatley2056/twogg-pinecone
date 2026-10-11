@@ -237,6 +237,24 @@ TwoGG-Packs bekommen Updates wie Modrinth-Packs. Die Server-Adresse ist `https:/
 abweichend über `PINECONE_SERVER_URL` (Laufzeit oder beim Bauen). Deploy auf core01 (Docker-Stack,
 Nginx Proxy Manager, Backup): [deploy/pinecone/README.md](deploy/pinecone/README.md).
 
+Weitere Bereiche des Servers:
+
+- **Pinecone-Freunde** (`/api/v1/auth/challenge`, `/auth/verify`, `/me`, `/presence`, `/friends`,
+  `/friends/requests`): Anmeldung mit dem Minecraft-Konto über den Mojang-Session-Server
+  (`session/minecraft/join` im Launcher, `hasJoined` im Server, abweichend über
+  `PINECONE_SESSION_SERVER`). Sitzungen gelten 30 Tage, Status sehen nur Freunde, „online“ heißt
+  Präsenz in den letzten 90 Sekunden. Offline-Konten nehmen nicht teil.
+- **Community-Server** (`/admin` → Einstellungen): Name und Adresse des TwoGG-Servers für die
+  Spielen-Seite, ausgeliefert in `/api/v1/info`.
+- **TwoGG-Auswahl** (`/api/v1/recommendations?type=modpack|mod|resourcepack|shader|datapack`):
+  kuratierte Projekte (TwoGG-Pack, Modrinth oder CurseForge) für den Streifen in „Entdecken“.
+- **Event-Packs**: Ein Modpack kann einer twogg.app-Event-ID zugeordnet werden; die Events-Seite
+  bietet es dann zum Installieren an.
+
+Events, Anmeldungen und Freunde von twogg.app holt der Launcher direkt von `https://api.twogg.app`
+(Anmeldung mit Discord im Login-Fenster oder E-Mail; das Refresh-Token liegt im Schlüsselbund).
+CLI: `pinecone events` listet die kommenden Events.
+
 ## Logs, Diagnose und Updates
 
 Die App schreibt ihre Logs nach `<data-dir>/logs/` (eine Datei pro Tag, die letzten sieben bleiben).

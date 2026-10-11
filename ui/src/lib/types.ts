@@ -38,6 +38,11 @@ export interface Profile {
   color: string | null;
   icon: string | null;
   running: boolean;
+  /** Herkunft, falls aus einem Modpack; nur in der Profil-Liste gesetzt. */
+  packSource?: "twogg" | "modrinth" | "curseforge" | "file" | null;
+  /** Pack-ID bei TwoGG-Packs. */
+  packId?: string | null;
+  lastPlayed?: number | null;
 }
 
 export interface ProfileInput {
@@ -120,19 +125,18 @@ export interface ServerStatus {
   favicon: string | null;
 }
 
-export type ThemeMode = "system" | "light" | "dark";
+export type ThemeName = "rinde" | "kiefer" | "winterland";
 export type WidgetId = "recent" | "news" | "packs" | "servers" | "screenshots" | "playtime";
 
 export interface Settings {
-  theme: { mode: ThemeMode; accent: string; backgroundDim: number };
-  background: string | null;
-  backgroundPath: string | null;
+  theme: { name: ThemeName; accent: string; pattern: boolean; pixelTitles: boolean; reduceMotion: boolean };
+  systemFrame: boolean;
   widgets: { id: WidgetId; visible: boolean }[];
   language: "de" | "en";
 }
 
 export type ContentKind = "mod" | "resourcepack" | "shader";
-export type ProjectType = ContentKind | "modpack";
+export type ProjectType = ContentKind | "modpack" | "datapack";
 export type SortIndex = "relevance" | "downloads" | "follows" | "newest" | "updated";
 
 export type ContentSource =
@@ -442,6 +446,20 @@ export interface TwoggPack {
   latest: TwoggVersion | null;
   descriptionHtml?: string | null;
   versions?: TwoggVersion[] | null;
+  /** Event auf twogg.app, zu dem das Pack gehört. */
+  eventId?: string | null;
+}
+
+/** Eintrag der TwoGG-Auswahl in „Entdecken“. */
+export interface Recommendation {
+  id: string;
+  projectType: ProjectType;
+  source: "twogg" | "modrinth" | "curseforge";
+  projectId: string;
+  title: string;
+  subtitle: string;
+  iconUrl: string | null;
+  motif: string | null;
 }
 
 export interface NewsItem {
@@ -453,4 +471,97 @@ export interface NewsItem {
   link: string | null;
   pinned: boolean;
   publishedAt: number;
+}
+
+/** Event von twogg.app (Titel ohne Emojis, Zusammenfassung als Klartext). */
+export interface AppEvent {
+  id: string;
+  title: string;
+  summary: string;
+  eventType: "STANDARD" | "TEAM" | "ROLEPLAY" | string;
+  eventDate: string | null;
+  registrationDeadline: string | null;
+  registrationClosed: boolean;
+  requiresApplication: boolean;
+  minecraftVersion: string | null;
+  maxPlayers: number | null;
+  teamSize: number | null;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  ended: boolean;
+  url: string;
+}
+
+export interface AppUser {
+  id: string;
+  username: string;
+  avatarUrl: string | null;
+  mcUsername: string | null;
+  mcUuid: string | null;
+}
+
+export interface Participation {
+  eventId: string;
+  kind: "registered" | "team" | "pre" | "invite";
+  status: string;
+  teamName: string | null;
+}
+
+export interface JoinInfo {
+  approved: boolean;
+  serverAddress: string | null;
+}
+
+export interface AppFriend {
+  id: string;
+  username: string;
+  mcUsername: string | null;
+  avatarUrl: string | null;
+}
+
+/** Pinecone-Freundesliste (eigener Server, Minecraft-Account als Identität). */
+export interface FriendActivity {
+  instance: string | null;
+  version: string | null;
+  server: string | null;
+  playing: boolean;
+}
+
+export interface Friend {
+  uuid: string;
+  name: string;
+  online: boolean;
+  lastSeen: number;
+  activity: FriendActivity | null;
+}
+
+export interface FriendsState {
+  /** false bei Offline-Accounts. */
+  available: boolean;
+  friends?: Friend[];
+  incoming?: { uuid: string; name: string }[];
+  outgoing?: { uuid: string; name: string }[];
+}
+
+export interface ServerInfo {
+  gameServer: { name: string; address: string } | null;
+}
+
+export interface World {
+  folder: string;
+  name: string;
+  gameMode: "survival" | "creative" | "adventure" | "spectator" | null;
+  hardcore: boolean;
+  /** Unix-Zeit in Millisekunden. */
+  lastPlayed: number | null;
+  version: string | null;
+  size: number;
+  icon: string | null;
+}
+
+export interface SavedServer {
+  name: string;
+  address: string;
+  /** PNG als Base64. */
+  icon: string | null;
 }

@@ -2,21 +2,24 @@
 // damit sich die Oberfläche ohne App-Fenster entwickeln und prüfen lässt.
 
 import { api } from "./api";
-import type { Account, InstalledContent, LaunchEvent, Profile, ProfileInput, SavedSkin, SearchArgs, Settings, SyncMode, SyncPack, UpdateInfo } from "./types";
+import type { Account, AppEvent, AppUser, FriendsState, Participation, InstalledContent, LaunchEvent, Profile, ProfileInput, SavedSkin, SearchArgs, Settings, SyncMode, SyncPack, UpdateInfo } from "./types";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const loginHandlers: ((r: { user?: AppUser; error?: string }) => void)[] = [];
 
 let profiles: Profile[] = [
-  { id: "fabric-test", name: "Fabric Test", minecraft: "26.3", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 6144, jvmArgs: [], java: null, color: "#4caf50", icon: "⛏️", running: false },
-  { id: "quilt-1-21-1", name: "Quilt 1.21.1", minecraft: "1.21.1", loader: { kind: "quilt", version: "0.30.1" }, memoryMb: null, jvmArgs: [], java: null, color: "#8e6fd8", icon: null, running: false },
-  { id: "retro", name: "Retro", minecraft: "1.8.9", loader: null, memoryMb: 2048, jvmArgs: [], java: null, color: null, icon: null, running: false },
+  { id: "fabric-test", packId: "horizons-unbound", name: "REVIVAL: Avalon", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 6144, jvmArgs: [], java: null, color: null, icon: "motif:shield", running: false, packSource: "twogg", lastPlayed: null },
+  { id: "latest-2026", name: "LATEST 2026", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 4096, jvmArgs: [], java: null, color: null, icon: "motif:waves", running: false, packSource: "twogg", lastPlayed: null },
+  { id: "survival", name: "Survival", minecraft: "26.2", loader: null, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:block", running: false, packSource: null, lastPlayed: null },
+  { id: "quilt-1-21-1", name: "Bauteam-Welt", minecraft: "26.2", loader: { kind: "quilt", version: "0.30.1" }, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:house", running: false, packSource: null, lastPlayed: null },
+  { id: "qol", name: "QoL Mods", minecraft: "26.2", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:sliders", running: false, packSource: "modrinth", lastPlayed: null },
+  { id: "retro", name: "Retro", minecraft: "1.8.9", loader: null, memoryMb: 2048, jvmArgs: [], java: null, color: null, icon: null, running: false, packSource: null, lastPlayed: null },
 ];
 let accounts: Account[] = [{ uuid: "1a70aea0-11fc-356b-8f09-325a0158a7d0", name: "Tobi", kind: "offline", active: true }];
 const stopped = new Set<string>();
 let settings: Settings = {
-  theme: { mode: "system", accent: "#4caf50", backgroundDim: 60 },
-  background: null,
-  backgroundPath: null,
+  theme: { name: "rinde", accent: "#e9a23b", pattern: true, pixelTitles: true, reduceMotion: false },
+  systemFrame: false,
   widgets: (["recent", "news", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
   language: "de",
 };
@@ -24,6 +27,9 @@ const hour = 3600;
 const now = Math.floor(Date.now() / 1000);
 const stats: Record<string, { playtimeSecs: number; sessions: number; lastPlayed: number | null; lastServer: null }> = {
   "fabric-test": { playtimeSecs: 14 * hour + 1200, sessions: 23, lastPlayed: now - 2 * hour, lastServer: null },
+  survival: { playtimeSecs: 30 * hour, sessions: 40, lastPlayed: now - 26 * hour, lastServer: null },
+  "quilt-1-21-1": { playtimeSecs: 9 * hour, sessions: 12, lastPlayed: now - 3 * 86400, lastServer: null },
+  qol: { playtimeSecs: 2 * hour, sessions: 3, lastPlayed: now - 5 * 86400, lastServer: null },
   retro: { playtimeSecs: 3 * hour, sessions: 5, lastPlayed: now - 9 * 86400, lastServer: null },
 };
 const SODIUM_ICON = "https://cdn.modrinth.com/data/AANobbMI/295862f4724dc3f78df3447ad6072b2dcd3ef0c9_96.webp";
@@ -95,7 +101,7 @@ let mockShots = [200, 30, 260, 180, 320, 90].map((hue, i) => ({
 }));
 const TWOGG_PACK = {
   id: "horizons-unbound", title: "Horizons Unbound", summary: "Das Modpack für unseren Survival-Server", iconUrl: null, featured: true,
-  updatedAt: now - 86400, downloads: 128,
+  updatedAt: now - 86400, downloads: 128, eventId: "revival-avalon",
   latest: { id: "v2", version: "2.0.0", minecraft: "1.20.1", loader: "fabric", loaderVersion: "0.19.5", channel: "release",
     changelogHtml: "<ul><li>Neue Farmwelt</li><li>Create 6</li></ul>", size: 2_400_000, sha1: "0", publishedAt: now - 86400 },
 };
@@ -125,7 +131,86 @@ function toProfile(id: string, input: ProfileInput): Profile {
   return { id, running: false, ...input, loader: input.loader && { ...input.loader, version: input.loader.version || "0.19.5" } };
 }
 
+// Echte Events von twogg.app (gekürzt) plus REVIVAL aus dem Design-System.
+const APP_EVENTS: AppEvent[] = [
+  { id: "revival-avalon", title: "REVIVAL: Avalon", summary: "Mittelalter-RP-Sandbox im Land Avalon. Schließ dich einer Seite an – Die Treue Hand oder der Phönixbund – und schreib die Geschichte mit.",
+    eventType: "ROLEPLAY", eventDate: null, registrationDeadline: null, registrationClosed: false, requiresApplication: true, minecraftVersion: "1.21.11",
+    maxPlayers: null, teamSize: null, logoUrl: null, bannerUrl: null, ended: false, url: "https://twogg.app/events" },
+  { id: "ca7acfe0-fc10-44e4-a477-96b64c670631", title: "WINTERLAND: Icebreaker", summary: "", eventType: "ROLEPLAY", eventDate: "2026-11-28T17:00:00.000Z",
+    registrationDeadline: null, registrationClosed: false, requiresApplication: true, minecraftVersion: "1.21.11", maxPlayers: 32, teamSize: 2,
+    logoUrl: null, bannerUrl: null, ended: false, url: "https://twogg.app/events/ca7acfe0-fc10-44e4-a477-96b64c670631" },
+  { id: "94181fb6-d005-45f2-80d2-0216826ffd65", title: "LATEST 2026 RISE OF ATLANTIS",
+    summary: "LATEST ist das jährliche Aushängeschild-Event von TwoGG: ein Minecraft-PvP-Survival im Varo-Format, bei dem ihr euch zu zweit gegen alle anderen Teams behauptet.",
+    eventType: "TEAM", eventDate: "2026-10-03T17:00:00.000Z", registrationDeadline: "2026-10-03T16:45:00.000Z", registrationClosed: false, requiresApplication: false,
+    minecraftVersion: "1.21.11", maxPlayers: 50, teamSize: 2, logoUrl: null, bannerUrl: null, ended: true, url: "https://twogg.app/events/94181fb6-d005-45f2-80d2-0216826ffd65" },
+];
+let appUser: AppUser | null = null;
+
+const now2 = Math.floor(Date.now() / 1000);
+const mockFriends: FriendsState = {
+  available: true,
+  friends: [
+    { uuid: "a1", name: "Kalle", online: true, lastSeen: now2, activity: { instance: "REVIVAL: Avalon", version: "Fabric 1.21.11", server: "mc.twogg.de", playing: true } },
+    { uuid: "a2", name: "MaraBaut", online: true, lastSeen: now2, activity: { instance: null, version: null, server: null, playing: false } },
+    { uuid: "a3", name: "Rex", online: false, lastSeen: now2 - 7200, activity: null },
+  ],
+  incoming: [{ uuid: "a4", name: "Lina" }],
+  outgoing: [],
+};
+
 Object.assign(api, {
+  worlds: async (id: string) =>
+    id === "fabric-test"
+      ? [
+          { folder: "Avalon", name: "Avalon – Hauptwelt", gameMode: "survival", hardcore: false, lastPlayed: Date.now() - 2 * 3600_000, version: "1.21.11", size: 412_000_000, icon: null },
+          { folder: "Bauplatz", name: "Bauplatz", gameMode: "creative", hardcore: false, lastPlayed: Date.now() - 5 * 86400_000, version: "1.21.11", size: 38_000_000, icon: null },
+        ]
+      : [],
+  datapackInstall: async (_id: string, _world: string, project: string) => (await wait(600), `${project}.zip`),
+  worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
+  worldDelete: async () => {},
+  worldOpenFolder: async () => {},
+  savedServers: async () => [
+    { name: "TwoGG Community", address: "mc.twogg.de", icon: null },
+    { name: "Avalon (Event)", address: "avalon.twogg.de", icon: null },
+  ],
+  recommendations: async (type: string) =>
+    type === "modpack"
+      ? [
+          { id: "r1", projectType: "modpack", source: "twogg", projectId: "horizons-unbound", title: "Avalon Event-Pack", subtitle: "Alles für REVIVAL: Avalon", iconUrl: null, motif: "shield" },
+          { id: "r2", projectType: "modpack", source: "modrinth", projectId: "1KVo5zza", title: "Pinecone Performance", subtitle: "Schlankes Basis-Pack vom Team", iconUrl: null, motif: "bolt" },
+          { id: "r3", projectType: "modpack", source: "modrinth", projectId: "x", title: "WINTERLAND-Shader", subtitle: "Schneelicht für das Winter-Event", iconUrl: null, motif: "snowflake" },
+        ]
+      : [],
+  serverInfo: async () => ({ gameServer: { name: "TwoGG Server", address: "mc.twogg.de" } }),
+  friends: async () => mockFriends,
+  friendsPresence: async () => {},
+  friendRequest: async (name: string) => (mockFriends.outgoing!.push({ uuid: name, name }), "requested"),
+  friendAccept: async (uuid: string) => {
+    const p = mockFriends.incoming!.find((x) => x.uuid === uuid);
+    mockFriends.incoming = mockFriends.incoming!.filter((x) => x.uuid !== uuid);
+    if (p) mockFriends.friends!.push({ ...p, online: false, lastSeen: now2 - 60, activity: null });
+  },
+  friendDecline: async (uuid: string) => {
+    mockFriends.incoming = mockFriends.incoming!.filter((x) => x.uuid !== uuid);
+    mockFriends.outgoing = mockFriends.outgoing!.filter((x) => x.uuid !== uuid);
+  },
+  friendRemove: async (uuid: string) => void (mockFriends.friends = mockFriends.friends!.filter((x) => x.uuid !== uuid)),
+  appEvents: async () => (await wait(150), APP_EVENTS),
+  appMe: async () => appUser,
+  appLoginDiscord: async () => {
+    appUser = { id: "u1", username: "wheatley", avatarUrl: null, mcUsername: "wheatley", mcUuid: null };
+    loginHandlers.forEach((h) => h({ user: appUser! }));
+  },
+  appLoginPassword: async () => (appUser = { id: "u1", username: "wheatley", avatarUrl: null, mcUsername: "wheatley", mcUuid: null }),
+  appLogout: async () => void (appUser = null),
+  appParticipations: async (): Promise<Participation[]> => (appUser ? [{ eventId: "revival-avalon", kind: "pre", status: "pending", teamName: null }] : []),
+  appJoin: async () => ({ approved: false, serverAddress: null }),
+  appFriends: async () => [],
+  onAppLogin: async (h: (r: { user?: AppUser; error?: string }) => void) => {
+    loginHandlers.push(h);
+    return () => {};
+  },
   appInfo: async () => ({ version: "0.1.0", dataDir: "/home/beispiel/.local/share/twogg-pinecone", msaConfigured: false, curseforgeConfigured: true, updatesConfigured: true }),
   versions: async (snapshots: boolean) => [
     ...(snapshots ? [{ id: "26.4-snapshot-3", kind: "snapshot", releaseTime: "2026-10-08" }] : []),
@@ -138,7 +223,7 @@ Object.assign(api, {
       ? [{ version: "0.19.5", stable: true }, { version: "0.19.4", stable: false }]
       : [{ version: "0.30.1", stable: true }, { version: "0.31.0-beta.4", stable: false }];
   },
-  profiles: async () => profiles,
+  profiles: async () => profiles.map((p) => ({ ...p, lastPlayed: stats[p.id]?.lastPlayed ?? null })),
   createProfile: async (input: ProfileInput) => {
     const p = toProfile(input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), input);
     profiles = [...profiles, p];
@@ -170,8 +255,8 @@ Object.assign(api, {
       .map((profile) => ({ profile, stats: stats[profile.id] ?? { playtimeSecs: 0, sessions: 0, lastPlayed: null, lastServer: null } }))
       .sort((a, b) => (b.stats.lastPlayed ?? 0) - (a.stats.lastPlayed ?? 0)),
     servers: [
-      { profileId: "fabric-test", profileName: "Fabric Test", name: "TwoGG Community", address: "mc.twogg.de", icon: ICON, last: true },
-      { profileId: "fabric-test", profileName: "Fabric Test", name: "Hypixel", address: "mc.hypixel.net", icon: null, last: false },
+      { profileId: "fabric-test", profileName: "REVIVAL: Avalon", name: "TwoGG Community", address: "mc.twogg.de", icon: ICON, last: true },
+      { profileId: "fabric-test", profileName: "REVIVAL: Avalon", name: "Hypixel", address: "mc.hypixel.net", icon: null, last: false },
       { profileId: "retro", profileName: "Retro", name: "Alter Server", address: "old.example.org:25570", icon: null, last: false },
     ],
     screenshots: [],
@@ -230,7 +315,8 @@ Object.assign(api, {
     { name: "realistic", projectType: "shader", header: "categories" },
     { name: "potato", projectType: "shader", header: "performance impact" },
   ],
-  packInfo: async (id: string) => (id === "fabric-test" ? { name: "Fabulously Optimized", version: "6.3.4", source: "modrinth" } : null),
+  packInfo: async (id: string) =>
+    id === "fabric-test" ? { name: "Avalon Event-Pack", version: "1.4.0", source: "twogg" } : id === "qol" ? { name: "Fabulously Optimized", version: "6.3.4", source: "modrinth" } : null,
   packCheckUpdate: async () => (await wait(400), { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" }),
   packUpdatesAll: async () => (await wait(600), [{ profile: profiles[0], update: { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" } }]),
   packPlanUpdate: async () => (await wait(500), {
@@ -367,8 +453,6 @@ Object.assign(api, {
   contentInstallCurseforge: async () => ({ installed: [["Just Enough Items (JEI)", "jei-1.0.jar"]], alreadyPresent: [], warnings: [] }),
   getSettings: async () => settings,
   saveSettings: async (s: Settings) => (settings = s),
-  setBackground: async () => settings,
-  clearBackground: async () => (settings = { ...settings, background: null, backgroundPath: null }),
   exportTheme: async () => {},
   importTheme: async () => settings,
   launch: async (id: string, onEvent: (e: LaunchEvent) => void) => {

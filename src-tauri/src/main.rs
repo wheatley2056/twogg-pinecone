@@ -5,13 +5,16 @@ mod commands;
 mod content;
 mod dashboard;
 mod dto;
+mod friends;
 mod game;
+mod instance;
 mod migrate;
 mod open;
 mod packs;
 mod screenshots;
 mod skins;
 mod syncpacks;
+mod twogg_app;
 mod update;
 
 use std::collections::HashMap;
@@ -40,6 +43,8 @@ pub struct AppState {
         Mutex<HashMap<String, (std::path::PathBuf, pinecone_core::modpack::PackSource)>>,
     /// Beim Start übergebene Links/Dateien, bis die Oberfläche sie abholt.
     pub open_requests: Mutex<Vec<String>>,
+    /// twogg.app: Events, Konto, Anmeldungen.
+    pub twogg_app: Arc<pinecone_core::twogg_app::TwoggApp>,
 }
 
 /// Logs in die Konsole (Warnungen) und nach `<data-dir>/logs/pinecone.log.<datum>` (Infos),
@@ -117,6 +122,9 @@ fn main() {
             &std::env::args().collect::<Vec<_>>(),
             &std::env::current_dir().unwrap_or_default(),
         )),
+        twogg_app: Arc::new(
+            pinecone_core::twogg_app::TwoggApp::new(Arc::new(KeyringStore)).expect("HTTP-Client"),
+        ),
     };
 
     tracing::info!("TwoGG Pinecone {} gestartet", env!("CARGO_PKG_VERSION"));
@@ -140,6 +148,13 @@ fn main() {
         .manage(state)
         .setup(|app| {
             dashboard::allow_assets(app.handle());
+            if let Ok(settings) = tauri::Manager::state::<AppState>(app)
+                .launcher
+                .settings()
+                .load()
+            {
+                dashboard::apply_frame(app.handle(), &settings);
+            }
             screenshots::start_watcher(app.handle());
             // Installer tragen `pinecone://` selbst ein; beim Entwickeln und für AppImages
             // registriert sich die App hier (Windows: Registry des Nutzers, Linux: .desktop-Datei).
@@ -175,9 +190,29 @@ fn main() {
             dashboard::open_screenshot,
             dashboard::get_settings,
             dashboard::save_settings,
-            dashboard::set_background,
-            dashboard::clear_background,
             dashboard::export_theme,
+            content::datapack_install,
+            instance::worlds_list,
+            instance::world_backup,
+            instance::world_delete,
+            instance::world_open_folder,
+            instance::servers_list,
+            friends::friends_list,
+            friends::friends_presence,
+            friends::friends_request,
+            friends::friends_accept,
+            friends::friends_decline,
+            friends::friends_remove,
+            friends::twogg_server_info,
+            friends::twogg_recommendations,
+            twogg_app::twogg_app_events,
+            twogg_app::twogg_app_me,
+            twogg_app::twogg_app_login_discord,
+            twogg_app::twogg_app_login_password,
+            twogg_app::twogg_app_logout,
+            twogg_app::twogg_app_participations,
+            twogg_app::twogg_app_join,
+            twogg_app::twogg_app_friends,
             dashboard::import_theme,
             content::content_list,
             content::content_identify,

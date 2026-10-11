@@ -25,6 +25,8 @@ pub enum ProjectType {
     Modpack,
     Resourcepack,
     Shader,
+    /// Datenpakete gehören in eine Welt (`saves/<welt>/datapacks`), nicht in die Instanz.
+    Datapack,
 }
 
 impl ProjectType {
@@ -34,6 +36,7 @@ impl ProjectType {
             ProjectType::Modpack => "modpack",
             ProjectType::Resourcepack => "resourcepack",
             ProjectType::Shader => "shader",
+            ProjectType::Datapack => "datapack",
         }
     }
 }

@@ -43,6 +43,12 @@ pub struct ProfileDto {
     pub color: Option<String>,
     pub icon: Option<String>,
     pub running: bool,
+    /// Herkunft, falls aus einem Modpack (`twogg`, `modrinth`, `curseforge`, `file`); nur in der Liste.
+    pub pack_source: Option<&'static str>,
+    /// Pack-ID bei TwoGG-Packs (für die Zuordnung zu Events); nur in der Liste.
+    pub pack_id: Option<String>,
+    /// Unix-Zeit des letzten Spielendes; nur in der Liste.
+    pub last_played: Option<u64>,
 }
 
 impl ProfileDto {
@@ -58,6 +64,9 @@ impl ProfileDto {
             color: p.color,
             icon: p.icon,
             running,
+            pack_source: None,
+            pack_id: None,
+            last_played: None,
         }
     }
 }
