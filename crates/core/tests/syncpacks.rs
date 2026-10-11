@@ -284,7 +284,10 @@ async fn first_enable_replaces_generated_config_and_options() {
         std::fs::read_to_string(game.join("options.txt")).unwrap(),
         "version:3955\nfov:0.25\nkey_key.zoom:key.keyboard.c\n"
     );
-    assert_eq!(sync.enabled_in(&pack.id).unwrap(), std::slice::from_ref(&p.id));
+    assert_eq!(
+        sync.enabled_in(&pack.id).unwrap(),
+        std::slice::from_ref(&p.id)
+    );
     assert_eq!(
         sync.profile_options(&p.id)["key_key.zoom"],
         "key.keyboard.c"
