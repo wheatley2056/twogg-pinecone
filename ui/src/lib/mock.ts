@@ -417,6 +417,17 @@ Object.assign(api, {
       : { installed: [], removed: ["Zoomify", "Fresh Animations"], present: [], unavailable: [], warnings: [] };
   },
   syncpackSync: async () => ({ installed: [], removed: [], present: [], unavailable: [], warnings: [] }),
+  syncpackProfiles: async (id: string) => [...syncEnabled].filter((k) => k.endsWith(`/${id}`)).map((k) => k.slice(0, -id.length - 1)),
+  syncpackProfileOptions: async () => ({
+    fov: "0.25",
+    guiScale: "3",
+    renderDistance: "12",
+    gamma: "1.0",
+    "key_key.attack": "key.mouse.left",
+    "key_key.sprint": "key.keyboard.left.control",
+    "key_key.zoom": "key.keyboard.c",
+    "key_key.drop": "key.keyboard.q",
+  }),
   updateCheck: async () => (await wait(500), { version: "0.9.1", currentVersion: "0.9.0", date: now - 3600, notes: "- Skins und Screenshots\n- Sync-Packs\n- Versionswechsel" }),
   updateInstall: async (onEvent: (e: { type: "progress"; done: number; total: number | null } | { type: "installing" }) => void) => {
     for (let done = 0; done <= 25_000_000; done += 2_500_000) {

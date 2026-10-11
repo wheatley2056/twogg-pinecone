@@ -161,15 +161,17 @@ das Ziel, wird stattdessen diese Pack-Version angeboten.
 ## Sync-Packs und Vorlagen
 
 In der Bibliothek unter „Sync-Packs“ legt man eigene Sammlungen an: Mods, Ressourcenpakete und Shader (als
-Modrinth-/CurseForge-Projekt ohne feste Version), eigene Dateien wie Configs und Standardwerte für
-`options.txt`. Im Tab Inhalt einer Instanz schaltet man sie per Klick an und aus.
+Modrinth-/CurseForge-Projekt ohne feste Version), eigene Dateien wie Configs sowie Steuerung und
+Spieleinstellungen aus `options.txt` (aus einer Instanz übernehmbar). Eingeschaltet wird im Sync-Pack
+für jede Instanz oder im Tab Inhalt einer Instanz.
 
 - **Sync-Pack**: bleibt verbunden und wird vor jedem Start abgeglichen. Für jedes Profil wird die
   zur Minecraft-Version und zum Loader passende Datei installiert (samt Abhängigkeiten). Ausschalten
   entfernt genau die Inhalte, die das Sync-Pack gebracht hat (im `pack.lock.json` mit `sync` markiert).
 - **Vorlage**: wird einmal eingespielt und ist danach normaler Profil-Inhalt.
 - Bringt das Modpack oder der Nutzer ein Projekt schon mit, gewinnt deren Fassung. Eigene Dateien und
-  Optionen werden nur gesetzt, solange man sie im Profil nicht selbst geändert hat.
+  Optionen werden beim ersten Einspielen gesetzt, danach nur, solange man sie im Profil nicht selbst
+  geändert hat.
 - Optional automatisch bei neuen Profilen und Modpack-Imports, auf Wunsch nur für bestimmte Loader.
 - Gespeichert unter `<data-dir>/syncpacks/<id>/`, der Zustand je Profil in `instances/<id>/syncpacks.json`.
 

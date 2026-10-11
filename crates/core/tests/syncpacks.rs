@@ -146,7 +146,7 @@ async fn sync_pack_installs_tracks_and_removes_only_its_content() {
     );
     assert_eq!(
         std::fs::read_to_string(game.join("options.txt")).unwrap(),
-        "fov:0.25\n"
+        "version:2147483647\nfov:0.25\n"
     );
     let lock = launcher.content().load_lock(&p.id).unwrap();
     assert_eq!(
@@ -246,4 +246,59 @@ async fn rejects_unsafe_files_and_names() {
     let mut bad = sync.get(&pack.id).unwrap();
     bad.options.insert("a:b".into(), "1".into());
     assert!(sync.save(&bad).is_err());
+}
+
+#[tokio::test]
+async fn first_enable_replaces_generated_config_and_options() {
+    let (_server, dir, launcher) = setup().await;
+    let sync = launcher.syncpacks();
+    let mut pack = sync.create("Steuerung", SyncMode::Sync).unwrap();
+    pack.options = BTreeMap::from([
+        ("fov".into(), "0.25".into()),
+        ("key_key.zoom".into(), "key.keyboard.c".into()),
+    ]);
+    sync.save(&pack).unwrap();
+    let cfg = dir.path().join("zoom.json");
+    std::fs::write(&cfg, "{\"zoom\":4}").unwrap();
+    sync.add_file(&pack.id, &cfg, "config/zoom.json")
+        .await
+        .unwrap();
+
+    // Die Instanz wurde schon gespielt: Minecraft und die Mod haben ihre Standardwerte geschrieben.
+    let p = profile(&launcher, "Gespielt", Some(LoaderKind::Fabric));
+    let game = launcher.game_dir(&p);
+    std::fs::create_dir_all(game.join("config")).unwrap();
+    std::fs::write(game.join("config/zoom.json"), "{\"zoom\":2}").unwrap();
+    std::fs::write(
+        game.join("options.txt"),
+        "version:3955\nfov:0.0\nkey_key.zoom:key.keyboard.z\n",
+    )
+    .unwrap();
+
+    sync.set_enabled(&p, &pack.id, true).await.unwrap();
+    assert_eq!(
+        std::fs::read_to_string(game.join("config/zoom.json")).unwrap(),
+        "{\"zoom\":4}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(game.join("options.txt")).unwrap(),
+        "version:3955\nfov:0.25\nkey_key.zoom:key.keyboard.c\n"
+    );
+    assert_eq!(
+        sync.enabled_in(&pack.id).unwrap(),
+        std::slice::from_ref(&p.id)
+    );
+    assert_eq!(
+        sync.profile_options(&p.id)["key_key.zoom"],
+        "key.keyboard.c"
+    );
+
+    // Danach geänderte Werte bleiben.
+    std::fs::write(game.join("options.txt"), "version:3955\nfov:0.5\n").unwrap();
+    sync.sync(&p).await.unwrap();
+    let text = std::fs::read_to_string(game.join("options.txt")).unwrap();
+    assert!(
+        text.contains("fov:0.5") && text.contains("key_key.zoom:key.keyboard.c"),
+        "{text}"
+    );
 }

@@ -1,5 +1,6 @@
 //! Befehle für Sync-Packs und Vorlagen.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use pinecone_core::profiles::Profile;
@@ -129,4 +130,20 @@ pub async fn syncpack_sync(
     not_running(&state, &profile_id)?;
     let profile = state.launcher.profiles().get(&profile_id).map_err(err)?;
     state.launcher.syncpacks().sync(&profile).await.map_err(err)
+}
+
+/// Instanzen, in denen das Sync-Pack eingeschaltet ist.
+#[tauri::command]
+pub fn syncpack_profiles(state: State<'_, AppState>, id: String) -> CmdResult<Vec<String>> {
+    state.launcher.syncpacks().enabled_in(&id).map_err(err)
+}
+
+/// Optionen und Steuerung aus der `options.txt` einer Instanz.
+#[tauri::command]
+pub fn syncpack_profile_options(
+    state: State<'_, AppState>,
+    profile_id: String,
+) -> CmdResult<BTreeMap<String, String>> {
+    state.launcher.profiles().get(&profile_id).map_err(err)?;
+    Ok(state.launcher.syncpacks().profile_options(&profile_id))
 }
