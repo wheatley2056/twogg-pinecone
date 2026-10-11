@@ -1,0 +1,134 @@
+// Im Release unter Windows kein Konsolenfenster neben der App.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod commands;
+mod content;
+mod dashboard;
+mod dto;
+mod game;
+mod packs;
+
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+use pinecone_core::accounts::{AccountStore, KeyringStore};
+use pinecone_core::download::Downloader;
+use pinecone_core::launcher::Launcher;
+use pinecone_core::msa::{self, DeviceCode, MsaClient};
+use pinecone_core::paths::Paths;
+use tokio::sync::Notify;
+
+pub struct AppState {
+    pub launcher: Launcher,
+    pub accounts: AccountStore<KeyringStore>,
+    pub msa: Option<MsaClient>,
+    /// Laufende Spiele: Profil-ID → Signal zum Beenden.
+    pub running: Mutex<HashMap<String, Arc<Notify>>>,
+    /// Laufender Microsoft-Login: Code und Abbruchsignal.
+    pub login: Mutex<Option<(DeviceCode, Arc<Notify>)>>,
+    /// Geplante Modpack-Updates: Profil-ID → (Archiv, Quelle). Die Oberfläche schickt nur Entscheidungen.
+    pub pending_updates:
+        Mutex<HashMap<String, (std::path::PathBuf, pinecone_core::modpack::PackSource)>>,
+}
+
+fn main() {
+    // WebKitGTK stürzt mit NVIDIA unter Wayland ab („Error 71 (Protokollfehler) dispatching to
+    // Wayland display“). Ohne DMA-BUF-Renderer läuft es stabil; eine eigene Einstellung gewinnt.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        // SAFETY: Ganz am Anfang von main, bevor weitere Threads existieren.
+        unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
+    }
+
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
+        )
+        .init();
+
+    let root = std::env::var_os("PINECONE_HOME")
+        .map(Into::into)
+        .map(Ok)
+        .unwrap_or_else(Paths::default_root)
+        .expect("Kein Datenverzeichnis");
+    let paths = Paths::new(root);
+    let downloader = Downloader::new().expect("HTTP-Client");
+    let msa = msa::client_id_from_env()
+        .map(MsaClient::new)
+        .transpose()
+        .expect("HTTP-Client");
+    let state = AppState {
+        accounts: AccountStore::new(paths.accounts_file(), KeyringStore),
+        launcher: Launcher::new(paths, downloader).expect("HTTP-Client"),
+        msa,
+        running: Mutex::default(),
+        login: Mutex::default(),
+        pending_updates: Mutex::default(),
+    };
+
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .manage(state)
+        .setup(|app| {
+            dashboard::allow_assets(app.handle());
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::app_info,
+            commands::list_versions,
+            commands::loader_versions,
+            commands::list_profiles,
+            commands::create_profile,
+            commands::update_profile,
+            commands::delete_profile,
+            commands::open_profile_folder,
+            commands::list_accounts,
+            commands::add_offline_account,
+            commands::set_active_account,
+            commands::remove_account,
+            commands::login_start,
+            commands::login_finish,
+            commands::login_cancel,
+            commands::java_list,
+            commands::last_log,
+            dashboard::dashboard,
+            dashboard::ping_server,
+            dashboard::open_screenshot,
+            dashboard::get_settings,
+            dashboard::save_settings,
+            dashboard::set_background,
+            dashboard::clear_background,
+            dashboard::export_theme,
+            dashboard::import_theme,
+            content::content_list,
+            content::content_identify,
+            content::content_set_enabled,
+            content::content_remove,
+            content::content_add_local,
+            content::content_install,
+            content::content_updates,
+            content::content_update,
+            content::modrinth_search,
+            content::modrinth_versions,
+            content::modrinth_categories,
+            content::curseforge_search,
+            content::curseforge_files,
+            content::content_install_curseforge,
+            packs::pack_install_modrinth,
+            packs::pack_install_curseforge,
+            packs::pack_import_file,
+            packs::pack_info,
+            packs::pack_check_update,
+            packs::pack_updates_all,
+            packs::pack_plan_update,
+            packs::pack_apply_update,
+            packs::pack_snapshots,
+            packs::pack_rollback,
+            packs::pack_export,
+            game::launch,
+            game::stop_game,
+        ])
+        .run(tauri::generate_context!())
+        .expect("TwoGG Pinecone konnte nicht starten");
+}

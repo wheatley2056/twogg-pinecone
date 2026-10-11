@@ -1,0 +1,232 @@
+// Nur für `npm run dev` im normalen Browser: ersetzt die Tauri-Befehle durch Beispieldaten,
+// damit sich die Oberfläche ohne App-Fenster entwickeln und prüfen lässt.
+
+import { api } from "./api";
+import type { Account, InstalledContent, LaunchEvent, Profile, ProfileInput, SearchArgs, Settings, UpdateInfo } from "./types";
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+let profiles: Profile[] = [
+  { id: "fabric-test", name: "Fabric Test", minecraft: "26.3", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 6144, jvmArgs: [], java: null, color: "#4caf50", icon: "⛏️", running: false },
+  { id: "quilt-1-21-1", name: "Quilt 1.21.1", minecraft: "1.21.1", loader: { kind: "quilt", version: "0.30.1" }, memoryMb: null, jvmArgs: [], java: null, color: "#8e6fd8", icon: null, running: false },
+  { id: "retro", name: "Retro", minecraft: "1.8.9", loader: null, memoryMb: 2048, jvmArgs: [], java: null, color: null, icon: null, running: false },
+];
+let accounts: Account[] = [{ uuid: "1a70aea0-11fc-356b-8f09-325a0158a7d0", name: "Tobi", kind: "offline", active: true }];
+const stopped = new Set<string>();
+let settings: Settings = {
+  theme: { mode: "system", accent: "#4caf50", backgroundDim: 60 },
+  background: null,
+  backgroundPath: null,
+  widgets: (["recent", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
+  language: "de",
+};
+const hour = 3600;
+const now = Math.floor(Date.now() / 1000);
+const stats: Record<string, { playtimeSecs: number; sessions: number; lastPlayed: number | null; lastServer: null }> = {
+  "fabric-test": { playtimeSecs: 14 * hour + 1200, sessions: 23, lastPlayed: now - 2 * hour, lastServer: null },
+  retro: { playtimeSecs: 3 * hour, sessions: 5, lastPlayed: now - 9 * 86400, lastServer: null },
+};
+const SODIUM_ICON = "https://cdn.modrinth.com/data/AANobbMI/295862f4724dc3f78df3447ad6072b2dcd3ef0c9_96.webp";
+let content: InstalledContent[] = [
+  { key: "mods/fabric-api.jar", fileName: "fabric-api.jar", kind: "mod", enabled: true, name: "Fabric API", version: "0.162.0+26.3",
+    source: { type: "modrinth", project_id: "P7dR8mSH", version_id: "a" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+  { key: "mods/sodium.jar", fileName: "sodium.jar", kind: "mod", enabled: true, name: "Sodium", version: "mc26.3-0.9.2-fabric",
+    source: { type: "modrinth", project_id: "AANobbMI", version_id: "b" }, iconUrl: SODIUM_ICON, fromPack: false, size: 1, unidentified: false },
+  { key: "mods/eigene-mod.jar", fileName: "eigene-mod.jar.disabled", kind: "mod", enabled: false, name: "eigene-mod", version: null,
+    source: { type: "local" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+  { key: "shaderpacks/complementary.zip", fileName: "complementary.zip", kind: "shader", enabled: true, name: "Complementary Shaders - Reimagined",
+    version: "r5.9.3", source: { type: "modrinth", project_id: "HVnmMxH1", version_id: "c" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+];
+const update: UpdateInfo = { key: "mods/sodium.jar", name: "Sodium", current: "mc26.3-0.9.2-fabric", latest: "mc26.3-0.9.4-fabric",
+  projectId: "AANobbMI", versionId: "d", kind: "mod" };
+
+// Kleines grünes Quadrat als Server-Icon (PNG, 2×2).
+const ICON = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGPwWR/gsz6AAUIBACQyBS0TyzOPAAAAAElFTkSuQmCC";
+
+function toProfile(id: string, input: ProfileInput): Profile {
+  return { id, running: false, ...input, loader: input.loader && { ...input.loader, version: input.loader.version || "0.19.5" } };
+}
+
+Object.assign(api, {
+  appInfo: async () => ({ version: "0.1.0", dataDir: "/home/beispiel/.local/share/twogg-pinecone", msaConfigured: false, curseforgeConfigured: true }),
+  versions: async (snapshots: boolean) => [
+    ...(snapshots ? [{ id: "26.4-snapshot-3", kind: "snapshot", releaseTime: "2026-10-08" }] : []),
+    ...["26.3", "26.2", "26.1.2", "1.21.1", "1.20.1", "1.12.2", "1.8.9"].map((id) => ({ id, kind: "release", releaseTime: "" })),
+  ],
+  loaderVersions: async (kind: string, mc: string) => {
+    await wait(300);
+    if (mc === "1.8.9") return [];
+    return kind === "fabric"
+      ? [{ version: "0.19.5", stable: true }, { version: "0.19.4", stable: false }]
+      : [{ version: "0.30.1", stable: true }, { version: "0.31.0-beta.4", stable: false }];
+  },
+  profiles: async () => profiles,
+  createProfile: async (input: ProfileInput) => {
+    const p = toProfile(input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), input);
+    profiles = [...profiles, p];
+    return p;
+  },
+  updateProfile: async (id: string, input: ProfileInput) => {
+    const p = toProfile(id, input);
+    profiles = profiles.map((x) => (x.id === id ? p : x));
+    return p;
+  },
+  deleteProfile: async (id: string) => void (profiles = profiles.filter((p) => p.id !== id)),
+  openProfileFolder: async () => {},
+  lastLog: async () => [],
+  accounts: async () => accounts,
+  addOfflineAccount: async (name: string) => {
+    const a: Account = { uuid: crypto.randomUUID(), name, kind: "offline", active: true };
+    accounts = [...accounts.map((x) => ({ ...x, active: false })), a];
+    return a;
+  },
+  setActiveAccount: async (uuid: string) => void (accounts = accounts.map((a) => ({ ...a, active: a.uuid === uuid }))),
+  removeAccount: async (uuid: string) => void (accounts = accounts.filter((a) => a.uuid !== uuid)),
+  javaList: async () => [
+    { path: "/usr/lib/jvm/java-8-openjdk/jre/bin/java", version: "1.8.0_504", major: 8, managed: false },
+    { path: "/usr/bin/java", version: "25.0.4.1", major: 25, managed: false },
+  ],
+  stopGame: async (id: string) => void stopped.add(id),
+  dashboard: async () => ({
+    recent: profiles
+      .map((profile) => ({ profile, stats: stats[profile.id] ?? { playtimeSecs: 0, sessions: 0, lastPlayed: null, lastServer: null } }))
+      .sort((a, b) => (b.stats.lastPlayed ?? 0) - (a.stats.lastPlayed ?? 0)),
+    servers: [
+      { profileId: "fabric-test", profileName: "Fabric Test", name: "TwoGG Community", address: "mc.twogg.de", icon: ICON, last: true },
+      { profileId: "fabric-test", profileName: "Fabric Test", name: "Hypixel", address: "mc.hypixel.net", icon: null, last: false },
+      { profileId: "retro", profileName: "Retro", name: "Alter Server", address: "old.example.org:25570", icon: null, last: false },
+    ],
+    screenshots: [],
+    totalPlaytimeSecs: Object.values(stats).reduce((a, s) => a + s.playtimeSecs, 0),
+  }),
+  pingServer: async (address: string) => {
+    await wait(400 + Math.random() * 600);
+    if (address.startsWith("old.")) throw "Server nicht erreichbar";
+    return address.includes("hypixel")
+      ? { motd: "Hypixel Network [1.8/26.3]\nHALLOWEEN EVENT", version: "Requires MC 1.8 / 1.21", protocol: 47, online: 34858, max: 200000, pingMs: 106, favicon: null }
+      : { motd: "TwoGG Community – Survival & Minigames", version: "Paper 26.3", protocol: 767, online: 7, max: 50, pingMs: 12, favicon: null };
+  },
+  openScreenshot: async () => {},
+  contentList: async () => content,
+  contentIdentify: async () => content,
+  contentSetEnabled: async (_id: string, key: string, enabled: boolean) =>
+    void (content = content.map((c) => (c.key === key ? { ...c, enabled } : c))),
+  contentRemove: async (_id: string, key: string) => void (content = content.filter((c) => c.key !== key)),
+  contentAddLocal: async () => "mods/neu.jar",
+  contentInstall: async (_id: string, _kind: string, project: string) => {
+    await wait(700);
+    return { installed: [[project === "AANobbMI" ? "Sodium" : "Iris Shaders", "1.0"]], alreadyPresent: [], warnings: [] };
+  },
+  contentUpdates: async () => (await wait(500), content.some((c) => c.key === update.key && c.version !== update.latest) ? [update] : []),
+  contentUpdate: async () => {
+    await wait(600);
+    content = content.map((c) => (c.key === update.key ? { ...c, version: update.latest } : c));
+    return { installed: [["Sodium", update.latest]], alreadyPresent: [], warnings: [] };
+  },
+  modrinthSearch: async (args: SearchArgs) => {
+    await wait(250);
+    const all = [
+      { projectId: "AANobbMI", slug: "sodium", projectType: "mod", title: "Sodium", author: "jellysquid3", iconUrl: SODIUM_ICON,
+        description: "A high-performance rendering engine replacement for Minecraft, which greatly improves frame rates and reduces micro-stutter.",
+        downloads: 240498978, follows: 30000, displayCategories: ["optimization", "fabric", "quilt"], versions: ["26.3"], dateModified: "2026-09-20T21:27:06Z" },
+      { projectId: "YL57xq9U", slug: "iris", projectType: "mod", title: "Iris Shaders", author: "coderbot", iconUrl: null,
+        description: "A modern shader pack loader for Minecraft intended to be compatible with existing OptiFine shader packs",
+        downloads: 98000000, follows: 20000, displayCategories: ["decoration", "optimization"], versions: ["26.3"], dateModified: "2026-10-01T10:00:00Z" },
+      { projectId: "P7dR8mSH", slug: "fabric-api", projectType: "mod", title: "Fabric API", author: "modmuss50", iconUrl: null,
+        description: "Lightweight and modular API providing common hooks and intercompatibility measures utilized by mods using the Fabric toolchain.",
+        downloads: 150000000, follows: 25000, displayCategories: ["library"], versions: ["26.3"], dateModified: "2026-10-05T10:00:00Z" },
+    ];
+    const q = args.query.toLowerCase();
+    const hits = all.filter((h) => !q || h.title.toLowerCase().includes(q));
+    return { hits, offset: 0, limit: 20, totalHits: hits.length };
+  },
+  modrinthVersions: async () => (await wait(300), [
+    { id: "v1", projectId: "AANobbMI", name: "Sodium", versionNumber: "mc26.3-0.9.3-alpha.1-fabric", versionType: "alpha", loaders: ["fabric"], gameVersions: ["26.3"], datePublished: "" },
+    { id: "v2", projectId: "AANobbMI", name: "Sodium", versionNumber: "mc26.3-0.9.2-fabric", versionType: "release", loaders: ["fabric"], gameVersions: ["26.3"], datePublished: "" },
+  ]),
+  modrinthCategories: async () => [
+    { name: "optimization", projectType: "mod", header: "categories" },
+    { name: "technology", projectType: "mod", header: "categories" },
+    { name: "magic", projectType: "mod", header: "categories" },
+    { name: "library", projectType: "mod", header: "categories" },
+    { name: "realistic", projectType: "shader", header: "categories" },
+    { name: "potato", projectType: "shader", header: "performance impact" },
+  ],
+  packInfo: async (id: string) => (id === "fabric-test" ? { name: "Fabulously Optimized", version: "6.3.4", source: "modrinth" } : null),
+  packCheckUpdate: async () => (await wait(400), { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" }),
+  packUpdatesAll: async () => (await wait(600), [{ profile: profiles[0], update: { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" } }]),
+  packPlanUpdate: async () => (await wait(500), {
+    packName: "Fabulously Optimized", fromVersion: "6.3.4", toVersion: "6.5.0", minecraft: "1.21.1",
+    loader: { kind: "fabric", version: "0.19.3" },
+    changes: [
+      { path: "mods/sodium-fabric-0.6.13.jar", action: "add" },
+      { path: "config/yosbr/options.txt", action: "replace" },
+      { path: "mods/ImmediatelyFast-Fabric-1.6.5+1.21.1.jar", action: "remove" },
+    ],
+    conflicts: [
+      { path: "config/fabric_loader_dependencies.json", reason: "bothChanged", default: "keepMine" },
+      { path: "mods/eigene-sodium.jar", reason: "userFileExists", default: "takePack" },
+    ],
+    kept: ["config/modmenu.json"],
+  }),
+  packApplyUpdate: async () => (await wait(800), { id: "1791667261", created: now, packVersion: "6.3.4", files: 93 }),
+  packSnapshots: async () => [{ id: "1791660000", created: now - 86400, packVersion: "6.3.3", files: 12 }],
+  packRollback: async () => {},
+  packExport: async () => (await wait(400), { path: "/tmp/x.mrpack", linked: 48, included: 7 }),
+  packImportFile: async () => ({ profile: profiles[0], missing: [] }),
+  packInstallModrinth: async () => (await wait(800), { profile: profiles[0], missing: [] }),
+  packInstallCurseforge: async () => (await wait(800), {
+    profile: profiles[0],
+    missing: [{ name: "OptiFine-Ersatz", path: "mods/beispiel.jar", url: "https://www.curseforge.com/minecraft/mc-mods/beispiel/files/1" }],
+  }),
+  curseforgeSearch: async () => (await wait(250), { offset: 0, limit: 20, totalHits: 1, hits: [
+    { projectId: "238222", slug: "jei", projectType: "mod", title: "Just Enough Items (JEI)", author: "mezz", iconUrl: null,
+      description: "View Items and Recipes", downloads: 400000000, follows: 0, displayCategories: ["API and Library"], versions: [], dateModified: "2026-10-01T00:00:00Z" },
+  ] }),
+  curseforgeFiles: async () => [],
+  contentInstallCurseforge: async () => ({ installed: [["Just Enough Items (JEI)", "jei-1.0.jar"]], alreadyPresent: [], warnings: [] }),
+  getSettings: async () => settings,
+  saveSettings: async (s: Settings) => (settings = s),
+  setBackground: async () => settings,
+  clearBackground: async () => (settings = { ...settings, background: null, backgroundPath: null }),
+  exportTheme: async () => {},
+  importTheme: async () => settings,
+  launch: async (id: string, onEvent: (e: LaunchEvent) => void) => {
+    stopped.delete(id);
+    for (const stage of ["loader", "version"] as const) {
+      onEvent({ type: "stage", stage });
+      await wait(400);
+    }
+    onEvent({ type: "progress", done: 0, files: 3812, bytesDone: 0, bytes: 812 * 1024 * 1024 });
+    for (let done = 0; done <= 3812; done += 190) {
+      onEvent({ type: "progress", done: Math.min(done, 3812), files: 3812, bytesDone: (done / 3812) * 812 * 1024 * 1024, bytes: 0 });
+      await wait(80);
+    }
+    onEvent({ type: "stage", stage: "java" });
+    onEvent({ type: "java", version: "25.0.4.1", path: "/usr/bin/java" });
+    onEvent({ type: "stage", stage: "assets" });
+    await wait(300);
+    onEvent({ type: "started", pid: 4242 });
+    (async () => {
+      const sample = [
+        "[22:11:28] [main/INFO]: Loading 49 mods:",
+        "\t- fabric-api 0.162.0+26.3",
+        "\t- fabricloader 0.19.5",
+        "[22:11:32] [Render thread/INFO]: Setting user: Tobi",
+        "[22:11:32] [Download-2/ERROR]: Failed to fetch user properties",
+        "[22:11:32] [Render thread/WARN]: Error while loading the narrator",
+        "[22:11:33] [Render thread/INFO]: Sound engine started",
+        "[22:11:33] [Render thread/INFO]: Created: 2048x2048x4 minecraft:textures/atlas/blocks.png-atlas",
+      ];
+      for (const line of sample) {
+        if (stopped.has(id)) break;
+        onEvent({ type: "log", lines: [line] });
+        await wait(250);
+      }
+      while (!stopped.has(id)) await wait(200);
+      onEvent({ type: "exited", code: 143, success: false });
+    })();
+  },
+});
+
+console.info("TwoGG Pinecone: Mock-Modus (kein Tauri)");

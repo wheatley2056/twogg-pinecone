@@ -1,0 +1,235 @@
+:root {
+  --bg: #121518;
+  --surface: #1a1e22;
+  --surface-2: #22272c;
+  --surface-3: #2b3137;
+  --border: #30363d;
+  --text: #e6e9eb;
+  --muted: #9aa3ab;
+  --accent: #4caf50;
+  --accent-strong: color-mix(in srgb, var(--accent) 82%, black);
+  --accent-text: #10140f;
+  --danger: #e5534b;
+  --warning: #d29922;
+  --log-bg: #0d0f11;
+  --radius: 8px;
+  --shadow: 0 8px 32px rgb(0 0 0 / 0.45);
+  color-scheme: dark;
+  font-family: "Inter", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+}
+
+:root[data-theme="light"] {
+  --bg: #f3f4f2;
+  --surface: #ffffff;
+  --surface-2: #eef0ec;
+  --surface-3: #e2e6df;
+  --border: #d3d8cf;
+  --text: #1d2420;
+  --muted: #5e6a62;
+  --log-bg: #1a1e22;
+  --shadow: 0 8px 32px rgb(0 0 0 / 0.18);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    --bg: #f3f4f2;
+    --surface: #ffffff;
+    --surface-2: #eef0ec;
+    --surface-3: #e2e6df;
+    --border: #d3d8cf;
+    --text: #1d2420;
+    --muted: #5e6a62;
+    --log-bg: #1a1e22;
+    --shadow: 0 8px 32px rgb(0 0 0 / 0.18);
+    color-scheme: light;
+  }
+}
+
+/* Hintergrundbild: abgedunkelt bzw. aufgehellt, Flächen leicht durchscheinend. */
+:root[data-background="on"] body {
+  background:
+    linear-gradient(color-mix(in srgb, var(--bg) var(--bg-dim), transparent), color-mix(in srgb, var(--bg) var(--bg-dim), transparent)),
+    var(--bg-image) center / cover no-repeat fixed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  user-select: none;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 7px 14px;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+button.danger {
+  color: var(--danger);
+}
+
+button.danger-solid {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+
+button.danger-solid:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 85%, black);
+}
+
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  width: 100%;
+  user-select: text;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+label > :is(input, select, textarea) {
+  color: var(--text);
+  font-size: 14px;
+}
+
+dialog {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 0;
+  width: min(520px, calc(100vw - 32px));
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+
+.dialog-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 0 0 12px 12px;
+}
+
+.error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  user-select: text;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--muted);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}

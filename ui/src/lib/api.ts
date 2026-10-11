@@ -1,0 +1,111 @@
+import { Channel, invoke } from "@tauri-apps/api/core";
+import type {
+  Account,
+  AppInfo,
+  JavaInstallation,
+  LaunchEvent,
+  LoaderKind,
+  LoaderVersion,
+  LoginStart,
+  Profile,
+  ProfileInput,
+  ServerStatus,
+  Settings,
+  Dashboard,
+  VersionInfo,
+  Category,
+  ContentKind,
+  InstallReport,
+  InstalledContent,
+  ModrinthVersion,
+  ProjectType,
+  SearchArgs,
+  SearchResult,
+  UpdateInfo,
+  ExportReport,
+  ImportResult,
+  PackInfo,
+  PackUpdate,
+  Resolution,
+  SnapshotInfo,
+  UpdatePlan,
+} from "./types";
+
+export const api = {
+  appInfo: () => invoke<AppInfo>("app_info"),
+  versions: (snapshots: boolean) => invoke<VersionInfo[]>("list_versions", { snapshots }),
+  loaderVersions: (kind: LoaderKind, minecraft: string) =>
+    invoke<LoaderVersion[]>("loader_versions", { kind, minecraft }),
+
+  profiles: () => invoke<Profile[]>("list_profiles"),
+  createProfile: (input: ProfileInput) => invoke<Profile>("create_profile", { input }),
+  updateProfile: (id: string, input: ProfileInput) => invoke<Profile>("update_profile", { id, input }),
+  deleteProfile: (id: string) => invoke<void>("delete_profile", { id }),
+  openProfileFolder: (id: string) => invoke<void>("open_profile_folder", { id }),
+  lastLog: (id: string, maxLines: number) => invoke<string[]>("last_log", { id, maxLines }),
+
+  accounts: () => invoke<Account[]>("list_accounts"),
+  addOfflineAccount: (name: string) => invoke<Account>("add_offline_account", { name }),
+  setActiveAccount: (uuid: string) => invoke<void>("set_active_account", { uuid }),
+  removeAccount: (uuid: string) => invoke<void>("remove_account", { uuid }),
+  loginStart: () => invoke<LoginStart>("login_start"),
+  loginFinish: () => invoke<Account>("login_finish"),
+  loginCancel: () => invoke<void>("login_cancel"),
+
+  javaList: () => invoke<JavaInstallation[]>("java_list"),
+
+  launch: (id: string, server: string | null, onEvent: (e: LaunchEvent) => void) => {
+    const channel = new Channel<LaunchEvent>();
+    channel.onmessage = onEvent;
+    return invoke<void>("launch", { id, server, onEvent: channel });
+  },
+
+  dashboard: () => invoke<Dashboard>("dashboard"),
+  pingServer: (address: string) => invoke<ServerStatus>("ping_server", { address }),
+  openScreenshot: (path: string) => invoke<void>("open_screenshot", { path }),
+
+  contentList: (id: string) => invoke<InstalledContent[]>("content_list", { id }),
+  contentIdentify: (id: string) => invoke<InstalledContent[]>("content_identify", { id }),
+  contentSetEnabled: (id: string, key: string, enabled: boolean) => invoke<void>("content_set_enabled", { id, key, enabled }),
+  contentRemove: (id: string, key: string) => invoke<void>("content_remove", { id, key }),
+  contentAddLocal: (id: string, kind: ContentKind, path: string) => invoke<string>("content_add_local", { id, kind, path }),
+  contentInstall: (id: string, kind: ContentKind, project: string, version: string | null = null) =>
+    invoke<InstallReport>("content_install", { id, kind, project, version }),
+  contentUpdates: (id: string) => invoke<UpdateInfo[]>("content_updates", { id }),
+  contentUpdate: (id: string, update: UpdateInfo) => invoke<InstallReport>("content_update", { id, update }),
+  modrinthSearch: (args: SearchArgs) => invoke<SearchResult>("modrinth_search", { args }),
+  modrinthVersions: (project: string, profileId: string | null, projectType: ProjectType) =>
+    invoke<ModrinthVersion[]>("modrinth_versions", { project, profileId, projectType }),
+  modrinthCategories: () => invoke<Category[]>("modrinth_categories"),
+
+  packInstallModrinth: (project: string, version: string | null = null) => invoke<ImportResult>("pack_install_modrinth", { project, version }),
+  packInstallCurseforge: (project: number, file: number | null = null) => invoke<ImportResult>("pack_install_curseforge", { project, file }),
+  packImportFile: (path: string) => invoke<ImportResult>("pack_import_file", { path }),
+  curseforgeSearch: (args: SearchArgs) => invoke<SearchResult>("curseforge_search", { args }),
+  curseforgeFiles: (project: number, profileId: string | null, projectType: ProjectType) =>
+    invoke<ModrinthVersion[]>("curseforge_files", { project, profileId, projectType }),
+  contentInstallCurseforge: (id: string, kind: ContentKind, project: number, file: number | null = null) =>
+    invoke<InstallReport>("content_install_curseforge", { id, kind, project, file }),
+  packInfo: (id: string) => invoke<PackInfo | null>("pack_info", { id }),
+  packCheckUpdate: (id: string) => invoke<PackUpdate | null>("pack_check_update", { id }),
+  packUpdatesAll: () => invoke<{ profile: Profile; update: PackUpdate }[]>("pack_updates_all"),
+  packPlanUpdate: (id: string, version: string | null = null, file: string | null = null) =>
+    invoke<UpdatePlan>("pack_plan_update", { id, version, file }),
+  packApplyUpdate: (id: string, resolutions: Record<string, Resolution>) => invoke<SnapshotInfo>("pack_apply_update", { id, resolutions }),
+  packSnapshots: (id: string) => invoke<SnapshotInfo[]>("pack_snapshots", { id }),
+  packRollback: (id: string, snapshot: string) => invoke<void>("pack_rollback", { id, snapshot }),
+  packExport: (id: string, path: string, version: string) => invoke<ExportReport>("pack_export", { id, path, version }),
+
+  getSettings: () => invoke<Settings>("get_settings"),
+  saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
+  setBackground: (path: string) => invoke<Settings>("set_background", { path }),
+  clearBackground: () => invoke<Settings>("clear_background"),
+  exportTheme: (path: string) => invoke<void>("export_theme", { path }),
+  importTheme: (path: string) => invoke<Settings>("import_theme", { path }),
+  stopGame: (id: string) => invoke<void>("stop_game", { id }),
+};
+
+/** Fehler aus Tauri-Befehlen kommen als Text; alles andere lesbar machen. */
+export function errorText(e: unknown): string {
+  return typeof e === "string" ? e : e instanceof Error ? e.message : JSON.stringify(e);
+}

@@ -1,0 +1,27 @@
+[package]
+name = "pinecone-core"
+description = "Kern von TwoGG Pinecone: Manifeste, Downloads, Installation und Start von Minecraft"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha1.workspace = true
+md-5.workspace = true
+zip.workspace = true
+futures.workspace = true
+tracing.workspace = true
+directories.workspace = true
+uuid.workspace = true
+regex.workspace = true
+keyring.workspace = true
+hickory-resolver.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
