@@ -154,6 +154,16 @@ async fn apply_input(
         {
             Some(i)
         }
+        // Pack-Logo, beim Import gesetzt (siehe `PackManager::source_icon`).
+        Some(i)
+            if i.starts_with("data:image/png;base64,")
+                && i.len() <= 128 * 1024
+                && i[22..]
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'/' | b'=')) =>
+        {
+            Some(i)
+        }
         // Ein Emoji kann aus mehreren Codepoints bestehen (z. B. mit Hautfarbe).
         Some(i) if i.chars().count() <= 8 && i.len() <= 32 => Some(i),
         Some(_) => return Err("Symbol ist zu lang (ein Emoji oder bis zu zwei Zeichen)".into()),

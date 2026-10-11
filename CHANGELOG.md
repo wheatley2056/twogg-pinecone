@@ -5,6 +5,14 @@
 - **Forge und NeoForge:** Instanzen mit Forge (ab 1.13 und ältere bis 1.12.2) und NeoForge,
   installiert über die offiziellen Installer. Modpacks mit Forge/NeoForge von Modrinth und
   CurseForge lassen sich importieren, die Suche filtert passend.
+- **TwoGG-Modpack-Seiten:** Jedes TwoGG-Pack hat eine eigene Seite auf dem Pinecone-Server
+  (`pinecone.twogg.app/packs/<id>`), aufgebaut wie bei CurseForge mit Beschreibung, Versionen und
+  „In Pinecone installieren“. In „Entdecken“ und auf der Event-Seite öffnet der Pack-Name sie.
+- **Pack-Logos in der Bibliothek:** Beim Installieren eines Modpacks (TwoGG, Modrinth, CurseForge)
+  wird sein Logo zum Instanz-Symbol. Ältere Pack-Instanzen ohne Symbol bekommen es beim nächsten
+  Start; im Instanz-Dialog lässt es sich gegen ein Motiv tauschen.
+- **Installationen unter „Downloads“:** Modpacks und Inhalte aus „Entdecken“, Event-Packs,
+  geöffnete Pack-Links und Migrationen erscheinen beim Installieren im Downloads-Panel.
 - **Skin-Vorschau mit eigenen Animationen:** Ruhe, Gehen, Laufen, Winken, Jubeln und Tanzen mit
   weichen Übergängen; der Kopf folgt dem Mauszeiger, Drehen lässt sich zuschalten. Mit
   „Animationen reduzieren“ bewegt sich die Figur nur sanft.

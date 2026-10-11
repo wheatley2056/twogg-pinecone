@@ -450,6 +450,8 @@ export interface TwoggPack {
   versions?: TwoggVersion[] | null;
   /** Event auf twogg.app, zu dem das Pack gehört. */
   eventId?: string | null;
+  /** Öffentliche Seite des Packs auf dem Pinecone-Server (fehlt bei älteren Servern). */
+  pageUrl?: string | null;
 }
 
 /** Eintrag der TwoGG-Auswahl in „Entdecken“. */

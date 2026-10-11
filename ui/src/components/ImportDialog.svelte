@@ -3,6 +3,7 @@
   import { onMount, untrack } from "svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import { api, errorText } from "../lib/api";
+  import { tracked } from "../lib/installs.svelte";
   import { t } from "../lib/i18n.svelte";
   import type { ImportResult, LoaderKind, OpenRequest, PreviewResult } from "../lib/types";
   import Icon from "./Icon.svelte";
@@ -53,7 +54,9 @@
     installing = true;
     error = null;
     try {
-      const imported = await api.packImportPending(result.token, name.trim() || null);
+      const token = result.token;
+      const title = name.trim() || result.preview.name;
+      const imported = await tracked({ title, iconUrl: null, target: t("discover.newInstance") }, () => api.packImportPending(token, name.trim() || null));
       result = null;
       onImported(imported);
       onClose();

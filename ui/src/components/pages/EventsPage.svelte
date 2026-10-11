@@ -4,6 +4,7 @@
   import { onDestroy, onMount } from "svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { api, errorText } from "../../lib/api";
+  import { tracked } from "../../lib/installs.svelte";
   import { badgeText, calendarLine, eventDate, featured, loadTwogg, participationOf, twogg, typeLabel } from "../../lib/events.svelte";
   import { t } from "../../lib/i18n.svelte";
   import type { AppEvent, ImportResult, JoinInfo, Profile, TwoggPack } from "../../lib/types";
@@ -55,7 +56,7 @@
     installing = true;
     packError = null;
     try {
-      onInstalled(await api.packInstallTwogg(pack.id, null));
+      onInstalled(await tracked({ title: pack.title, iconUrl: pack.iconUrl, target: t("discover.newInstance") }, () => api.packInstallTwogg(pack.id, null)));
     } catch (e) {
       packError = errorText(e);
     } finally {
@@ -159,7 +160,12 @@
             <h3 class="section-label">{t("events.pack")}</h3>
             <div class="row">
               <span class="grow">
-                <span class="title">{eventPack.title}</span>
+                {#if eventPack.pageUrl}
+                  {@const url = eventPack.pageUrl}
+                  <button class="title link-title" title={t("events.packPage")} onclick={() => open(url)}>{eventPack.title}</button>
+                {:else}
+                  <span class="title">{eventPack.title}</span>
+                {/if}
                 <span class="hint">{eventPack.latest ? `${eventPack.latest.version} · ${eventPack.latest.loader ?? "Vanilla"} ${eventPack.latest.minecraft}` : eventPack.summary}</span>
               </span>
               {#if packInstance}
@@ -473,6 +479,19 @@
 
   .title {
     font-weight: 700;
+  }
+
+  .link-title {
+    justify-content: flex-start;
+    min-height: 0;
+    padding: 0;
+    background: transparent;
+    font-size: inherit;
+  }
+
+  .link-title:hover:not(:disabled) {
+    background: transparent;
+    color: var(--accent-hover);
   }
 
   .title.ok {

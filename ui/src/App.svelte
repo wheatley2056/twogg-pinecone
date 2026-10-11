@@ -6,6 +6,7 @@
   import { hasUnread } from "./lib/notifications.svelte";
   import { startFriends } from "./lib/friends.svelte";
   import { byRecent, versionLabel } from "./lib/profiles";
+  import { installs } from "./lib/installs.svelte";
   import { runOf, startGame, stopGame } from "./lib/runs.svelte";
   import type { MenuEntry } from "./lib/contextmenu.svelte";
   import { loadSettings, settings } from "./lib/settings.svelte";
@@ -99,7 +100,7 @@
   const hasAccount = $derived(accounts.some((a) => a.active));
   const tab = $derived<Tab | null>(view === "settings" ? null : view);
   const syncPack = $derived(syncId ? (syncPacks.find((s) => s.id === syncId) ?? null) : null);
-  const activity = $derived(profiles.filter((p) => runOf(p.id).status === "preparing").length);
+  const activity = $derived(profiles.filter((p) => runOf(p.id).status === "preparing").length + installs.length);
   const customFrame = $derived(!(settings.current?.systemFrame ?? false));
 
   async function reloadProfiles() {
@@ -129,6 +130,11 @@
     await api.onOpenPack(openExternal).catch(() => {});
     for (const r of await api.takeOpenRequests().catch(() => [])) openExternal(r);
     if (info?.updatesConfigured) checkUpdates(true);
+    // Ältere Pack-Instanzen ohne Symbol bekommen das Logo ihres Packs.
+    api
+      .packFillIcons()
+      .then((n) => void (n > 0 && reloadProfiles()))
+      .catch(() => {});
   });
 
   // Freundesliste: Status melden (gewählte Instanz, ob gespielt wird, Server beim Schnellbeitritt).

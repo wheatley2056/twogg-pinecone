@@ -103,7 +103,7 @@ let mockShots = [200, 30, 260, 180, 320, 90].map((hue, i) => ({
 }));
 const TWOGG_PACK = {
   id: "horizons-unbound", title: "Horizons Unbound", summary: "Das Modpack für unseren Survival-Server", iconUrl: null, featured: true,
-  updatedAt: now - 86400, downloads: 128, eventId: "revival-avalon",
+  updatedAt: now - 86400, downloads: 128, eventId: "revival-avalon", pageUrl: "https://pinecone.twogg.app/packs/horizons-unbound",
   latest: { id: "v2", version: "2.0.0", minecraft: "1.20.1", loader: "fabric", loaderVersion: "0.19.5", channel: "release",
     changelogHtml: "<ul><li>Neue Farmwelt</li><li>Create 6</li></ul>", size: 2_400_000, sha1: "0", publishedAt: now - 86400 },
 };
@@ -322,6 +322,7 @@ Object.assign(api, {
   packInfo: async (id: string) =>
     id === "fabric-test" ? { name: "Avalon Event-Pack", version: "1.4.0", source: "twogg" } : id === "qol" ? { name: "Fabulously Optimized", version: "6.3.4", source: "modrinth" } : null,
   packCheckUpdate: async () => (await wait(400), { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" }),
+  packFillIcons: async () => 0,
   packUpdatesAll: async () => (await wait(600), [{ profile: profiles[0], update: { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" } }]),
   packPlanUpdate: async () => (await wait(500), {
     packName: "Fabulously Optimized", fromVersion: "6.3.4", toVersion: "6.5.0", minecraft: "1.21.1",

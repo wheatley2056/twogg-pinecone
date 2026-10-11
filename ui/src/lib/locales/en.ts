@@ -65,6 +65,7 @@ const en: Record<MessageKey, string> = {
   "dialog.look": "Appearance",
   "dialog.icon": "Icon",
   "dialog.initials": "Initials",
+  "dialog.packLogo": "Pack logo",
   "motif.shield": "Crest",
   "motif.block": "Block",
   "motif.house": "House",
@@ -523,6 +524,7 @@ const en: Record<MessageKey, string> = {
   "shell.minimize": "Minimize",
   "shell.maximize": "Maximize",
   "shell.close": "Close",
+  "shell.installing": "Installing · {target}",
   "shell.noActivity": "Nothing is downloading.",
   "shell.noNotifications": "No notifications.",
   "shell.dismiss": "Dismiss",
@@ -823,6 +825,7 @@ const en: Record<MessageKey, string> = {
   "discover.chooseWorld": "Which world?",
   "discover.noWorlds": "This instance has no world yet. Start it once and create one.",
   "events.pack": "Event pack",
+  "events.packPage": "Open pack page",
   "events.openInstance": "Open instance",
   "events.installPack": "Install event pack",
 };

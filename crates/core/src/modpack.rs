@@ -1040,6 +1040,7 @@ impl PackManager {
         profile.loader = pack.loader.clone();
         let profile = self.profiles.create(profile)?;
         let game_dir = self.profiles.game_dir(&profile.id);
+        let icon_source = source.clone();
 
         let result = async {
             let targets: Vec<(String, PackFile)> = pack
@@ -1057,10 +1058,78 @@ impl PackManager {
             let _ = self.profiles.delete(&profile.id);
             return Err(e);
         }
+        // Logo der Quelle als Instanz-Symbol; fehlt es oder klappt der Abruf nicht, bleiben die
+        // Anfangsbuchstaben.
+        let mut profile = profile;
+        match self.source_icon(&icon_source).await {
+            Ok(Some(icon)) => {
+                profile.icon = Some(icon);
+                if let Err(e) = self.profiles.save(&profile) {
+                    tracing::warn!("Instanz-Symbol nicht gespeichert: {e}");
+                }
+            }
+            Ok(None) => {}
+            Err(e) => tracing::warn!("Pack-Logo nicht geladen: {e}"),
+        }
         Ok(ImportResult {
             profile,
             missing: pack.missing,
         })
+    }
+
+    /// Pack-Instanzen ohne Symbol (vor dem Logo-Import angelegt) bekommen das Logo ihrer Quelle.
+    /// Liefert, wie viele Instanzen ein Symbol bekommen haben.
+    pub async fn fill_missing_icons(&self) -> Result<usize> {
+        let mut filled = 0;
+        for mut profile in self.profiles.list()? {
+            if profile.icon.is_some() {
+                continue;
+            }
+            let Some(info) = self.content.load_lock(&profile.id)?.pack else {
+                continue;
+            };
+            match self.source_icon(&info.source).await {
+                Ok(Some(icon)) => {
+                    profile.icon = Some(icon);
+                    self.profiles.save(&profile)?;
+                    filled += 1;
+                }
+                Ok(None) => {}
+                Err(e) => tracing::warn!("Pack-Logo für {} nicht geladen: {e}", profile.id),
+            }
+        }
+        Ok(filled)
+    }
+
+    /// Logo eines Packs an seiner Quelle (Modrinth, CurseForge, TwoGG-Server) als kleines PNG
+    /// (`data:`-URL), passend für das Instanz-Symbol.
+    pub async fn source_icon(&self, source: &PackSource) -> Result<Option<String>> {
+        let url = match source {
+            PackSource::Modrinth { project_id, .. } => {
+                self.modrinth.project(project_id).await?.icon_url
+            }
+            PackSource::Curseforge { project_id, .. } => match &self.curseforge {
+                Some(cf) => cf
+                    .mods_by_ids(&[*project_id])
+                    .await?
+                    .into_iter()
+                    .next()
+                    .and_then(|m| m.logo)
+                    .and_then(|l| l.thumbnail_url),
+                None => None,
+            },
+            PackSource::Twogg { pack_id, .. } => match &self.twogg {
+                Some(client) => client.pack(pack_id).await?.icon_url,
+                None => None,
+            },
+            PackSource::File => None,
+        };
+        let Some(url) = url.filter(|u| u.starts_with("https://") || u.starts_with("http://"))
+        else {
+            return Ok(None);
+        };
+        let bytes = self.downloader.fetch_bytes(&url).await?;
+        icon_data_url(&bytes).map(Some)
     }
 
     /// Neuere Pack-Version für dieselbe Minecraft-Version und denselben Loader?
@@ -1599,9 +1668,56 @@ fn walk_files(root: &Path, dir: &str) -> Vec<String> {
     out
 }
 
+/// Größte Kantenlänge gespeicherter Instanz-Symbole (Pixel).
+const ICON_SIZE: u32 = 96;
+
+/// Bild (PNG, JPEG, WebP, GIF) auf höchstens [`ICON_SIZE`] verkleinern und als PNG-`data:`-URL
+/// liefern. Kleine Pixel-Logos werden nicht weichgezeichnet.
+pub fn icon_data_url(bytes: &[u8]) -> Result<String> {
+    use base64::Engine;
+    if bytes.len() > 8 * 1024 * 1024 {
+        return Err(Error::Invalid("Logo ist zu groß".into()));
+    }
+    let img = image::load_from_memory(bytes)
+        .map_err(|e| Error::Invalid(format!("Logo nicht lesbar: {e}")))?;
+    let img = if img.width() > ICON_SIZE || img.height() > ICON_SIZE {
+        img.resize(ICON_SIZE, ICON_SIZE, image::imageops::FilterType::Lanczos3)
+    } else {
+        img
+    };
+    let mut png = Vec::new();
+    img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .map_err(|e| Error::Invalid(format!("Logo nicht umwandelbar: {e}")))?;
+    Ok(format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(png)
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn icon_is_shrunk_to_png_data_url() {
+        let img = image::RgbaImage::from_pixel(400, 200, image::Rgba([200, 120, 40, 255]));
+        let mut jpeg = Vec::new();
+        image::DynamicImage::ImageRgba8(img)
+            .to_rgb8()
+            .write_to(
+                &mut std::io::Cursor::new(&mut jpeg),
+                image::ImageFormat::Jpeg,
+            )
+            .unwrap();
+        let url = icon_data_url(&jpeg).unwrap();
+        use base64::Engine;
+        let png = base64::engine::general_purpose::STANDARD
+            .decode(url.strip_prefix("data:image/png;base64,").unwrap())
+            .unwrap();
+        let back = image::load_from_memory(&png).unwrap();
+        assert_eq!((back.width(), back.height()), (ICON_SIZE, ICON_SIZE / 2));
+        assert!(icon_data_url(b"kein Bild").is_err());
+    }
 
     #[test]
     fn settings_classification() {

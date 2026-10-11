@@ -566,3 +566,48 @@ async fn imports_curseforge_pack_with_blocked_file() {
         req.body
     );
 }
+
+#[tokio::test]
+async fn import_takes_pack_logo_as_instance_icon() {
+    let (server, dir, packs) = setup().await;
+    let packs = packs.with_twogg(Some(
+        pinecone_core::twogg::TwoggClient::with_base(&server.base).unwrap(),
+    ));
+    let mut logo = Vec::new();
+    image::RgbaImage::from_pixel(256, 256, image::Rgba([233, 162, 59, 255]))
+        .write_to(
+            &mut std::io::Cursor::new(&mut logo),
+            image::ImageFormat::Png,
+        )
+        .unwrap();
+    server.on("GET", "/media/logo.png", 200, logo);
+    server.on(
+        "GET",
+        "/api/v1/packs/test-pack",
+        200,
+        json!({ "id": "test-pack", "title": "Test", "summary": "", "iconUrl": format!("{}/media/logo.png", server.base),
+                "featured": false, "updatedAt": 0, "downloads": 0, "latest": null })
+        .to_string(),
+    );
+    let v1 = dir.path().join("v1.mrpack");
+    mrpack(
+        &v1,
+        &server,
+        "1.0",
+        &["a1.jar"],
+        &[],
+        json!({ "minecraft": "1.21.1" }),
+    );
+    let source = PackSource::Twogg {
+        pack_id: "test-pack".into(),
+        version_id: "v1".into(),
+    };
+    let result = packs.import(&v1, source, None).await.unwrap();
+    let icon = result.profile.icon.expect("Logo als Symbol");
+    assert!(icon.starts_with("data:image/png;base64,"));
+
+    // Ohne Logo an der Quelle bleibt das Symbol leer, der Import klappt trotzdem.
+    let plain = packs.import(&v1, PackSource::File, None).await.unwrap();
+    assert_eq!(plain.profile.icon, None);
+    assert_eq!(packs.fill_missing_icons().await.unwrap(), 0);
+}

@@ -247,6 +247,7 @@ fn main() {
             packs::pack_info,
             packs::pack_check_update,
             packs::pack_updates_all,
+            packs::pack_fill_icons,
             packs::pack_plan_update,
             packs::pack_apply_update,
             packs::pack_snapshots,

@@ -68,6 +68,9 @@ pub struct Pack {
     /// Event auf twogg.app, zu dem das Pack gehört.
     #[serde(default)]
     pub event_id: Option<String>,
+    /// Öffentliche Seite des Packs (`/packs/<id>` auf dem Pinecone-Server); fehlt bei älteren Servern.
+    #[serde(default)]
+    pub page_url: Option<String>,
 }
 
 /// Eintrag der TwoGG-Auswahl in „Entdecken“.
