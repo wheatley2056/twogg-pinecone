@@ -18,13 +18,19 @@ npx tauri signer generate -w ~/.tauri/pinecone.key
 
 ## Neue Version
 
-1. Version an drei Stellen gleich setzen: `Cargo.toml` (`[workspace.package] version`),
+Versionsschema: Während der Beta `0.9.x` (0.9.0, 0.9.1, …), danach `1.0.0`. Keine Vorab-Kennungen
+wie `-beta.1`: Der MSI-Installer akzeptiert nur Zahlen, und `releases/latest` (Updater) überspringt
+als „Pre-release“ markierte Releases. Releases in der Beta-Zeit heißen deshalb „… (Beta)“, werden
+aber als normales Release veröffentlicht.
+
+1. `CHANGELOG.md` um die neue Version ergänzen.
+2. Version an drei Stellen gleich setzen: `Cargo.toml` (`[workspace.package] version`),
    `src-tauri/tauri.conf.json` (`version`) und `package.json` (`version`), danach `cargo check`
    (aktualisiert `Cargo.lock`) und `npm install` (aktualisiert `package-lock.json`).
-2. Committen und taggen: `git tag v0.2.0 && git push origin v0.2.0`.
-3. Der Workflow „Release“ baut Windows (NSIS-.exe, .msi) und Linux (AppImage, .deb, .rpm),
+3. Committen und taggen: `git tag v0.9.1 && git push origin v0.9.1`.
+4. Der Workflow „Release“ baut Windows (NSIS-.exe, .msi) und Linux (AppImage, .deb, .rpm),
    signiert die Update-Pakete und legt ein **Release als Entwurf** mit `latest.json` an.
-4. Entwurf prüfen (Installer auf Windows und Linux ausprobieren), Release-Notizen ergänzen,
+5. Entwurf prüfen (Installer auf Windows und Linux ausprobieren), Release-Notizen ergänzen,
    veröffentlichen. Erst dann sehen installierte Launcher das Update
    (`releases/latest/download/latest.json`).
 
@@ -45,6 +51,7 @@ Der Updater lädt `latest.json` und die Pakete **ohne Anmeldung**. Aus einem pri
 GitHub-Repo geht das nicht. Möglichkeiten:
 
 - Repo (oder ein separates Release-Repo) öffentlich machen, oder
-- `latest.json` und die Installer auf einem eigenen Server ablegen (z. B. bei TwoGG) und
-  `PINECONE_UPDATE_URL` im Workflow auf diese Adresse setzen. Die Adressen in `latest.json`
+- `latest.json` und die Installer auf einem eigenen Server ablegen (z. B. bei TwoGG) und die
+  GitHub-Variable `PINECONE_UPDATE_URL` auf diese Adresse setzen (der Workflow nimmt sie statt der
+  Releases dieses Repos). Die Adressen in `latest.json`
   müssen dann ebenfalls auf diesen Server zeigen.

@@ -1,4 +1,5 @@
-//! Client für den TwoGG-Pinecone-Server (`crates/server`): Neuigkeiten und TwoGG-Modpacks.
+//! Client für den TwoGG-Pinecone-Server (Repo `twogg-pinecone-server`): Neuigkeiten, TwoGG-Modpacks,
+//! Empfehlungen und Freunde.
 //! Modpack-Dateien gibt es nur über kurzlebige, signierte Links, die der Server Pinecone ausstellt.
 
 use std::time::Duration;

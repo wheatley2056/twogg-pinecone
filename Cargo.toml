@@ -1,12 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["crates/core", "crates/cli", "crates/server", "src-tauri"]
+members = ["crates/core", "crates/cli", "src-tauri"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.9.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-repository = "https://git.core01.twogg.de/wheatley/twogg-pinecone"
+repository = "https://github.com/wheatley2056/twogg-pinecone"
 
 [workspace.dependencies]
 pinecone-core = { path = "crates/core" }

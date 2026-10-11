@@ -60,11 +60,12 @@ jobs:
           PINECONE_MSA_CLIENT_ID: ${{ secrets.PINECONE_MSA_CLIENT_ID }}
           PINECONE_CURSEFORGE_API_KEY: ${{ secrets.PINECONE_CURSEFORGE_API_KEY }}
           PINECONE_UPDATE_PUBKEY: ${{ vars.PINECONE_UPDATE_PUBKEY }}
-          PINECONE_UPDATE_URL: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
+          # Wo installierte Launcher nach Updates suchen; ohne Variable die Releases dieses Repos.
+          PINECONE_UPDATE_URL: ${{ vars.PINECONE_UPDATE_URL || format('https://github.com/{0}/releases/latest/download/latest.json', github.repository) }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: TwoGG Pinecone ${{ github.ref_name }}
-          releaseBody: Änderungen siehe Commits. Windows-Installer (.exe/.msi), Linux (AppImage, .deb, .rpm).
+          releaseName: TwoGG Pinecone ${{ github.ref_name }} (Beta)
+          releaseBody: Änderungen siehe CHANGELOG.md. Windows-Installer (.exe/.msi), Linux (AppImage, .deb, .rpm).
           releaseDraft: true
           includeUpdaterJson: true
           args: --config src-tauri/tauri.release.conf.json

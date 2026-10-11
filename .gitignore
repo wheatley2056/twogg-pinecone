@@ -1,5 +1,3 @@
 /target/
 node_modules/
 /dist/
-/admin/dist/
-/deploy/pinecone/deploy.local.psd1
