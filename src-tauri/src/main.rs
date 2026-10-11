@@ -13,6 +13,7 @@ mod open;
 mod packs;
 mod screenshots;
 mod skins;
+mod splash;
 mod syncpacks;
 mod twogg_app;
 mod update;
@@ -148,13 +149,15 @@ fn main() {
         .manage(state)
         .setup(|app| {
             dashboard::allow_assets(app.handle());
-            if let Ok(settings) = tauri::Manager::state::<AppState>(app)
+            let settings = tauri::Manager::state::<AppState>(app)
                 .launcher
                 .settings()
                 .load()
-            {
-                dashboard::apply_frame(app.handle(), &settings);
+                .ok();
+            if let Some(settings) = &settings {
+                dashboard::apply_frame(app.handle(), settings);
             }
+            splash::start(app.handle(), settings.as_ref());
             screenshots::start_watcher(app.handle());
             // Installer tragen `pinecone://` selbst ein; beim Entwickeln und für AppImages
             // registriert sich die App hier (Windows: Registry des Nutzers, Linux: .desktop-Datei).
@@ -185,6 +188,7 @@ fn main() {
             commands::login_cancel,
             commands::java_list,
             commands::last_log,
+            splash::splash_finished,
             dashboard::dashboard,
             dashboard::ping_server,
             dashboard::open_screenshot,

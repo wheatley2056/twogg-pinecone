@@ -736,6 +736,8 @@ const de = {
   "settings.sourcesAccounts": "Anmeldung",
   "settings.sourcesContent": "Inhalte",
   "settings.sourcesLead": "Woher Pinecone Inhalte lädt.",
+  "settings.splash": "Startanimation",
+  "settings.splashHint": "Pinecone-Logo beim Öffnen des Launchers (gut drei Sekunden).",
   "settings.systemFrame": "Fensterrahmen des Systems",
   "settings.systemFrameHint": "Statt der eigenen Kopfleiste; hilft, wenn das Fenster unter Linux nicht verschiebbar ist.",
   "settings.twogg": "TwoGG-Verknüpfung",

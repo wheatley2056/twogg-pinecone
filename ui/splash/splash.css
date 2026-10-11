@@ -1,0 +1,204 @@
+/* Werte aus der Vorlage „Intro-Animation (Start)“. Die Vorlage läuft in einer 5-s-Schleife; hier
+   läuft sie einmal und bleibt auf dem Endbild stehen (Ende des Schriftzugs bei 68,75 % = 3,44 s). */
+@import "@fontsource/pixelify-sans/700.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #12100d;
+  user-select: none;
+  cursor: default;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 960px;
+  height: 600px;
+  overflow: hidden;
+  background: #e9a23b;
+  font-family: "Pixelify Sans", sans-serif;
+  font-variant-ligatures: none;
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
+}
+
+.stage * {
+  animation-duration: 5s;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+.w {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% + 90px);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 90px) 100%, 0 100%);
+  transform: translateX(-105%);
+  animation-timing-function: cubic-bezier(0.75, 0, 0.25, 1);
+}
+
+.w1 { background: #8ccb7e; animation-name: w1; }
+.w2 { background: #5a3416; animation-name: w2; }
+.w3 { background: #f1e8da; animation-name: w3; }
+.w4 { background: #12100d; animation-name: w4; }
+
+@keyframes w1 { 0%, 13.75% { transform: translateX(-105%); } 18.75%, 100% { transform: translateX(0); } }
+@keyframes w2 { 0%, 23.75% { transform: translateX(-105%); } 28.75%, 100% { transform: translateX(0); } }
+@keyframes w3 { 0%, 33.75% { transform: translateX(-105%); } 38.75%, 100% { transform: translateX(0); } }
+@keyframes w4 { 0%, 43.75% { transform: translateX(-105%); } 48.75%, 100% { transform: translateX(0); } }
+
+.pat {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation-name: pat;
+  animation-timing-function: ease-out;
+}
+
+@keyframes pat { 0%, 48.75% { opacity: 0; } 57.5%, 100% { opacity: 1; } }
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  position: relative;
+  width: 108px;
+  height: 156px;
+  flex: none;
+  animation-name: pop;
+  animation-timing-function: ease-out;
+}
+
+@keyframes pop {
+  0% { transform: scale(0); animation-timing-function: steps(5, end); }
+  6.25%, 100% { transform: scale(1); }
+}
+
+.logo svg {
+  position: absolute;
+  inset: 0;
+}
+
+.sil {
+  animation-name: sil;
+  animation-timing-function: linear;
+}
+
+@keyframes sil {
+  0%, 26.2% { color: #1b1206; opacity: 1; }
+  26.3%, 36.2% { color: #f1e8da; opacity: 1; }
+  36.3%, 46.2% { color: #1b1206; opacity: 1; }
+  46.3%, 100% { color: #1b1206; opacity: 0; }
+}
+
+.col {
+  opacity: 0;
+  animation-name: col;
+  animation-timing-function: linear;
+}
+
+@keyframes col { 0%, 46.2% { opacity: 0; } 46.3%, 100% { opacity: 1; } }
+
+.txt {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 0;
+  margin-left: 0;
+  font-weight: 700;
+  font-size: 96px;
+  line-height: 1;
+  letter-spacing: 2px;
+  color: #f1e8da;
+  animation-name: type;
+  animation-timing-function: steps(8, end);
+}
+
+@keyframes type {
+  0%, 52.5% { max-width: 0; margin-left: 0; }
+  62.5%, 100% { max-width: 470px; margin-left: 30px; }
+}
+
+.cur {
+  display: block;
+  width: 14px;
+  height: 76px;
+  margin-left: 8px;
+  flex: none;
+  background: #e9a23b;
+  opacity: 0;
+  animation-name: cur;
+  animation-timing-function: step-end;
+}
+
+@keyframes cur {
+  0% { opacity: 0; }
+  52.5% { opacity: 1; }
+  55% { opacity: 0; }
+  56.5% { opacity: 1; }
+  59% { opacity: 0; }
+  60.5% { opacity: 1; }
+  64% { opacity: 0; }
+  66% { opacity: 1; }
+  68%, 100% { opacity: 0; }
+}
+
+.tag {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + 104px);
+  text-align: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 5px;
+  color: #b5a790;
+  opacity: 0;
+  animation-name: tag;
+  animation-timing-function: ease-out;
+}
+
+@keyframes tag {
+  0%, 63.75% { opacity: 0; transform: translateY(8px); }
+  68.75%, 100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Ohne Bewegung: gleich das Endbild. */
+.still * {
+  animation: none !important;
+}
+
+.still .w4,
+.still .w1,
+.still .w2,
+.still .w3 {
+  transform: none;
+}
+
+.still .sil,
+.still .cur {
+  opacity: 0;
+}
+
+.still .col,
+.still .pat,
+.still .tag {
+  opacity: 1;
+}
+
+.still .txt {
+  max-width: 470px;
+  margin-left: 30px;
+}

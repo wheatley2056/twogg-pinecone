@@ -17,11 +17,12 @@ export default defineConfig({
     target: "es2022",
     // three.js für den Skin-Editor ist allein gut 500 kB; der Editor lädt es erst bei Bedarf.
     chunkSizeWarningLimit: 700,
-    // Zweite Seite: der eingebettete Skin-Editor (läuft im iframe).
+    // Weitere Seiten: der eingebettete Skin-Editor (läuft im iframe) und die Startanimation.
     rolldownOptions: {
       input: {
         main: fileURLToPath(new URL("./ui/index.html", import.meta.url)),
         skinEditor: fileURLToPath(new URL("./ui/skin-editor.html", import.meta.url)),
+        splash: fileURLToPath(new URL("./ui/splash.html", import.meta.url)),
       },
     },
   },

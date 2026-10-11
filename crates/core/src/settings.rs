@@ -119,10 +119,17 @@ pub struct Settings {
     /// Fensterrahmen des Systems statt der eigenen Kopfleiste (hilft unter manchen Linux-Fenstermanagern).
     #[serde(default)]
     pub system_frame: bool,
+    /// Startanimation (Splash-Screen) beim Öffnen des Launchers.
+    #[serde(default = "default_splash")]
+    pub splash: bool,
     #[serde(default = "default_widgets")]
     pub widgets: Vec<Widget>,
     #[serde(default)]
     pub language: Language,
+}
+
+fn default_splash() -> bool {
+    true
 }
 
 fn default_widgets() -> Vec<Widget> {
@@ -140,6 +147,7 @@ impl Default for Settings {
         Self {
             theme: Theme::default(),
             system_frame: false,
+            splash: true,
             widgets: default_widgets(),
             language: Language::default(),
         }

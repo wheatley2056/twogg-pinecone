@@ -2,6 +2,9 @@
 
 ## 0.9.1
 
+- **Startanimation:** Beim Öffnen erscheint das Pinecone-Logo als Splash-Screen, während der
+  Launcher im Hintergrund lädt. Abschaltbar unter Einstellungen → Allgemein; mit „Animationen
+  reduzieren“ nur als Standbild.
 - **Startseite neu:** aktuelles TwoGG-Event mit Banner von twogg.app, „Zuletzt gespielt“ mit
   Spielen-Knopf und letzter Spielzeit, Neuigkeiten (zum Lesen anklicken), Community-Server mit
   Spielerzahl und Beitreten, Freunde online.
