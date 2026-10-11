@@ -127,6 +127,8 @@
   const LOADERS: [LoaderKind | null, string][] = [
     ["fabric", "Fabric"],
     ["quilt", "Quilt"],
+    ["forge", "Forge"],
+    ["neoforge", "NeoForge"],
     [null, "Vanilla"],
   ];
 </script>

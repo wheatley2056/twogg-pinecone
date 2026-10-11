@@ -156,9 +156,11 @@ impl Installer {
 
         let libraries = self.paths.libraries();
         for lib in version.libraries.iter().filter(|l| l.applies(&self.env)) {
+            // Ohne Adresse (Forge): erzeugen die Forge-Prozessoren bzw. liegen aus dem Installer bereit.
             for artifact in [lib.artifact(), lib.native_artifact(&self.env)]
                 .into_iter()
                 .flatten()
+                .filter(|a| !a.url.is_empty())
             {
                 tasks.push(DownloadTask {
                     dest: libraries.join(&artifact.path),

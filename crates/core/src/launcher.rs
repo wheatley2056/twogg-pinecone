@@ -241,6 +241,14 @@ impl Launcher {
             }
         };
 
+        // Forge/NeoForge: gepatchten Client einmalig mit den Installer-Prozessoren erzeugen.
+        if let (Some(spec), false) = (&profile.loader, offline) {
+            on_event(PrepareEvent::Stage(Stage::Loader));
+            self.loaders
+                .finish(spec, &id, &profile.minecraft, &java)
+                .await?;
+        }
+
         on_event(PrepareEvent::Stage(Stage::Assets));
         let game_dir = self.game_dir(profile);
         let game_assets = self.installer.prepare_assets(&version, &game_dir).await?;

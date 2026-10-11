@@ -1,6 +1,6 @@
 // Spiegel der DTOs aus src-tauri/src/dto.rs.
 
-export type LoaderKind = "fabric" | "quilt";
+export type LoaderKind = "fabric" | "quilt" | "forge" | "neoforge";
 export type AccountKind = "offline" | "microsoft";
 
 export interface AppInfo {

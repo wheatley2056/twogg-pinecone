@@ -71,8 +71,9 @@ pub struct VersionJson {
     pub libraries: Vec<Library>,
     #[serde(default)]
     pub java_version: Option<JavaVersion>,
-    /// Version, deren Client-JAR genutzt wird (bei Loadern die Basisversion). Wird beim Merge gesetzt.
-    #[serde(skip)]
+    /// Version, deren Client-JAR genutzt wird: bei Loadern die Basisversion (beim Merge gesetzt),
+    /// bei Forge die eigene ID (steht dann im Version-JSON).
+    #[serde(default)]
     pub jar: Option<String>,
 }
 
@@ -291,7 +292,11 @@ impl VersionJson {
     /// Führt eine Loader-Version (`inheritsFrom`) mit ihrer Basisversion zusammen.
     /// Felder des Kindes gewinnen, Libraries des Kindes stehen vorne und ersetzen gleichnamige.
     pub fn merge_onto(self, parent: VersionJson) -> VersionJson {
-        let jar = Some(parent.jar_id().to_string());
+        // Eigene Client-JAR des Kinds (Forge ab 1.17 erwartet `<id>.jar`), sonst die der Basis.
+        let jar = self
+            .jar
+            .clone()
+            .or_else(|| Some(parent.jar_id().to_string()));
         let child_ids: HashSet<String> = self.libraries.iter().map(Library::identity).collect();
         let mut libraries = self.libraries;
         libraries.extend(

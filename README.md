@@ -1,7 +1,7 @@
 # TwoGG Pinecone
 
 Minecraft-Launcher der TwoGG-Community: Rust-Kern, Desktop-App mit Tauri 2 und Svelte 5.
-Windows und Linux, Fabric und Quilt, Modrinth und CurseForge, TwoGG-Events und -Modpacks.
+Windows und Linux, Fabric, Quilt, Forge und NeoForge, Modrinth und CurseForge, TwoGG-Events und -Modpacks.
 Architektur und Phasen stehen in [PLAN.md](PLAN.md), Änderungen in [CHANGELOG.md](CHANGELOG.md).
 
 Website mit Download: https://wheatley2056.github.io/twogg-pinecone/ (Quelle in `site/`).
@@ -99,7 +99,11 @@ cargo run -p pinecone-cli -- java install jre-legacy  # Mojang-Runtime laden (hi
 Profile liegen unter `<data-dir>/instances/<id>/` mit `profile.json` (Version, Loader, RAM,
 JVM-Argumente, Java) und eigenem `.minecraft`-Ordner für Welten, Mods und Einstellungen.
 Fabric und Quilt werden über ihre Meta-APIs installiert; ohne Angabe wird die neueste stabile
-Loader-Version gewählt. Spontane Starts ohne Profil nutzen `instances/_<version>/`.
+Loader-Version gewählt. Forge (empfohlene Version laut Forge) und NeoForge kommen über ihre
+offiziellen Installer: Pinecone lädt die Installer-JAR nach `versions/<id>/`, entpackt die
+mitgelieferten Bibliotheken und führt beim ersten Start die Installer-Prozessoren mit dem Java der
+Instanz aus (moderne Versionen ab 1.13; ältere Installer bis 1.12.2 brauchen das nicht). Spontane
+Starts ohne Profil nutzen `instances/_<version>/`.
 
 Java wird beim Start automatisch gewählt: zuerst eine installierte Java-Version mit genau der
 Major-Version aus dem Version-JSON (von Pinecone verwaltete Runtimes bevorzugt), sonst wird Mojangs
@@ -145,7 +149,7 @@ unter `instances/<id>/snapshots/` angelegt (die letzten drei bleiben), aus dem m
 ## Version wechseln
 
 „Version wechseln …“ im Menü einer Instanz (bzw. `profile migrate`) zieht eine Instanz auf eine andere
-Minecraft-Version oder einen anderen Loader (Fabric, Quilt, Vanilla) um. Pinecone legt dafür ein
+Minecraft-Version oder einen anderen Loader (Fabric, Quilt, Forge, NeoForge, Vanilla) um. Pinecone legt dafür ein
 neues Profil an und lässt das bisherige unverändert. Für jeden Inhalt wird die passende Version
 gesucht: Modrinth-Inhalte per Hash-Abgleich, CurseForge-Inhalte per Projekt; der Kanal (Release/Beta)
 wird nicht instabiler. Bekannte Gegenstücke werden ersetzt (z. B. Quilted Fabric API → Fabric API

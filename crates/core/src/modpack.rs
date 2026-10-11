@@ -215,10 +215,15 @@ fn cf_loader(loaders: &[CfLoader]) -> Result<Option<LoaderSpec>> {
             kind: LoaderKind::Quilt,
             version: version.into(),
         })),
-        "forge" | "neoforge" => Err(Error::Invalid(format!(
-            "Dieses Modpack braucht {}; Pinecone unterstützt bisher Fabric und Quilt",
-            if name == "forge" { "Forge" } else { "NeoForge" }
-        ))),
+        "forge" => Ok(Some(LoaderSpec {
+            kind: LoaderKind::Forge,
+            version: version.into(),
+        })),
+        "neoforge" => Ok(Some(LoaderSpec {
+            kind: LoaderKind::NeoForge,
+            // Für 1.20.1 hieß NeoForge noch `1.20.1-47.1.x`; dafür gibt es keinen NeoForge-Installer.
+            version: version.into(),
+        })),
         other => Err(Error::Invalid(format!(
             "Unbekannter Mod-Loader {other:?} im Modpack"
         ))),
@@ -344,16 +349,15 @@ pub fn read_mrpack(path: &Path) -> Result<PackArchive> {
 }
 
 fn loader_from_deps(deps: &BTreeMap<String, String>) -> Result<Option<LoaderSpec>> {
-    for unsupported in ["forge", "neoforge"] {
-        if deps.contains_key(unsupported) {
-            return Err(Error::Invalid(format!(
-                "Dieses Modpack braucht {}; Pinecone unterstützt bisher Fabric und Quilt",
-                if unsupported == "forge" {
-                    "Forge"
-                } else {
-                    "NeoForge"
-                }
-            )));
+    for (key, kind) in [
+        ("neoforge", LoaderKind::NeoForge),
+        ("forge", LoaderKind::Forge),
+    ] {
+        if let Some(v) = deps.get(key) {
+            return Ok(Some(LoaderSpec {
+                kind,
+                version: v.clone(),
+            }));
         }
     }
     Ok(
@@ -1074,12 +1078,7 @@ impl PackManager {
                 let loaders: Vec<String> = profile
                     .loader
                     .as_ref()
-                    .map(|l| {
-                        vec![match l.kind {
-                            LoaderKind::Fabric => "fabric".to_string(),
-                            LoaderKind::Quilt => "quilt".to_string(),
-                        }]
-                    })
+                    .map(|l| vec![l.kind.id().to_string()])
                     .unwrap_or_default();
                 let versions = self
                     .modrinth
@@ -1505,6 +1504,8 @@ impl PackManager {
             let key = match l.kind {
                 LoaderKind::Fabric => "fabric-loader",
                 LoaderKind::Quilt => "quilt-loader",
+                LoaderKind::Forge => "forge",
+                LoaderKind::NeoForge => "neoforge",
             };
             dependencies.insert(key.into(), l.version.clone());
         }
@@ -1633,6 +1634,12 @@ mod tests {
             loader_from_deps(&deps(&[("minecraft", "1.21.1")])).unwrap(),
             None
         );
-        assert!(loader_from_deps(&deps(&[("neoforge", "21.1.1")])).is_err());
+        assert_eq!(
+            loader_from_deps(&deps(&[("neoforge", "21.1.1")])).unwrap(),
+            Some(LoaderSpec {
+                kind: LoaderKind::NeoForge,
+                version: "21.1.1".into()
+            })
+        );
     }
 }

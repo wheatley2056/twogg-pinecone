@@ -1,5 +1,11 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- **Forge und NeoForge:** Instanzen mit Forge (ab 1.13 und ältere bis 1.12.2) und NeoForge,
+  installiert über die offiziellen Installer. Modpacks mit Forge/NeoForge von Modrinth und
+  CurseForge lassen sich importieren, die Suche filtert passend.
+
 ## 0.9.2
 
 - **Update-Kanal** wählbar (Einstellungen → Allgemein): „Release“ bekommt nur stabile Versionen,
@@ -59,5 +65,4 @@ Erste öffentliche Beta von TwoGG Pinecone für Windows und Linux.
 - Signierte Selbst-Updates, Diagnose-ZIP für Fehlermeldungen, Logs in `<data-dir>/logs/`.
 
 **Bekannt**
-- Forge und NeoForge werden noch nicht unterstützt.
 - Die Gildenwahl läuft vorerst auf twogg.app.

@@ -381,7 +381,7 @@
       <Dropdown
         label={t("discover.loader")}
         value={usesTarget ? (target!.loader?.kind ?? "vanilla") : loader}
-        options={[{ value: "", label: t("discover.any") }, { value: "fabric", label: "Fabric" }, { value: "quilt", label: "Quilt" }, { value: "vanilla", label: "Vanilla" }]}
+        options={[{ value: "", label: t("discover.any") }, { value: "fabric", label: "Fabric" }, { value: "quilt", label: "Quilt" }, { value: "forge", label: "Forge" }, { value: "neoforge", label: "NeoForge" }, { value: "vanilla", label: "Vanilla" }]}
         disabled={usesTarget}
         title={usesTarget ? t("discover.fromTarget") : undefined}
         onchange={(v) => (loader = v === "vanilla" ? "" : v)}
