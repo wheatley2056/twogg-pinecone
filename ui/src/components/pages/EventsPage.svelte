@@ -86,10 +86,6 @@
   function open(url: string) {
     openUrl(url).catch(() => window.open(url, "_blank"));
   }
-
-  function teamAction(e: AppEvent) {
-    return e.eventType === "ROLEPLAY" ? t("events.chooseGuild") : t("events.chooseTeam");
-  }
 </script>
 
 {#snippet item(e: AppEvent)}
@@ -209,9 +205,6 @@
         </section>
 
         <div class="actions">
-          {#if !current.ended && current.eventType !== "STANDARD"}
-            <button class="cut edge" onclick={() => open(`${current.url}?tab=teams`)}>{teamAction(current)}</button>
-          {/if}
           <button class="link" onclick={() => open(current.url)}>
             {current.ended ? t("events.toResults") : t("events.toRegistration")}<Icon name="external" size={15} stroke={2} />
           </button>
@@ -501,11 +494,6 @@
     align-items: center;
     gap: 14px;
     flex-wrap: wrap;
-  }
-
-  .actions .edge {
-    height: 44px;
-    padding: 0 20px;
   }
 
   .actions .link {

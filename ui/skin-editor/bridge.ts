@@ -3,12 +3,35 @@
 
 import { mount } from "svelte";
 import "../vendor/mc-skin-editor/src/app.css";
+import "./pinecone.css";
 import App from "../vendor/mc-skin-editor/src/App.svelte";
 import { createNewSkin, ensureInitialSkin, importSkinAsNew } from "../vendor/mc-skin-editor/src/lib/stores/savedSkins";
 import { skinStore } from "../vendor/mc-skin-editor/src/lib/stores/skin";
 import { resolutionFromDims } from "../vendor/mc-skin-editor/src/lib/skin/resolutions";
 import { dataUrlToImageData, imageDataToDataUrl } from "../vendor/mc-skin-editor/src/lib/png";
 import { SOURCE, type FromEditor, type ToEditor, type Unsourced } from "./protocol";
+
+// Theme und Akzent der App übernehmen (gleiche Herkunft, das iframe darf die Eltern-Seite lesen).
+const THEME_VARS = [
+  "bg", "bar", "side", "stage", "surface", "surface-2", "surface-active", "line", "line-strong",
+  "text", "text-muted", "text-dim", "accent", "accent-hover", "accent-edge", "ink",
+];
+try {
+  const parent = getComputedStyle(window.parent.document.documentElement);
+  const root = document.documentElement;
+  for (const v of THEME_VARS) {
+    const value = parent.getPropertyValue(`--${v}`).trim();
+    if (value) root.style.setProperty(`--pc-${v}`, value);
+  }
+  root.style.colorScheme = window.parent.document.documentElement.dataset.theme === "winterland" ? "light" : "dark";
+} catch {
+  // Eigenständig geöffnet: Standardfarben aus pinecone.css.
+}
+
+// Kein Browser-Kontextmenü im Editor (wie im Rest der App); Textfelder behalten ihres.
+document.addEventListener("contextmenu", (e) => {
+  if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) e.preventDefault();
+});
 
 const target = document.getElementById("app");
 if (target == null) throw new Error("Missing #app element");

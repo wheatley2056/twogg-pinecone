@@ -72,6 +72,7 @@
 
 <div class="editor-shell">
   <header>
+    <span class="title">{t("skins.editor")}</span>
     <input bind:value={name} maxlength="48" aria-label={t("skins.name")} />
     <span class="muted small">{t("skins.editorHint")}</span>
     <div class="spacer"></div>
@@ -102,8 +103,15 @@
     align-items: center;
     gap: 10px;
     padding: 10px 14px;
-    border-bottom: 1px solid var(--line-strong);
-    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    background: var(--bar);
+  }
+
+  .title {
+    font-family: var(--font-pixel);
+    font-weight: 600;
+    font-size: 18px;
+    margin-right: 6px;
   }
 
   header input {

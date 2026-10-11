@@ -31,8 +31,10 @@
     onAddContent: (kind: ContentKind) => void;
     onCreated: (result: ImportResult) => void;
     onJoin: (address: string) => void;
+    /** Zählt hoch, wenn der Hinzufügen-Dialog aufgehen soll. */
+    addSignal?: number;
   }
-  let { profile, tab = $bindable(), onChanged, onDeleted, onAddContent, onCreated, onJoin }: Props = $props();
+  let { profile, tab = $bindable(), onChanged, onDeleted, onAddContent, onCreated, onJoin, addSignal = 0 }: Props = $props();
 
   const run = $derived(runOf(profile.id));
   const locked = $derived(run.status !== "idle");
@@ -144,7 +146,7 @@
 
 {#if tab === "content"}
   {#key contentKey}
-    <ContentTable {profile} {locked} {onAddContent} onCount={(n) => (contentCount = n)} />
+    <ContentTable {profile} {locked} {onAddContent} {addSignal} onCount={(n) => (contentCount = n)} />
   {/key}
 {:else if tab === "worlds"}
   <WorldsTab {profile} {locked} />

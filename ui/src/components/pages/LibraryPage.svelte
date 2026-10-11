@@ -5,6 +5,7 @@
   import { t } from "../../lib/i18n.svelte";
   import { byRecent, isTwogg, versionLabel } from "../../lib/profiles";
   import { runOf } from "../../lib/runs.svelte";
+  import { menu, type MenuEntry } from "../../lib/contextmenu.svelte";
   import type { Profile, SyncPack } from "../../lib/types";
   import Icon from "../Icon.svelte";
   import ProfileIcon from "../ProfileIcon.svelte";
@@ -20,9 +21,10 @@
     onCreate: () => void;
     onCreateSync: () => void;
     onImport: () => void;
+    instanceMenu: (p: Profile) => MenuEntry[];
     children: Snippet;
   }
-  let { profiles, syncPacks, current, onSelect, onSelectSync, onCreate, onCreateSync, onImport, children }: Props = $props();
+  let { profiles, syncPacks, current, onSelect, onSelectSync, onCreate, onCreateSync, onImport, instanceMenu, children }: Props = $props();
 
   let filter = $state("");
 
@@ -34,7 +36,7 @@
 </script>
 
 {#snippet item(p: Profile)}
-  <button class="item" class:active={current === p.id} onclick={() => onSelect(p.id)} aria-current={current === p.id ? "true" : undefined}>
+  <button class="item" class:active={current === p.id} onclick={() => onSelect(p.id)} aria-current={current === p.id ? "true" : undefined} use:menu={() => instanceMenu(p)}>
     <ProfileIcon profile={p} size={36} />
     <span class="text">
       <span class="name">{p.name}</span>

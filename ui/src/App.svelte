@@ -6,7 +6,8 @@
   import { hasUnread } from "./lib/notifications.svelte";
   import { startFriends } from "./lib/friends.svelte";
   import { byRecent, versionLabel } from "./lib/profiles";
-  import { runOf, startGame } from "./lib/runs.svelte";
+  import { runOf, startGame, stopGame } from "./lib/runs.svelte";
+  import type { MenuEntry } from "./lib/contextmenu.svelte";
   import { loadSettings, settings } from "./lib/settings.svelte";
   import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
   import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType, SyncPack } from "./lib/types";
@@ -26,6 +27,7 @@
   import Panels from "./components/shell/Panels.svelte";
   import PlayBar from "./components/shell/PlayBar.svelte";
   import TitleBar, { type Tab } from "./components/shell/TitleBar.svelte";
+  import ContextMenu from "./components/ui/ContextMenu.svelte";
 
   type View = Tab | "settings";
 
@@ -192,6 +194,27 @@
     startGame(id, () => onGameExit(id), server ?? null);
   }
 
+  /** Signal an den Inhalt-Tab, den Hinzufügen-Dialog zu öffnen. */
+  let addSignal = $state(0);
+
+  /** Rechtsklick auf eine Instanz (Bibliothek, Startseite). */
+  function instanceMenu(p: Profile): MenuEntry[] {
+    const running = runOf(p.id).status === "running";
+    return [
+      running
+        ? { label: t("menu.stop"), icon: "stop", action: () => stopGame(p.id) }
+        : { label: t("menu.play"), icon: "play", disabled: runOf(p.id).status === "preparing", action: () => play(p.id) },
+      { label: t("menu.open"), icon: "library", action: () => openProfile(p.id) },
+      { label: t("content.addContent"), icon: "plus", disabled: running, action: () => (openProfile(p.id, "content"), addSignal++) },
+      "-",
+      { label: t("profile.openFolder"), icon: "folder", action: () => api.openProfileFolder(p.id) },
+      { label: t("instance.tabWorlds"), icon: "globe", action: () => openProfile(p.id, "worlds") },
+      { label: t("instance.tabScreenshots"), icon: "image", action: () => openProfile(p.id, "screenshots") },
+      { label: t("instance.tabLogs"), icon: "log", action: () => openProfile(p.id, "logs") },
+      { label: t("instance.tabSettings"), icon: "settings", action: () => openProfile(p.id, "settings") },
+    ];
+  }
+
   function discover(profileId: string | null, kind: ContentKind) {
     discoverTarget = { profileId, type: kind };
     view = "discover";
@@ -233,6 +256,8 @@
             {profiles}
             {selectedId}
             onSelect={select}
+            onPlay={(id) => (select(id), play(id))}
+            {instanceMenu}
             onJoin={(address) => selected && play(selected.id, address)}
             onLibrary={() => (view = "library")}
             onEvents={(id) => ((eventId = id ?? null), (view = "events"))}
@@ -249,6 +274,7 @@
         onCreate={() => (creating = true)}
         onCreateSync={() => (creatingSync = true)}
         onImport={() => openPack({ kind: "link", link: "" })}
+        {instanceMenu}
       >
         {#if syncPack}
           {#key syncPack.id}
@@ -269,6 +295,7 @@
               onChanged={() => onGameExit(selected.id)}
               onDeleted={reloadProfiles}
               onAddContent={(kind) => discover(selected.id, kind)}
+              {addSignal}
               onCreated={onImported}
               onJoin={(address) => play(selected.id, address)}
             />
@@ -361,6 +388,8 @@
     }}
   />
 {/if}
+
+<ContextMenu />
 
 <style>
   .app {

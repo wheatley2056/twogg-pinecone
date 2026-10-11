@@ -59,6 +59,51 @@ impl ContentKind {
         let folder = key.split('/').next()?;
         Self::ALL.into_iter().find(|k| k.folder() == folder)
     }
+
+    /// Art einer hineingezogenen Datei: `.jar` ist eine Mod, bei `.zip` entscheidet der Inhalt
+    /// (`shaders/` → Shader, `assets/` oder `pack.mcmeta` → Ressourcenpaket).
+    pub fn detect(path: &Path) -> Result<Self> {
+        let ext = path
+            .extension()
+            .and_then(|x| x.to_str())
+            .map(str::to_ascii_lowercase);
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("?");
+        match ext.as_deref() {
+            Some("jar") => return Ok(ContentKind::Mod),
+            Some("zip") => {}
+            _ => {
+                return Err(Error::Invalid(format!(
+                    "{name}: nur .jar (Mods) und .zip (Ressourcenpakete, Shader)"
+                )));
+            }
+        }
+        let file = std::fs::File::open(path).map_err(Error::io(path))?;
+        let zip = zip::ZipArchive::new(file)
+            .map_err(|e| Error::Invalid(format!("{name} ist kein ZIP-Archiv: {e}")))?;
+        let names: Vec<&str> = zip.file_names().collect();
+        let has = |prefix: &str| {
+            names.iter().any(|n| {
+                n.starts_with(prefix)
+                    || n.split_once('/')
+                        .is_some_and(|(_, r)| r.starts_with(prefix))
+            })
+        };
+        if has("shaders/") {
+            Ok(ContentKind::Shader)
+        } else if has("assets/") {
+            Ok(ContentKind::Resourcepack)
+        } else if has("data/") {
+            Err(Error::Invalid(format!(
+                "{name} ist ein Datenpaket; installiere es im Tab Welten in eine Welt"
+            )))
+        } else if has("pack.mcmeta") {
+            Ok(ContentKind::Resourcepack)
+        } else {
+            Err(Error::Invalid(format!(
+                "{name}: weder Ressourcenpaket noch Shader erkannt"
+            )))
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1072,6 +1117,37 @@ fn file_stem(key: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn detects_dropped_files() {
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let make = |name: &str, entries: &[&str]| {
+            let path = dir.path().join(name);
+            let mut zip = zip::ZipWriter::new(std::fs::File::create(&path).unwrap());
+            for e in entries {
+                zip.start_file(*e, zip::write::SimpleFileOptions::default())
+                    .unwrap();
+                zip.write_all(b"x").unwrap();
+            }
+            zip.finish().unwrap();
+            path
+        };
+        assert_eq!(
+            ContentKind::detect(Path::new("x/sodium.jar")).unwrap(),
+            ContentKind::Mod
+        );
+        let shader = make("bsl.zip", &["BSL/shaders/final.fsh"]);
+        assert_eq!(ContentKind::detect(&shader).unwrap(), ContentKind::Shader);
+        let pack = make("faithful.zip", &["pack.mcmeta", "assets/minecraft/x.png"]);
+        assert_eq!(
+            ContentKind::detect(&pack).unwrap(),
+            ContentKind::Resourcepack
+        );
+        let data = make("dp.zip", &["pack.mcmeta", "data/x/function/a.mcfunction"]);
+        assert!(ContentKind::detect(&data).is_err());
+        assert!(ContentKind::detect(Path::new("a.exe")).is_err());
+    }
+
     use super::*;
 
     #[test]

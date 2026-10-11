@@ -147,6 +147,13 @@ async fn apply_input(
         .map(|i| i.trim().to_string())
         .filter(|i| !i.is_empty())
     {
+        // Motiv aus dem Instanz-Dialog, z. B. `motif:snowflake`.
+        Some(i)
+            if i.strip_prefix("motif:")
+                .is_some_and(|m| MOTIFS.contains(&m)) =>
+        {
+            Some(i)
+        }
         // Ein Emoji kann aus mehreren Codepoints bestehen (z. B. mit Hautfarbe).
         Some(i) if i.chars().count() <= 8 && i.len() <= 32 => Some(i),
         Some(_) => return Err("Symbol ist zu lang (ein Emoji oder bis zu zwei Zeichen)".into()),
@@ -154,6 +161,18 @@ async fn apply_input(
     };
     Ok(())
 }
+
+/// Instanz-Motive, wie in `ui/src/components/ProfileIcon.svelte`.
+const MOTIFS: [&str; 8] = [
+    "shield",
+    "block",
+    "house",
+    "sliders",
+    "waves",
+    "snowflake",
+    "server",
+    "bolt",
+];
 
 #[tauri::command]
 pub async fn create_profile(

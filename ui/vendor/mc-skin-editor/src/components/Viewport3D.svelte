@@ -186,7 +186,9 @@
       sourceCtx = sourceCanvas.getContext('2d')!;
 
       scene = new Scene();
-      scene.background = new Color(0x2b2f36);
+      // Pinecone: Hintergrund aus der CSS-Variable --viewport-bg (siehe VENDORED.md).
+      const viewportBg = getComputedStyle(document.documentElement).getPropertyValue('--viewport-bg').trim();
+      scene.background = new Color(viewportBg || 0x2b2f36);
 
       camera = new PerspectiveCamera(35, 16 / 9, 1, 1000);
       camera.position.set(45, 30, 70);

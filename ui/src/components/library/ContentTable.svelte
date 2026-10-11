@@ -1,13 +1,15 @@
 <script lang="ts">
   // Tab „Inhalt“ (Design-System 9.11): Suche, Filter, Updates, Tabelle Name · Status · Quelle · Aktiv.
   // Inhalte aus einem TwoGG-Event-Pack sind gesperrt (vom Event vorgegeben).
-  import { onMount } from "svelte";
-  import { open } from "@tauri-apps/plugin-dialog";
+  import { onMount, untrack } from "svelte";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { menu, type MenuEntry } from "../../lib/contextmenu.svelte";
   import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
   import { isTwogg } from "../../lib/profiles";
   import type { ContentKind, InstalledContent, Profile, ProfileSyncPack, UpdateInfo } from "../../lib/types";
   import ConfirmDialog from "../ConfirmDialog.svelte";
+  import AddContentDialog from "./AddContentDialog.svelte";
   import Icon from "../Icon.svelte";
   import Segmented from "../ui/Segmented.svelte";
   import SearchField from "../ui/SearchField.svelte";
@@ -19,8 +21,10 @@
     locked: boolean;
     onAddContent: (kind: ContentKind) => void;
     onCount: (count: number) => void;
+    /** Zählt hoch, wenn der Hinzufügen-Dialog aufgehen soll (Rechtsklick auf eine Instanz). */
+    addSignal?: number;
   }
-  let { profile, locked, onAddContent, onCount }: Props = $props();
+  let { profile, locked, onAddContent, onCount, addSignal = 0 }: Props = $props();
 
   type Filter = "all" | ContentKind;
   let filter = $state<Filter>("all");
@@ -36,6 +40,16 @@
   let removing = $state<InstalledContent | null>(null);
   let syncPacks = $state<ProfileSyncPack[]>([]);
   let syncBusy = $state<string | null>(null);
+  let adding = $state<ContentKind | null>(null);
+  let dragging = $state(false);
+  let seenSignal = untrack(() => addSignal);
+
+  $effect(() => {
+    if (addSignal !== seenSignal) {
+      seenSignal = addSignal;
+      if (!locked) adding = "mod";
+    }
+  });
 
   const eventPack = $derived(isTwogg(profile));
   const syncNames = $derived(Object.fromEntries(syncPacks.map((s) => [s.pack.id, s.pack.name])));
@@ -85,6 +99,45 @@
     }
   }
 
+  // Dateien ins Fenster ziehen: Mods (.jar), Ressourcenpakete und Shader (.zip) landen direkt hier.
+  onMount(() => {
+    let stop: (() => void) | undefined;
+    let gone = false;
+    api
+      .onFileDrop(async (e) => {
+        if (locked || eventPack) return;
+        if (e.type === "over") dragging = true;
+        else if (e.type === "leave") dragging = false;
+        else {
+          dragging = false;
+          await addDropped(e.paths);
+        }
+      })
+      .then((u) => (gone ? u() : (stop = u)))
+      .catch(() => {});
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  });
+
+  async function addDropped(paths: string[]) {
+    error = message = null;
+    const names: string[] = [];
+    for (const path of paths) {
+      try {
+        const key = await api.contentAddDropped(profile.id, path);
+        names.push(key.split("/").pop() ?? key);
+      } catch (e) {
+        error = errorText(e);
+      }
+    }
+    if (names.length) {
+      message = t("content.installedMsg", { names: names.join(", ") });
+      await load();
+    }
+  }
+
   onMount(async () => {
     await load();
     syncPacks = await api.syncpackForProfile(profile.id).catch(() => []);
@@ -118,12 +171,6 @@
     for (const u of pending) await update(u);
   }
 
-  async function addFile() {
-    const kind: ContentKind = filter === "all" ? "mod" : filter;
-    const path = await open({ multiple: false, filters: [{ name: t("content.fileFilter"), extensions: kind === "mod" ? ["jar"] : ["zip"] }] });
-    if (typeof path === "string") await act("__add", () => api.contentAddLocal(profile.id, kind, path));
-  }
-
   async function toggleSync(s: ProfileSyncPack) {
     error = message = null;
     syncBusy = s.pack.id;
@@ -136,6 +183,34 @@
     } finally {
       syncBusy = null;
     }
+  }
+
+  function rowMenu(item: InstalledContent): MenuEntry[] {
+    const fixed = isLocked(item);
+    const up = updates[item.key];
+    const project =
+      item.source.type === "modrinth"
+        ? `https://modrinth.com/project/${item.source.project_id}`
+        : item.source.type === "curseforge"
+          ? `https://www.curseforge.com/projects/${item.source.project_id}`
+          : null;
+    return [
+      !fixed && {
+        label: item.enabled ? t("content.disable") : t("content.enable"),
+        icon: item.enabled ? ("close" as const) : ("check" as const),
+        disabled: locked || busy.has(item.key),
+        action: () => act(item.key, () => api.contentSetEnabled(profile.id, item.key, !item.enabled)),
+      },
+      up && { label: t("content.update"), icon: "arrow-up" as const, disabled: locked || busy.has(item.key), action: () => update(up) },
+      !!project && {
+        label: t("menu.openSource", { source: item.source.type === "modrinth" ? "Modrinth" : "CurseForge" }),
+        icon: "external" as const,
+        action: () => openUrl(project).catch(() => window.open(project, "_blank")),
+      },
+      { label: t("profile.openFolder"), icon: "folder" as const, action: () => api.openProfileFolder(profile.id) },
+      !fixed && "-",
+      !fixed && { label: t("content.remove"), icon: "trash" as const, danger: true, disabled: locked, action: () => (removing = item) },
+    ];
   }
 
   function source(i: InstalledContent): string {
@@ -152,7 +227,14 @@
   }
 </script>
 
-<div class="content">
+<div class="content" class:dragging>
+  {#if dragging}
+    <div class="drop" aria-hidden="true">
+      <Icon name="download" size={28} />
+      <span>{t("content.dropHere")}</span>
+      <span class="drop-sub">{t("content.dropKinds")}</span>
+    </div>
+  {/if}
   {#if syncPacks.length > 0}
     <div class="sync">
       <span class="section-label">{t("library.groupSync")}</span>
@@ -178,10 +260,7 @@
         {checking ? t("content.checking") : t("content.checkUpdates")}
       </button>
     {/if}
-    <button class="small ghost" onclick={addFile} disabled={locked} title={t("content.addFile")} aria-label={t("content.addFile")}>
-      <Icon name="file" size={16} />
-    </button>
-    <button class="small primary" onclick={() => onAddContent(filter === "all" ? "mod" : filter)}>
+    <button class="small primary" onclick={() => (adding = filter === "all" ? "mod" : filter)} disabled={locked}>
       <Icon name="plus" size={14} stroke={2.6} />{t("content.addContent")}
     </button>
   </div>
@@ -199,7 +278,7 @@
     <div class="rows">
       {#each shown as item (item.key)}
         {@const up = updates[item.key]}
-        <div class="row" class:locked={isLocked(item)} class:off={!item.enabled} role="row">
+        <div class="row" class:locked={isLocked(item)} class:off={!item.enabled} role="row" use:menu={() => rowMenu(item)}>
           <span class="name-cell" role="cell">
             {#if item.iconUrl}
               <img class="icon" src={item.iconUrl} alt="" width="34" height="34" loading="lazy" />
@@ -249,6 +328,17 @@
   </div>
 </div>
 
+{#if adding}
+  <AddContentDialog
+    {profile}
+    kind={adding}
+    installed={items}
+    onClose={() => (adding = null)}
+    onAdded={load}
+    onDiscover={onAddContent}
+  />
+{/if}
+
 {#if removing}
   {@const item = removing}
   <ConfirmDialog
@@ -265,6 +355,34 @@
 {/if}
 
 <style>
+  .content {
+    position: relative;
+  }
+
+  .drop {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--bar-glass);
+    outline: 2px dashed var(--accent);
+    outline-offset: -8px;
+    color: var(--accent);
+    font-family: var(--font-pixel);
+    font-size: 20px;
+    pointer-events: none;
+  }
+
+  .drop-sub {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
   .content {
     flex: 1;
     min-height: 0;
@@ -303,11 +421,6 @@
     min-height: 34px;
     padding: 0 14px;
     font-size: 13px;
-  }
-
-  .ghost.small {
-    width: 34px;
-    padding: 0;
   }
 
   .message {
