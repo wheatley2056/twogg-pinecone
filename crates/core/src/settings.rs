@@ -27,6 +27,17 @@ pub enum Language {
     En,
 }
 
+/// Welche Launcher-Versionen das Selbst-Update anbietet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UpdateChannel {
+    /// Nur stabile Versionen.
+    #[default]
+    Release,
+    /// Auch Vorabversionen (auf GitHub als „Pre-release“ veröffentlicht).
+    Beta,
+}
+
 /// Standard-Akzent „Harz“.
 pub const DEFAULT_ACCENT: &str = "#e9a23b";
 
@@ -122,6 +133,8 @@ pub struct Settings {
     /// Startanimation (Splash-Screen) beim Öffnen des Launchers.
     #[serde(default = "default_splash")]
     pub splash: bool,
+    #[serde(default)]
+    pub update_channel: UpdateChannel,
     #[serde(default = "default_widgets")]
     pub widgets: Vec<Widget>,
     #[serde(default)]
@@ -148,6 +161,7 @@ impl Default for Settings {
             theme: Theme::default(),
             system_frame: false,
             splash: true,
+            update_channel: UpdateChannel::Release,
             widgets: default_widgets(),
             language: Language::default(),
         }

@@ -132,6 +132,7 @@ export interface Settings {
   theme: { name: ThemeName; accent: string; pattern: boolean; pixelTitles: boolean; reduceMotion: boolean };
   systemFrame: boolean;
   splash: boolean;
+  updateChannel: "release" | "beta";
   widgets: { id: WidgetId; visible: boolean }[];
   language: "de" | "en";
 }

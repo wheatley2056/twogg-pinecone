@@ -5,6 +5,7 @@
 <script lang="ts">
   // Einstellungen nach docs/design/referenz/04-einstellungen-darstellung.html: Navigation links
   // (230 px), rechts der gewählte Bereich.
+  import { settings } from "../../lib/settings.svelte";
   import { t } from "../../lib/i18n.svelte";
   import type { Account, AppInfo } from "../../lib/types";
   import AccountsSection from "../settings/AccountsSection.svelte";
@@ -34,7 +35,9 @@
       </button>
     {/each}
     <div class="version mono">
-      Pinecone {info?.version ?? "?"}<br />{info?.updatesConfigured ? t("settings.channelAuto") : t("settings.channelManual")}
+      Pinecone {info?.version ?? "?"}<br />{info?.updatesConfigured
+        ? t("settings.channelAuto", { channel: settings.current?.updateChannel === "beta" ? t("appUpdate.channelBeta") : t("appUpdate.channelRelease") })
+        : t("settings.channelManual")}
     </div>
   </aside>
   <main>

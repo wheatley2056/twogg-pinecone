@@ -21,6 +21,7 @@ let settings: Settings = {
   theme: { name: "rinde", accent: "#e9a23b", pattern: true, pixelTitles: true, reduceMotion: false },
   systemFrame: false,
   splash: true,
+  updateChannel: "release",
   widgets: (["recent", "news", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
   language: "de",
 };

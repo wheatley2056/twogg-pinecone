@@ -7,6 +7,7 @@
   import { checkUpdates, installUpdate, updates } from "../../lib/updates.svelte";
   import type { AppInfo, Settings } from "../../lib/types";
   import Dropdown from "../ui/Dropdown.svelte";
+  import Segmented from "../ui/Segmented.svelte";
   import Switch from "../ui/Switch.svelte";
   import SettingRow from "./SettingRow.svelte";
 
@@ -86,6 +87,24 @@
         <progress max="1" value={updates.progress}></progress>
       {/if}
     </SettingRow>
+    {#if s && info?.updatesConfigured}
+      <SettingRow title={t("appUpdate.channel")} hint={s.updateChannel === "beta" ? t("appUpdate.channelBetaHint") : t("appUpdate.channelReleaseHint")}>
+        <Segmented
+          items={[
+            { id: "release", label: t("appUpdate.channelRelease") },
+            { id: "beta", label: t("appUpdate.channelBeta") },
+          ]}
+          value={s.updateChannel}
+          label={t("appUpdate.channel")}
+          variant="soft"
+          onchange={async (c) => {
+            await change((x) => (x.updateChannel = c));
+            updates.info = null;
+            checkUpdates();
+          }}
+        />
+      </SettingRow>
+    {/if}
     {#if updates.info?.notes}<pre class="notes">{updates.info.notes}</pre>{/if}
     {#if updates.error}<p class="error">{updates.error}</p>{/if}
   </div>
