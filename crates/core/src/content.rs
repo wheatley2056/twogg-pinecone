@@ -93,6 +93,9 @@ pub struct LockEntry {
     /// Kanal der installierten Version; Updates werden nicht instabiler (Release → Alpha).
     #[serde(default)]
     pub channel: Option<VersionType>,
+    /// Kommt aus diesem Sync-Pack (wird beim Ausschalten wieder entfernt).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sync: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -117,6 +120,8 @@ pub struct InstalledContent {
     pub source: Source,
     pub icon_url: Option<String>,
     pub from_pack: bool,
+    /// ID des Sync-Packs, aus dem der Inhalt stammt.
+    pub sync: Option<String>,
     pub size: u64,
     /// Noch nicht per Hash geprüft (`identify` aufrufen).
     pub unidentified: bool,
@@ -294,6 +299,7 @@ impl ContentManager {
                         source: e.source.clone(),
                         icon_url: e.icon_url.clone(),
                         from_pack: e.from_pack,
+                        sync: e.sync.clone(),
                         size,
                         unidentified: false,
                     },
@@ -307,6 +313,7 @@ impl ContentManager {
                         source: Source::Local,
                         icon_url: None,
                         from_pack: false,
+                        sync: None,
                         size,
                         unidentified: true,
                     },
@@ -382,6 +389,7 @@ impl ContentManager {
                         icon_url: projects.get(&v.project_id).and_then(|p| p.icon_url.clone()),
                         from_pack: false,
                         channel: Some(v.version_type),
+                        sync: None,
                     },
                     None => LockEntry {
                         kind,
@@ -393,6 +401,7 @@ impl ContentManager {
                         icon_url: None,
                         from_pack: false,
                         channel: None,
+                        sync: None,
                     },
                 };
                 lock.files.insert(key, entry);
@@ -618,6 +627,8 @@ impl ContentManager {
                 report.warnings.push(msg);
                 continue;
             };
+            // Herkunft der ersetzten Datei (Pack, Sync-Pack) bleibt erhalten.
+            let (from_pack, sync) = previous(&lock, existing.as_deref());
             let key = self
                 .place_file(
                     &mut lock,
@@ -630,7 +641,6 @@ impl ContentManager {
                     existing,
                 )
                 .await?;
-            let from_pack = lock.files.get(&key).is_some_and(|e| e.from_pack);
             lock.files.insert(
                 key.clone(),
                 LockEntry {
@@ -649,6 +659,7 @@ impl ContentManager {
                     icon_url: None,
                     from_pack,
                     channel: Some(cf_channel(file.release_type)),
+                    sync,
                 },
             );
             by_project.insert(mod_id, key);
@@ -762,6 +773,7 @@ impl ContentManager {
                     version.version_number
                 ))
             })?;
+            let (from_pack, sync) = previous(&lock, existing.as_deref());
             let key = self
                 .place_file(
                     &mut lock,
@@ -774,7 +786,6 @@ impl ContentManager {
                     existing,
                 )
                 .await?;
-            let from_pack = lock.files.get(&key).is_some_and(|e| e.from_pack);
             lock.files.insert(
                 key.clone(),
                 LockEntry {
@@ -790,6 +801,7 @@ impl ContentManager {
                     icon_url: None,
                     from_pack,
                     channel: Some(version.version_type),
+                    sync,
                 },
             );
             by_project.insert(version.project_id.clone(), key);
@@ -983,6 +995,13 @@ impl ContentManager {
         )
         .await
     }
+}
+
+/// Herkunft (Pack, Sync-Pack) eines Eintrags, der gerade ersetzt wird.
+fn previous(lock: &ContentLock, key: Option<&str>) -> (bool, Option<String>) {
+    key.and_then(|k| lock.files.get(k))
+        .map(|e| (e.from_pack, e.sync.clone()))
+        .unwrap_or_default()
 }
 
 fn file_stem(key: &str) -> String {

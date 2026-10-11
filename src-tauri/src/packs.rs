@@ -53,11 +53,9 @@ pub async fn pack_install_modrinth(
         .download_modrinth(&project, version.as_deref())
         .await
         .map_err(err)?;
-    Ok(packs
-        .import(&archive, source, None)
-        .await
-        .map_err(err)?
-        .into())
+    let result = packs.import(&archive, source, None).await.map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &result.profile).await;
+    Ok(result.into())
 }
 
 #[tauri::command]
@@ -71,11 +69,9 @@ pub async fn pack_install_curseforge(
         .download_curseforge(project, file, None)
         .await
         .map_err(err)?;
-    Ok(packs
-        .import(&archive, source, None)
-        .await
-        .map_err(err)?
-        .into())
+    let result = packs.import(&archive, source, None).await.map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &result.profile).await;
+    Ok(result.into())
 }
 
 #[tauri::command]
@@ -170,13 +166,14 @@ pub async fn pack_import_pending(
         .remove(&token)
         .ok_or("Keine Vorschau zu diesem Modpack. Bitte erneut öffnen.")?;
     let name = name.map(|n| n.trim().to_string()).filter(|n| !n.is_empty());
-    Ok(state
+    let result = state
         .launcher
         .packs()
         .import(&archive, source, name)
         .await
-        .map_err(err)?
-        .into())
+        .map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &result.profile).await;
+    Ok(result.into())
 }
 
 /// Vorschau geschlossen, ohne zu installieren.

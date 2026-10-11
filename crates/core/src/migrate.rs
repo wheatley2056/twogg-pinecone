@@ -468,6 +468,13 @@ impl Launcher {
             .await
             .map_err(|e| Error::Invalid(format!("Kopieren abgebrochen: {e}")))??;
 
+        // Eingeschaltete Sync-Packs gelten auch im neuen Profil.
+        let state = self.paths().instance_dir(&old.id).join("syncpacks.json");
+        if state.is_file() {
+            let dest = self.paths().instance_dir(&new.id).join("syncpacks.json");
+            std::fs::copy(&state, &dest).map_err(Error::io(&dest))?;
+        }
+
         // Herkunft der Inhalte übernehmen; das neue Profil ist kein Pack-Profil mehr.
         let content = self.content();
         let mut lock = content.load_lock(&old.id)?;

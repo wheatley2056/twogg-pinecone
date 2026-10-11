@@ -2,7 +2,7 @@
 // damit sich die Oberfläche ohne App-Fenster entwickeln und prüfen lässt.
 
 import { api } from "./api";
-import type { Account, InstalledContent, LaunchEvent, Profile, ProfileInput, SearchArgs, Settings, UpdateInfo } from "./types";
+import type { Account, InstalledContent, LaunchEvent, Profile, ProfileInput, SearchArgs, Settings, SyncMode, SyncPack, UpdateInfo } from "./types";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -29,19 +29,34 @@ const stats: Record<string, { playtimeSecs: number; sessions: number; lastPlayed
 const SODIUM_ICON = "https://cdn.modrinth.com/data/AANobbMI/295862f4724dc3f78df3447ad6072b2dcd3ef0c9_96.webp";
 let content: InstalledContent[] = [
   { key: "mods/fabric-api.jar", fileName: "fabric-api.jar", kind: "mod", enabled: true, name: "Fabric API", version: "0.162.0+26.3",
-    source: { type: "modrinth", project_id: "P7dR8mSH", version_id: "a" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+    source: { type: "modrinth", project_id: "P7dR8mSH", version_id: "a" }, iconUrl: null, fromPack: false, sync: null, size: 1, unidentified: false },
   { key: "mods/sodium.jar", fileName: "sodium.jar", kind: "mod", enabled: true, name: "Sodium", version: "mc26.3-0.9.2-fabric",
-    source: { type: "modrinth", project_id: "AANobbMI", version_id: "b" }, iconUrl: SODIUM_ICON, fromPack: false, size: 1, unidentified: false },
+    source: { type: "modrinth", project_id: "AANobbMI", version_id: "b" }, iconUrl: SODIUM_ICON, fromPack: false, sync: "basics", size: 1, unidentified: false },
   { key: "mods/eigene-mod.jar", fileName: "eigene-mod.jar.disabled", kind: "mod", enabled: false, name: "eigene-mod", version: null,
-    source: { type: "local" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+    source: { type: "local" }, iconUrl: null, fromPack: false, sync: null, size: 1, unidentified: false },
   { key: "shaderpacks/complementary.zip", fileName: "complementary.zip", kind: "shader", enabled: true, name: "Complementary Shaders - Reimagined",
-    version: "r5.9.3", source: { type: "modrinth", project_id: "HVnmMxH1", version_id: "c" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+    version: "r5.9.3", source: { type: "modrinth", project_id: "HVnmMxH1", version_id: "c" }, iconUrl: null, fromPack: false, sync: null, size: 1, unidentified: false },
 ];
 const update: UpdateInfo = { key: "mods/sodium.jar", name: "Sodium", current: "mc26.3-0.9.2-fabric", latest: "mc26.3-0.9.4-fabric",
   projectId: "AANobbMI", versionId: "d", kind: "mod" };
 
 // Kleines grünes Quadrat als Server-Icon (PNG, 2×2).
 const ICON = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGPwWR/gsz6AAUIBACQyBS0TyzOPAAAAAElFTkSuQmCC";
+
+let syncPacks: SyncPack[] = [
+  {
+    id: "basics", name: "Basics", mode: "sync",
+    entries: [
+      { type: "modrinth", projectId: "w7ThoJFB", kind: "mod", name: "Zoomify" },
+      { type: "modrinth", projectId: "AANobbMI", kind: "mod", name: "Sodium" },
+      { type: "modrinth", projectId: "50dA9Sha", kind: "resourcepack", name: "Fresh Animations" },
+      { type: "file", path: "config/zoomify.json", sha1: "0" },
+    ],
+    options: { fov: "0.25" }, auto: { enabled: true, loaders: ["fabric", "quilt"] },
+  },
+  { id: "shader-setup", name: "Shader-Setup", mode: "template", entries: [{ type: "modrinth", projectId: "HVnmMxH1", kind: "shader", name: "Complementary Shaders" }], options: {}, auto: { enabled: false, loaders: [] } },
+];
+const syncEnabled = new Set(["fabric-test/basics"]);
 
 function preview(token: string, source: "modrinth" | "curseforge" | "file") {
   return {
@@ -222,6 +237,31 @@ Object.assign(api, {
     profiles = [...profiles, copy];
     return { profile: copy, warnings: [] };
   },
+  syncpackList: async () => syncPacks,
+  syncpackCreate: async (name: string, mode: SyncMode) => {
+    const pack: SyncPack = { id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), name, mode, entries: [], options: {}, auto: { enabled: false, loaders: [] } };
+    syncPacks = [...syncPacks, pack];
+    return pack;
+  },
+  syncpackSave: async (pack: SyncPack) => ((syncPacks = syncPacks.map((p) => (p.id === pack.id ? pack : p))), pack),
+  syncpackDelete: async (id: string) => void (syncPacks = syncPacks.filter((p) => p.id !== id)),
+  syncpackAddFile: async (id: string, _path: string, target: string) => {
+    const pack = syncPacks.find((p) => p.id === id)!;
+    pack.entries = [...pack.entries, { type: "file", path: target, sha1: "0" }];
+    return pack;
+  },
+  syncpackAddFromProfile: async (id: string) => syncPacks.find((p) => p.id === id)!,
+  syncpackForProfile: async (profileId: string) => syncPacks.map((pack) => ({ pack, enabled: syncEnabled.has(`${profileId}/${pack.id}`) })),
+  syncpackSetEnabled: async (profileId: string, id: string, enabled: boolean) => {
+    await wait(500);
+    const template = syncPacks.find((p) => p.id === id)?.mode === "template";
+    if (enabled && !template) syncEnabled.add(`${profileId}/${id}`);
+    else syncEnabled.delete(`${profileId}/${id}`);
+    return enabled
+      ? { installed: ["Zoomify", "Fresh Animations"], removed: [], present: ["Sodium"], unavailable: [], warnings: [] }
+      : { installed: [], removed: ["Zoomify", "Fresh Animations"], present: [], unavailable: [], warnings: [] };
+  },
+  syncpackSync: async () => ({ installed: [], removed: [], present: [], unavailable: [], warnings: [] }),
   takeOpenRequests: async () => [],
   onOpenPack: async () => () => {},
   packInstallModrinth: async () => (await wait(800), { profile: profiles[0], missing: [] }),

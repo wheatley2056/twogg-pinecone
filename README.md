@@ -142,6 +142,29 @@ weggelassen; Ressourcenpakete, Shader und Configs werden übernommen. Welten las
 bei einem Wechsel auf eine ältere Version warnt Pinecone. Gibt es das Modpack des Profils selbst für
 das Ziel, wird stattdessen diese Pack-Version angeboten.
 
+## Sync-Packs und Vorlagen
+
+Unter „Sync-Packs“ legt man eigene Sammlungen an: Mods, Ressourcenpakete und Shader (als
+Modrinth-/CurseForge-Projekt ohne feste Version), eigene Dateien wie Configs und Standardwerte für
+`options.txt`. Im Inhalte-Tab eines Profils schaltet man sie per Klick an und aus.
+
+- **Sync-Pack**: bleibt verbunden und wird vor jedem Start abgeglichen. Für jedes Profil wird die
+  zur Minecraft-Version und zum Loader passende Datei installiert (samt Abhängigkeiten). Ausschalten
+  entfernt genau die Inhalte, die das Sync-Pack gebracht hat (im `pack.lock.json` mit `sync` markiert).
+- **Vorlage**: wird einmal eingespielt und ist danach normaler Profil-Inhalt.
+- Bringt das Modpack oder der Nutzer ein Projekt schon mit, gewinnt deren Fassung. Eigene Dateien und
+  Optionen werden nur gesetzt, solange man sie im Profil nicht selbst geändert hat.
+- Optional automatisch bei neuen Profilen und Modpack-Imports, auf Wunsch nur für bestimmte Loader.
+- Gespeichert unter `<data-dir>/syncpacks/<id>/`, der Zustand je Profil in `instances/<id>/syncpacks.json`.
+
+```sh
+cargo run -p pinecone-cli -- sync create Basics
+cargo run -p pinecone-cli -- sync add basics zoomify
+cargo run -p pinecone-cli -- sync add basics fresh-animations --type resourcepack
+cargo run -p pinecone-cli -- sync option basics fov 0.25
+cargo run -p pinecone-cli -- sync enable Fabric basics      # bzw. disable, run, list --profile Fabric
+```
+
 ## Modpacks teilen
 
 „Teilen …“ im Profilmenü bietet zwei Wege:

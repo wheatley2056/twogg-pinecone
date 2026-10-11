@@ -70,7 +70,7 @@ export interface JavaInstallation {
   managed: boolean;
 }
 
-export type Stage = "loader" | "version" | "java" | "assets";
+export type Stage = "sync" | "loader" | "version" | "java" | "assets";
 
 export type LaunchEvent =
   | { type: "stage"; stage: Stage }
@@ -149,6 +149,8 @@ export interface InstalledContent {
   source: ContentSource;
   iconUrl: string | null;
   fromPack: boolean;
+  /** ID des Sync-Packs, aus dem der Inhalt stammt. */
+  sync: string | null;
   size: number;
   unidentified: boolean;
 }
@@ -282,6 +284,8 @@ export interface ExportOptions {
   config: boolean;
   /** options.txt und Shader-/OptiFine-Einstellungen. */
   options: boolean;
+  /** Inhalte aus eingeschalteten Sync-Packs. */
+  syncContent: boolean;
 }
 
 export interface PackPreview {
@@ -345,4 +349,35 @@ export interface MigrateOptions {
   name: string | null;
   includeWorlds: boolean;
   missing: Record<string, MissingChoice>;
+}
+
+export type SyncMode = "sync" | "template";
+
+export type SyncEntry =
+  | { type: "modrinth"; projectId: string; kind: ContentKind; name: string }
+  | { type: "curseforge"; projectId: number; kind: ContentKind; name: string }
+  | { type: "file"; path: string; sha1: string };
+
+export interface SyncPack {
+  id: string;
+  name: string;
+  mode: SyncMode;
+  entries: SyncEntry[];
+  /** Standardwerte für options.txt. */
+  options: Record<string, string>;
+  /** loaders: null = Vanilla; leer = alle. */
+  auto: { enabled: boolean; loaders: (LoaderKind | null)[] };
+}
+
+export interface ProfileSyncPack {
+  pack: SyncPack;
+  enabled: boolean;
+}
+
+export interface SyncReport {
+  installed: string[];
+  removed: string[];
+  present: string[];
+  unavailable: string[];
+  warnings: string[];
 }

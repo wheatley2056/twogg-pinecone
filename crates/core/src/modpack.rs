@@ -490,6 +490,9 @@ pub struct ExportOptions {
     /// Spieleinstellungen (`options.txt`, Shader- und OptiFine-Optionen).
     #[serde(default)]
     pub options: bool,
+    /// Inhalte aus eingeschalteten Sync-Packs.
+    #[serde(default = "yes")]
+    pub sync_content: bool,
 }
 
 impl ExportOptions {
@@ -501,6 +504,7 @@ impl ExportOptions {
             shaders: true,
             config: true,
             options: false,
+            sync_content: true,
         }
     }
 
@@ -1350,7 +1354,7 @@ impl PackManager {
         let lock = self.content.load_lock(&profile.id)?;
         let installed: Vec<_> = installed
             .into_iter()
-            .filter(|c| c.enabled && opts.wants(c.kind))
+            .filter(|c| c.enabled && opts.wants(c.kind) && (opts.sync_content || c.sync.is_none()))
             .collect();
         let version_ids: Vec<String> = installed
             .iter()

@@ -19,11 +19,14 @@ use crate::profiles::{Profile, ProfileStore};
 use crate::servers::{ServerAddress, last_server_in_log};
 use crate::settings::SettingsStore;
 use crate::stats::{ProfileStats, StatsStore, now_secs};
+use crate::syncpacks::SyncManager;
 
 pub const DEFAULT_MEMORY_MB: u32 = 4096;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Stage {
+    /// Eingeschaltete Sync-Packs abgleichen.
+    Sync,
     Loader,
     Version,
     Java,
@@ -51,6 +54,7 @@ pub struct Launcher {
     settings: SettingsStore,
     content: ContentManager,
     packs: PackManager,
+    sync: SyncManager,
 }
 
 impl Launcher {
@@ -90,6 +94,11 @@ impl Launcher {
             installer.environment().clone(),
         );
         Self {
+            sync: SyncManager::new(
+                paths.clone(),
+                content.clone(),
+                ProfileStore::new(paths.clone()),
+            ),
             content,
             packs,
             loaders: LoaderInstaller::new(paths.clone(), downloader),
@@ -108,6 +117,10 @@ impl Launcher {
 
     pub fn packs(&self) -> &PackManager {
         &self.packs
+    }
+
+    pub fn syncpacks(&self) -> &SyncManager {
+        &self.sync
     }
 
     pub fn paths(&self) -> &Paths {
@@ -179,6 +192,18 @@ impl Launcher {
         quick_play: Option<ServerAddress>,
         on_event: &mut (dyn FnMut(PrepareEvent) + Send),
     ) -> Result<LaunchCommand> {
+        // Sync-Packs abgleichen; ohne Netz oder bei Fehlern mit dem bisherigen Stand starten.
+        if !offline && !profile.id.is_empty() {
+            on_event(PrepareEvent::Stage(Stage::Sync));
+            match self.sync.sync(profile).await {
+                Ok(r) => {
+                    for w in r.warnings {
+                        tracing::warn!("Sync-Pack: {w}");
+                    }
+                }
+                Err(e) => tracing::warn!("Sync-Packs nicht abgeglichen: {e}"),
+            }
+        }
         let id = match (&profile.loader, offline) {
             (Some(spec), false) => {
                 on_event(PrepareEvent::Stage(Stage::Loader));

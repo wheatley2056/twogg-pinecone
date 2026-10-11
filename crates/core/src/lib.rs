@@ -25,6 +25,7 @@ pub mod servers;
 pub mod settings;
 pub mod share;
 pub mod stats;
+pub mod syncpacks;
 
 pub use error::{Error, Result};
 

@@ -9,6 +9,7 @@ mod game;
 mod migrate;
 mod open;
 mod packs;
+mod syncpacks;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -160,6 +161,15 @@ fn main() {
             open::take_open_requests,
             migrate::migrate_plan,
             migrate::migrate_apply,
+            syncpacks::syncpack_list,
+            syncpacks::syncpack_create,
+            syncpacks::syncpack_save,
+            syncpacks::syncpack_delete,
+            syncpacks::syncpack_add_file,
+            syncpacks::syncpack_add_from_profile,
+            syncpacks::syncpack_for_profile,
+            syncpacks::syncpack_set_enabled,
+            syncpacks::syncpack_sync,
             game::launch,
             game::stop_game,
         ])

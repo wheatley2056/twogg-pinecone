@@ -23,6 +23,7 @@ use pinecone_core::profiles::Profile;
 use pinecone_core::servers::{ServerAddress, ping as server_ping, read_servers_dat};
 use pinecone_core::share::ShareLink;
 use pinecone_core::stats::now_secs;
+use pinecone_core::syncpacks::{SyncEntry, SyncMode, SyncPack, SyncReport};
 use std::collections::HashMap;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -107,6 +108,9 @@ enum Command {
     /// Profile (Instanzen) verwalten.
     #[command(subcommand)]
     Profile(ProfileCommand),
+    /// Sync-Packs und Vorlagen: Inhalte, die man Profilen zuschaltet.
+    #[command(subcommand)]
+    Sync(SyncCommand),
     /// Mod-Loader abfragen.
     #[command(subcommand)]
     Loader(LoaderCommand),
@@ -329,6 +333,48 @@ impl From<KindArg> for ContentKind {
 }
 
 #[derive(Subcommand)]
+enum SyncCommand {
+    /// Sync-Packs anzeigen (mit --profile: an/aus für dieses Profil).
+    List {
+        #[arg(long)]
+        profile: Option<String>,
+    },
+    /// Neues Sync-Pack (oder mit --template eine Vorlage) anlegen.
+    Create {
+        name: String,
+        #[arg(long)]
+        template: bool,
+    },
+    /// Modrinth-Projekt hinzufügen (Slug oder ID).
+    Add {
+        pack: String,
+        project: String,
+        #[arg(long = "type", value_enum, default_value = "mod")]
+        kind: KindArg,
+    },
+    /// Eigene Datei hinzufügen; Ziel relativ zum Spielordner, z. B. config/x.json.
+    AddFile {
+        pack: String,
+        file: PathBuf,
+        target: String,
+    },
+    /// Option für options.txt setzen, z. B. fov 0.25.
+    Option {
+        pack: String,
+        key: String,
+        value: String,
+    },
+    /// Im Profil einschalten (Vorlagen: einmal einspielen).
+    Enable { profile: String, pack: String },
+    /// Im Profil ausschalten und eingespielte Inhalte entfernen.
+    Disable { profile: String, pack: String },
+    /// Eingeschaltete Sync-Packs eines Profils abgleichen.
+    Run { profile: String },
+    /// Sync-Pack löschen (eingespielte Inhalte bleiben).
+    Delete { pack: String },
+}
+
+#[derive(Subcommand)]
 enum ServerCommand {
     /// Status eines Servers abfragen (MOTD, Spieler, Ping).
     Ping { address: String },
@@ -463,6 +509,7 @@ async fn main() -> Result<()> {
             let mut on_event = |e: PrepareEvent| match e {
                 PrepareEvent::Stage(stage) => {
                     bar.set_prefix(match stage {
+                        Stage::Sync => "Sync-Packs",
                         Stage::Loader => "Mod-Loader",
                         Stage::Version => "Spieldateien",
                         Stage::Java => "Java",
@@ -539,6 +586,7 @@ async fn main() -> Result<()> {
         }
         Command::Content(cmd) => content_command(cmd, &launcher).await,
         Command::Pack(cmd) => pack_command(cmd, &launcher).await,
+        Command::Sync(cmd) => sync_command(cmd, &launcher).await,
         Command::Stats => {
             let stats = launcher.stats().load()?;
             let profiles = launcher.profiles().list()?;
@@ -697,6 +745,7 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
             };
             let result = packs.import(&archive, src, name).await?;
             let p = result.profile;
+            apply_auto_sync(launcher, &p).await;
             let count = launcher
                 .content()
                 .list(&p.id, &launcher.game_dir(&p))?
@@ -909,6 +958,126 @@ async fn resolve_link(
     })
 }
 
+/// Neues Profil: Sync-Packs mit Auto-Regel einschalten (Fehler nur melden).
+async fn apply_auto_sync(launcher: &Launcher, profile: &Profile) {
+    match launcher.syncpacks().apply_auto(profile).await {
+        Ok(r) if !r.installed.is_empty() => {
+            println!("Sync-Packs eingespielt: {}", r.installed.join(", "))
+        }
+        Ok(_) => {}
+        Err(e) => eprintln!("Sync-Packs nicht eingespielt: {e}"),
+    }
+}
+
+async fn sync_command(cmd: SyncCommand, launcher: &Launcher) -> Result<()> {
+    let sync = launcher.syncpacks();
+    let print = |r: SyncReport| {
+        for (label, list) in [
+            ("installiert", &r.installed),
+            ("entfernt", &r.removed),
+            ("schon vorhanden", &r.present),
+            ("nicht verfügbar", &r.unavailable),
+        ] {
+            if !list.is_empty() {
+                println!("  {label}: {}", list.join(", "));
+            }
+        }
+        for w in &r.warnings {
+            println!("  Hinweis: {w}");
+        }
+    };
+    match cmd {
+        SyncCommand::List { profile } => {
+            let packs: Vec<(SyncPack, Option<bool>)> = match profile {
+                Some(p) => {
+                    let p = launcher.profiles().get(&p)?;
+                    sync.for_profile(&p.id)?
+                        .into_iter()
+                        .map(|x| (x.pack, Some(x.enabled)))
+                        .collect()
+                }
+                None => sync.list()?.into_iter().map(|p| (p, None)).collect(),
+            };
+            if packs.is_empty() {
+                println!("Keine Sync-Packs. Anlegen mit `pinecone sync create <name>`.");
+            }
+            for (p, on) in packs {
+                let mark = match on {
+                    Some(true) => "[x] ",
+                    Some(false) => "[ ] ",
+                    None => "",
+                };
+                let mode = match p.mode {
+                    SyncMode::Sync => "Sync-Pack",
+                    SyncMode::Template => "Vorlage",
+                };
+                println!(
+                    "{mark}{} ({}, {mode}): {} Einträge",
+                    p.name,
+                    p.id,
+                    p.entries.len()
+                );
+                for e in &p.entries {
+                    println!("    {}", e.label());
+                }
+                for (k, v) in &p.options {
+                    println!("    options.txt: {k}:{v}");
+                }
+            }
+        }
+        SyncCommand::Create { name, template } => {
+            let mode = if template {
+                SyncMode::Template
+            } else {
+                SyncMode::Sync
+            };
+            let p = sync.create(&name, mode)?;
+            println!("{:?} angelegt (ID {})", p.name, p.id);
+        }
+        SyncCommand::Add {
+            pack,
+            project,
+            kind,
+        } => {
+            let mut p = sync.get(&pack)?;
+            let info = launcher.content().modrinth().project(&project).await?;
+            p.entries.push(SyncEntry::Modrinth {
+                project_id: info.id,
+                kind: kind.into(),
+                name: info.title.clone(),
+            });
+            sync.save(&p)?;
+            println!("{} zu {:?} hinzugefügt", info.title, p.name);
+        }
+        SyncCommand::AddFile { pack, file, target } => {
+            let p = sync.add_file(&pack, &file, &target).await?;
+            println!("{target} zu {:?} hinzugefügt", p.name);
+        }
+        SyncCommand::Option { pack, key, value } => {
+            let mut p = sync.get(&pack)?;
+            p.options.insert(key, value);
+            sync.save(&p)?;
+        }
+        SyncCommand::Enable { profile, pack } => {
+            let p = launcher.profiles().get(&profile)?;
+            print(sync.set_enabled(&p, &pack, true).await?);
+        }
+        SyncCommand::Disable { profile, pack } => {
+            let p = launcher.profiles().get(&profile)?;
+            print(sync.set_enabled(&p, &pack, false).await?);
+        }
+        SyncCommand::Run { profile } => {
+            let p = launcher.profiles().get(&profile)?;
+            print(sync.sync(&p).await?);
+        }
+        SyncCommand::Delete { pack } => {
+            sync.delete(&pack)?;
+            println!("Sync-Pack {pack} gelöscht");
+        }
+    }
+    Ok(())
+}
+
 fn format_duration(secs: u64) -> String {
     match secs {
         s if s < 60 => format!("{s} s"),
@@ -971,6 +1140,7 @@ async fn profile_command(cmd: ProfileCommand, launcher: &Launcher) -> Result<()>
             }
             profile.memory_mb = memory;
             let profile = profiles.create(profile)?;
+            apply_auto_sync(launcher, &profile).await;
             println!(
                 "Profil {:?} angelegt ({}): {}",
                 profile.name,

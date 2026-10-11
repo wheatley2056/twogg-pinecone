@@ -149,6 +149,7 @@ pub async fn create_profile(
     let mut profile = Profile::new("", "");
     apply_input(&state, &mut profile, input).await?;
     let profile = state.launcher.profiles().create(profile).map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &profile).await;
     Ok(ProfileDto::new(profile, false))
 }
 

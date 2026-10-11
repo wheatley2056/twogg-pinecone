@@ -16,8 +16,9 @@
   import ProfileIcon from "./components/ProfileIcon.svelte";
   import ProfileView from "./components/ProfileView.svelte";
   import Settings from "./components/Settings.svelte";
+  import SyncPacks from "./components/SyncPacks.svelte";
 
-  type View = "home" | "library" | "discover" | "profile" | "settings";
+  type View = "home" | "library" | "discover" | "syncpacks" | "profile" | "settings";
 
   let info = $state<AppInfo | null>(null);
   let profiles = $state<Profile[]>([]);
@@ -114,6 +115,7 @@
     ["home", "home", () => t("nav.home")],
     ["library", "library", () => t("nav.library")],
     ["discover", "discover", () => t("nav.discover")],
+    ["syncpacks", "layers", () => t("nav.syncpacks")],
   ];
 </script>
 
@@ -181,6 +183,8 @@
           onPackInstalled={onImported}
         />
       {/key}
+    {:else if view === "syncpacks"}
+      <SyncPacks {profiles} />
     {:else if view === "profile" && selected}
       {#key selected.id}
         <ProfileView

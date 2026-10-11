@@ -35,6 +35,10 @@ import type {
   MigrateOptions,
   MigrationPlan,
   MigrationTarget,
+  ProfileSyncPack,
+  SyncMode,
+  SyncPack,
+  SyncReport,
 } from "./types";
 
 export const api = {
@@ -108,6 +112,17 @@ export const api = {
   migratePlan: (id: string, target: MigrationTarget) => invoke<MigrationPlan>("migrate_plan", { id, target }),
   migrateApply: (id: string, options: MigrateOptions) =>
     invoke<{ profile: Profile; warnings: string[] }>("migrate_apply", { id, options }),
+  syncpackList: () => invoke<SyncPack[]>("syncpack_list"),
+  syncpackCreate: (name: string, mode: SyncMode) => invoke<SyncPack>("syncpack_create", { name, mode }),
+  syncpackSave: (pack: SyncPack) => invoke<SyncPack>("syncpack_save", { id: pack.id, pack }),
+  syncpackDelete: (id: string) => invoke<void>("syncpack_delete", { id }),
+  syncpackAddFile: (id: string, path: string, target: string) => invoke<SyncPack>("syncpack_add_file", { id, path, target }),
+  syncpackAddFromProfile: (id: string, profileId: string, keys: string[]) =>
+    invoke<SyncPack>("syncpack_add_from_profile", { id, profileId, keys }),
+  syncpackForProfile: (profileId: string) => invoke<ProfileSyncPack[]>("syncpack_for_profile", { profileId }),
+  syncpackSetEnabled: (profileId: string, id: string, enabled: boolean) =>
+    invoke<SyncReport>("syncpack_set_enabled", { profileId, id, enabled }),
+  syncpackSync: (profileId: string) => invoke<SyncReport>("syncpack_sync", { profileId }),
   /** Beim Start übergebene Links/Dateien (einmalig) und später geöffnete. */
   takeOpenRequests: () => invoke<string[]>("take_open_requests"),
   onOpenPack: (handler: (request: string) => void) => listen<string>("open-pack", (e) => handler(e.payload)),
