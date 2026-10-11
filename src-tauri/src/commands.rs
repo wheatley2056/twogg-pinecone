@@ -26,6 +26,7 @@ pub fn app_info(state: State<'_, AppState>) -> AppInfo {
         data_dir: state.launcher.paths().root().display().to_string(),
         msa_configured: state.msa.is_some(),
         curseforge_configured: state.launcher.content().curseforge().is_some(),
+        updates_configured: crate::update::configured(),
     }
 }
 

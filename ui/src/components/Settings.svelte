@@ -5,6 +5,7 @@
   import { t } from "../lib/i18n.svelte";
   import { ACCENTS, settings, updateSettings, useSettings } from "../lib/settings.svelte";
   import { exportDiagnostics } from "../lib/diagnostics";
+  import { checkUpdates, installUpdate, updates } from "../lib/updates.svelte";
   import type { AppInfo, JavaInstallation, Settings, ThemeMode, WidgetId } from "../lib/types";
 
   let { info }: { info: AppInfo | null } = $props();
@@ -234,6 +235,32 @@
   </div>
 
   <div class="card">
+    <h2>{t("appUpdate.title")}</h2>
+    <p class="muted">{t("appUpdate.current", { version: info?.version ?? "?" })}</p>
+    {#if !info?.updatesConfigured}
+      <p class="muted">{t("appUpdate.notConfigured")}</p>
+    {:else}
+      {#if updates.info}
+        <p>{t("appUpdate.available", { version: updates.info.version })}</p>
+        {#if updates.info.notes}<pre class="notes">{updates.info.notes}</pre>{/if}
+        {#if updates.progress !== null}
+          <progress max="1" value={updates.progress}></progress>
+          <p class="muted">{updates.installing ? t("appUpdate.installing") : t("appUpdate.downloading")}</p>
+        {/if}
+      {:else if updates.checked}
+        <p class="notice">{t("appUpdate.upToDate")}</p>
+      {/if}
+      {#if updates.progress === null}
+        <div class="row-buttons">
+          {#if updates.info}<button class="primary" onclick={installUpdate}>{t("appUpdate.install")}</button>{/if}
+          <button onclick={() => checkUpdates()} disabled={updates.checking}>{updates.checking ? t("appUpdate.checking") : t("appUpdate.check")}</button>
+        </div>
+      {/if}
+      {#if updates.error}<p class="error">{updates.error}</p>{/if}
+    {/if}
+  </div>
+
+  <div class="card">
     <h2>{t("diag.title")}</h2>
     <p class="muted">{t("diag.hint")}</p>
     <div class="row-buttons">
@@ -245,6 +272,22 @@
 </section>
 
 <style>
+  .notes {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    font-family: inherit;
+    font-size: 13px;
+    white-space: pre-wrap;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  progress {
+    width: 100%;
+  }
+
   .row-buttons {
     display: flex;
     gap: 8px;

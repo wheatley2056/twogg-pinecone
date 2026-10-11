@@ -4,6 +4,7 @@
   import { t } from "./lib/i18n.svelte";
   import { runOf, startGame } from "./lib/runs.svelte";
   import { loadSettings } from "./lib/settings.svelte";
+  import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
   import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType } from "./lib/types";
   import AccountMenu from "./components/AccountMenu.svelte";
   import Discover from "./components/Discover.svelte";
@@ -89,6 +90,7 @@
     await Promise.all([reloadProfiles(), reloadAccounts()]);
     await api.onOpenPack(openExternal).catch(() => {});
     for (const r of await api.takeOpenRequests().catch(() => [])) openExternal(r);
+    if (info?.updatesConfigured) checkUpdates(true);
   });
 
   function openProfile(id: string, tab: "content" | "log" = "content") {
@@ -154,6 +156,20 @@
   <main class="view">
     {#if loadError}
       <p class="error">{loadError}</p>
+    {/if}
+    {#if updates.info && !updates.dismissed && view !== "settings"}
+      <div class="update-banner">
+        <span>{t("appUpdate.available", { version: updates.info.version })}</span>
+        {#if updates.progress !== null}
+          <progress max="1" value={updates.progress}></progress>
+          <span class="muted">{updates.installing ? t("appUpdate.installing") : t("appUpdate.downloading")}</span>
+        {:else}
+          <button class="primary" onclick={installUpdate}>{t("appUpdate.install")}</button>
+          <button class="ghost" onclick={() => (view = "settings")}>{t("appUpdate.details")}</button>
+          <button class="ghost" onclick={() => (updates.dismissed = true)}>{t("appUpdate.later")}</button>
+        {/if}
+        {#if updates.error}<span class="error-text">{updates.error}</span>{/if}
+      </div>
     {/if}
     {#if view === "home"}
       {#if profiles.length === 0}
@@ -329,6 +345,26 @@
     flex-direction: column;
     gap: 12px;
     overflow: hidden;
+  }
+
+  .update-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    font-size: 13px;
+  }
+
+  .update-banner progress {
+    width: 160px;
+  }
+
+  .error-text {
+    color: var(--danger);
   }
 
   .welcome {

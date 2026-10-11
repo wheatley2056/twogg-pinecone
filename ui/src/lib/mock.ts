@@ -120,7 +120,7 @@ function toProfile(id: string, input: ProfileInput): Profile {
 }
 
 Object.assign(api, {
-  appInfo: async () => ({ version: "0.1.0", dataDir: "/home/beispiel/.local/share/twogg-pinecone", msaConfigured: false, curseforgeConfigured: true }),
+  appInfo: async () => ({ version: "0.1.0", dataDir: "/home/beispiel/.local/share/twogg-pinecone", msaConfigured: false, curseforgeConfigured: true, updatesConfigured: true }),
   versions: async (snapshots: boolean) => [
     ...(snapshots ? [{ id: "26.4-snapshot-3", kind: "snapshot", releaseTime: "2026-10-08" }] : []),
     ...["26.3", "26.2", "26.1.2", "1.21.1", "1.20.1", "1.12.2", "1.8.9"].map((id) => ({ id, kind: "release", releaseTime: "" })),
@@ -307,6 +307,16 @@ Object.assign(api, {
       : { installed: [], removed: ["Zoomify", "Fresh Animations"], present: [], unavailable: [], warnings: [] };
   },
   syncpackSync: async () => ({ installed: [], removed: [], present: [], unavailable: [], warnings: [] }),
+  updateCheck: async () => (await wait(500), { version: "0.2.0", currentVersion: "0.1.0", date: now - 3600, notes: "- Skins und Screenshots\n- Sync-Packs\n- Versionswechsel" }),
+  updateInstall: async (onEvent: (e: { type: "progress"; done: number; total: number | null } | { type: "installing" }) => void) => {
+    for (let done = 0; done <= 25_000_000; done += 2_500_000) {
+      onEvent({ type: "progress", done, total: 25_000_000 });
+      await wait(120);
+    }
+    onEvent({ type: "installing" });
+    await wait(800);
+    throw "Mock-Modus: kein echtes Update";
+  },
   diagnosticsExport: async (path: string) => (await wait(600), { path, files: 12, bytes: 48_000 }),
   openLogsFolder: async () => {},
   screenshotsList: async () => mockShots,

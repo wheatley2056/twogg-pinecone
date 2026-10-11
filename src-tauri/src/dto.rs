@@ -13,6 +13,7 @@ pub struct AppInfo {
     pub data_dir: String,
     pub msa_configured: bool,
     pub curseforge_configured: bool,
+    pub updates_configured: bool,
 }
 
 #[derive(Serialize)]

@@ -12,6 +12,7 @@ mod packs;
 mod screenshots;
 mod skins;
 mod syncpacks;
+mod update;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -127,6 +128,13 @@ fn main() {
             open::forward(app, args, cwd)
         }))
         .plugin(tauri_plugin_deep_link::init())
+        // Ohne eingebauten Schlüssel bleibt der Updater registriert, prüft aber nie (siehe update.rs).
+        .plugin(
+            tauri_plugin_updater::Builder::new()
+                .pubkey(update::pubkey().unwrap_or_default())
+                .build(),
+        )
+        .manage(update::PendingUpdate::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
@@ -212,6 +220,8 @@ fn main() {
             syncpacks::syncpack_for_profile,
             syncpacks::syncpack_set_enabled,
             syncpacks::syncpack_sync,
+            update::update_check,
+            update::update_install,
             commands::diagnostics_export,
             commands::open_logs_folder,
             screenshots::screenshots_list,

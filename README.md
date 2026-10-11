@@ -217,6 +217,17 @@ gesetzt als `PINECONE_CURSEFORGE_API_KEY` (beim Bauen gesetzt, wird er einkompil
 Autoren Downloads über andere Launcher gesperrt haben, meldet Pinecone mit Link zum manuellen
 Herunterladen.
 
+## Logs, Diagnose und Updates
+
+Die App schreibt ihre Logs nach `<data-dir>/logs/` (eine Datei pro Tag, die letzten sieben bleiben).
+Unter Einstellungen → „Hilfe & Diagnose“ (oder im Spielausgabe-Tab eines Profils, bzw.
+`pinecone diag <datei.zip>`) entsteht ein ZIP mit Systeminfos, Launcher- und Spiel-Logs, den neuesten
+Crash-Reports, der Mod-Liste und der Profil-Konfiguration; Account-Daten fehlen, Tokens werden geschwärzt.
+
+Release-Builds prüfen beim Start auf Updates (signiert, Tauri-Updater) und installieren sie auf Wunsch.
+Installer gibt es für Windows (NSIS, MSI) und Linux (AppImage, deb, rpm); wie ein Release entsteht und
+welche Schlüssel nötig sind, steht in [RELEASING.md](RELEASING.md).
+
 ## Entwicklung
 
 ```sh

@@ -43,6 +43,8 @@ import type {
   SavedSkin,
   SkinModel,
   ScreenshotItem,
+  UpdateEvent,
+  AppUpdate,
 } from "./types";
 
 export const api = {
@@ -127,6 +129,12 @@ export const api = {
   syncpackSetEnabled: (profileId: string, id: string, enabled: boolean) =>
     invoke<SyncReport>("syncpack_set_enabled", { profileId, id, enabled }),
   syncpackSync: (profileId: string) => invoke<SyncReport>("syncpack_sync", { profileId }),
+  updateCheck: () => invoke<AppUpdate | null>("update_check"),
+  updateInstall: (onEvent: (e: UpdateEvent) => void) => {
+    const channel = new Channel<UpdateEvent>();
+    channel.onmessage = onEvent;
+    return invoke<void>("update_install", { onEvent: channel });
+  },
   diagnosticsExport: (path: string, profileId: string | null = null) =>
     invoke<{ path: string; files: number; bytes: number }>("diagnostics_export", { path, profileId }),
   openLogsFolder: () => invoke<void>("open_logs_folder"),

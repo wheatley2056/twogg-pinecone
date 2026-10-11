@@ -7,6 +7,7 @@ export interface AppInfo {
   version: string;
   dataDir: string;
   msaConfigured: boolean;
+  updatesConfigured: boolean;
   curseforgeConfigured: boolean;
 }
 
@@ -407,3 +408,12 @@ export interface ScreenshotItem {
   modified: number;
   size: number;
 }
+
+export interface AppUpdate {
+  version: string;
+  currentVersion: string;
+  date: number | null;
+  notes: string | null;
+}
+
+export type UpdateEvent = { type: "progress"; done: number; total: number | null } | { type: "installing" };
