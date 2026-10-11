@@ -37,6 +37,15 @@ jobs:
           [ "$tag" = "$conf" ] && [ "$tag" = "$pkg" ] && [ "$tag" = "$cargo" ] || {
             echo "::error::Versionen passen nicht zum Tag (siehe RELEASING.md)"; exit 1; }
 
+      - name: Signatur-Secrets prüfen
+        shell: bash
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          PUBKEY: ${{ vars.PINECONE_UPDATE_PUBKEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::Secret TAURI_SIGNING_PRIVATE_KEY fehlt oder ist leer (Settings → Secrets and variables → Actions → Repository secrets)"; exit 1; }
+          [ -n "$PUBKEY" ] || { echo "::error::Variable PINECONE_UPDATE_PUBKEY fehlt (Tab „Variables“, nicht „Secrets“)"; exit 1; }
+
       - name: Linux-Abhängigkeiten
         if: runner.os == 'Linux'
         run: |
