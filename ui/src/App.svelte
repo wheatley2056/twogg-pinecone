@@ -10,7 +10,7 @@
   import { loadSettings, settings } from "./lib/settings.svelte";
   import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
   import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType, SyncPack } from "./lib/types";
-  import Discover from "./components/Discover.svelte";
+  import DiscoverPage from "./components/pages/DiscoverPage.svelte";
   import PlayPage from "./components/pages/PlayPage.svelte";
   import ImportDialog from "./components/ImportDialog.svelte";
   import InstanceView, { type InstanceTab } from "./components/library/InstanceView.svelte";
@@ -42,7 +42,7 @@
   // Neu laden der Startseite nach Spielende (Spielzeit, letzter Server).
   let homeKey = $state(0);
   // Entdecken aus einem Profil heraus: Ziel und Inhaltsart vorbelegen.
-  let discoverTarget = $state<{ profileId: string | null; type: ProjectType }>({ profileId: null, type: "mod" });
+  let discoverTarget = $state<{ profileId: string | null; type: ProjectType }>({ profileId: null, type: "modpack" });
   let instanceTab = $state<InstanceTab>("content");
   // Rechts in der Bibliothek: Instanz (selectedId) oder ein Sync-Pack.
   let syncId = $state<string | null>(null);
@@ -213,7 +213,7 @@
     onPanel={togglePanel}
   />
 
-  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library"}>
+  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library" || view === "discover"}>
     {#if loadError}
       <p class="error">{loadError}</p>
     {/if}
@@ -280,7 +280,7 @@
       </LibraryPage>
     {:else if view === "discover"}
       {#key discoverTarget}
-        <Discover
+        <DiscoverPage
           {profiles}
           initialProfileId={discoverTarget.profileId}
           initialType={discoverTarget.type}
