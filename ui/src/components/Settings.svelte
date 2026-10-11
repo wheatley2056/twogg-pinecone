@@ -3,10 +3,11 @@
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
-  import { ACCENTS, settings, updateSettings, useSettings } from "../lib/settings.svelte";
+  import { ACCENTS, THEMES, settings, updateSettings, useSettings } from "../lib/settings.svelte";
+  import Switch from "./ui/Switch.svelte";
   import { exportDiagnostics } from "../lib/diagnostics";
   import { checkUpdates, installUpdate, updates } from "../lib/updates.svelte";
-  import type { AppInfo, JavaInstallation, Settings, ThemeMode, WidgetId } from "../lib/types";
+  import type { AppInfo, JavaInstallation, Settings, WidgetId } from "../lib/types";
 
   let { info }: { info: AppInfo | null } = $props();
 
@@ -57,11 +58,6 @@
     }
   }
 
-  async function chooseBackground() {
-    const path = await open({ multiple: false, filters: [{ name: t("settings.imageFilter"), extensions: ["png", "jpg", "jpeg", "webp"] }] });
-    if (typeof path === "string") await run(() => api.setBackground(path));
-  }
-
   async function exportTheme() {
     const path = await save({ defaultPath: "pinecone-theme.json", filters: [{ name: t("settings.themeFilter"), extensions: ["json"] }] });
     if (path) await run(() => api.exportTheme(path));
@@ -79,11 +75,11 @@
     });
   }
 
-  const modes: [ThemeMode, () => string][] = [
-    ["system", () => t("settings.modeSystem")],
-    ["light", () => t("settings.modeLight")],
-    ["dark", () => t("settings.modeDark")],
-  ];
+  const details = [
+    ["pattern", "settings.pattern"],
+    ["pixelTitles", "settings.pixelTitles"],
+    ["reduceMotion", "settings.reduceMotion"],
+  ] as const;
 </script>
 
 <section class="settings">
@@ -128,14 +124,14 @@
     <div class="card">
       <h2>{t("settings.appearance")}</h2>
       <div class="row">
-        <span class="label">{t("settings.mode")}</span>
+        <span class="label">{t("settings.theme")}</span>
         <div class="segmented" role="radiogroup">
-          {#each modes as [mode, label] (mode)}
+          {#each THEMES as name (name)}
             <button
               role="radio"
-              aria-checked={s.theme.mode === mode}
-              class:selected={s.theme.mode === mode}
-              onclick={() => change((x) => (x.theme.mode = mode))}>{label()}</button
+              aria-checked={s.theme.name === name}
+              class:selected={s.theme.name === name}
+              onclick={() => change((x) => (x.theme.name = name))}>{t(`theme.${name}`)}</button
             >
           {/each}
         </div>
@@ -143,15 +139,16 @@
       <div class="row">
         <span class="label">{t("settings.accent")}</span>
         <div class="swatches" role="radiogroup">
-          {#each ACCENTS as c (c)}
+          {#each ACCENTS as a (a.id)}
             <button
               class="swatch"
-              class:selected={s.theme.accent === c}
+              class:selected={s.theme.accent === a.color}
               role="radio"
-              aria-checked={s.theme.accent === c}
-              aria-label={c}
-              style:background={c}
-              onclick={() => change((x) => (x.theme.accent = c))}
+              aria-checked={s.theme.accent === a.color}
+              aria-label={t(`accent.${a.id}`)}
+              title={t(`accent.${a.id}`)}
+              style:background={a.color}
+              onclick={() => change((x) => (x.theme.accent = a.color))}
             ></button>
           {/each}
           <input
@@ -162,28 +159,12 @@
           />
         </div>
       </div>
-      <div class="row">
-        <span class="label">{t("settings.background")}</span>
-        <div class="bg">
-          <button onclick={chooseBackground}>{t("settings.chooseImage")}</button>
-          {#if s.background}
-            <button class="ghost" onclick={() => run(api.clearBackground)}>{t("settings.removeImage")}</button>
-          {/if}
+      {#each details as [key, label] (key)}
+        <div class="row">
+          <span class="label">{t(label)}</span>
+          <Switch checked={s.theme[key]} label={t(label)} onchange={(on) => change((x) => (x.theme[key] = on))} />
         </div>
-      </div>
-      {#if s.background}
-        <label class="dim">
-          {t("settings.dim", { percent: s.theme.backgroundDim })}
-          <input
-            type="range"
-            min="0"
-            max="90"
-            step="5"
-            value={s.theme.backgroundDim}
-            onchange={(e) => change((x) => (x.theme.backgroundDim = Number(e.currentTarget.value)))}
-          />
-        </label>
-      {/if}
+      {/each}
       <div class="row end">
         <button class="ghost" onclick={importTheme}>{t("settings.import")}</button>
         <button class="ghost" onclick={exportTheme}>{t("settings.export")}</button>
@@ -425,15 +406,7 @@
     cursor: pointer;
   }
 
-  .bg {
-    display: flex;
-    gap: 8px;
-  }
 
-  .dim input {
-    padding: 0;
-    accent-color: var(--accent);
-  }
 
   .widgets {
     list-style: none;

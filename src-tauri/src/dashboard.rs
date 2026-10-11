@@ -149,7 +149,7 @@ pub fn open_screenshot(app: AppHandle, state: State<'_, AppState>, path: String)
         .map_err(err)
 }
 
-/// Gibt der Oberfläche Lesezugriff auf Screenshots (Profilordner) und das Hintergrundbild.
+/// Gibt der Oberfläche Lesezugriff auf Screenshots (Profilordner).
 pub fn allow_assets(app: &AppHandle) {
     let state = app.state::<AppState>();
     let root = state.launcher.paths().root().to_path_buf();
@@ -163,64 +163,16 @@ pub fn allow_assets(app: &AppHandle) {
     if let Err(e) = scope.allow_directory(thumbs, false) {
         tracing::warn!("Asset-Freigabe fehlgeschlagen: {e}");
     }
-    if let Ok(settings) = state.launcher.settings().load()
-        && let Some(bg) = settings.background
-    {
-        let _ = scope.allow_file(root.join(bg));
-    }
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SettingsDto {
-    #[serde(flatten)]
-    pub settings: Settings,
-    /// Absoluter Pfad des Hintergrundbilds für die Anzeige.
-    pub background_path: Option<String>,
-}
-
-fn settings_dto(state: &AppState, settings: Settings) -> SettingsDto {
-    let background_path = settings
-        .background
-        .as_ref()
-        .map(|b| state.launcher.paths().root().join(b).display().to_string());
-    SettingsDto {
-        settings,
-        background_path,
-    }
 }
 
 #[tauri::command]
-pub fn get_settings(state: State<'_, AppState>) -> CmdResult<SettingsDto> {
-    let settings = state.launcher.settings().load().map_err(err)?;
-    Ok(settings_dto(&state, settings))
+pub fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
+    state.launcher.settings().load().map_err(err)
 }
 
 #[tauri::command]
-pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> CmdResult<SettingsDto> {
-    let saved = state.launcher.settings().save(&settings).map_err(err)?;
-    Ok(settings_dto(&state, saved))
-}
-
-#[tauri::command]
-pub fn set_background(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    path: String,
-) -> CmdResult<SettingsDto> {
-    let saved = state
-        .launcher
-        .settings()
-        .set_background(Path::new(&path))
-        .map_err(err)?;
-    allow_assets(&app);
-    Ok(settings_dto(&state, saved))
-}
-
-#[tauri::command]
-pub fn clear_background(state: State<'_, AppState>) -> CmdResult<SettingsDto> {
-    let saved = state.launcher.settings().clear_background().map_err(err)?;
-    Ok(settings_dto(&state, saved))
+pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> CmdResult<Settings> {
+    state.launcher.settings().save(&settings).map_err(err)
 }
 
 #[tauri::command]
@@ -233,11 +185,10 @@ pub fn export_theme(state: State<'_, AppState>, path: String) -> CmdResult<()> {
 }
 
 #[tauri::command]
-pub fn import_theme(state: State<'_, AppState>, path: String) -> CmdResult<SettingsDto> {
-    let saved = state
+pub fn import_theme(state: State<'_, AppState>, path: String) -> CmdResult<Settings> {
+    state
         .launcher
         .settings()
         .import_theme(Path::new(&path))
-        .map_err(err)?;
-    Ok(settings_dto(&state, saved))
+        .map_err(err)
 }

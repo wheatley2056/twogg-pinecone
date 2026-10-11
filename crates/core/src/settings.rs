@@ -6,13 +6,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Error, Result};
 
+/// Farbwelt nach dem Pinecone-Design-System (`docs/design/design-system.md`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ThemeMode {
+pub enum ThemeName {
+    /// Warmes Dunkel, Standard.
     #[default]
-    System,
-    Light,
-    Dark,
+    Rinde,
+    /// Tiefes Waldgrün.
+    Kiefer,
+    /// Hell.
+    Winterland,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -23,34 +27,58 @@ pub enum Language {
     En,
 }
 
+/// Standard-Akzent „Harz“.
+pub const DEFAULT_ACCENT: &str = "#e9a23b";
+
 /// Das, was eine Theme-Datei enthält (exportier- und importierbar).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", from = "RawTheme")]
 pub struct Theme {
-    #[serde(default)]
-    pub mode: ThemeMode,
+    pub name: ThemeName,
     /// Akzentfarbe als `#rrggbb`.
-    #[serde(default = "default_accent")]
     pub accent: String,
-    /// Abdunklung des Hintergrundbilds in Prozent (0–90).
-    #[serde(default = "default_dim")]
-    pub background_dim: u8,
-}
-
-fn default_accent() -> String {
-    "#4caf50".into()
-}
-
-fn default_dim() -> u8 {
-    60
+    /// Zapfenschuppen-Muster hinter Bannern.
+    pub pattern: bool,
+    /// Pixelify Sans für Titel, Tabs und Buttons.
+    pub pixel_titles: bool,
+    pub reduce_motion: bool,
 }
 
 impl Default for Theme {
     fn default() -> Self {
+        RawTheme::default().into()
+    }
+}
+
+/// Liest auch Dateien älterer Versionen (`mode` hell/dunkel/System, grüner Standard-Akzent).
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawTheme {
+    name: Option<ThemeName>,
+    mode: Option<String>,
+    accent: Option<String>,
+    pattern: Option<bool>,
+    pixel_titles: Option<bool>,
+    reduce_motion: Option<bool>,
+}
+
+impl From<RawTheme> for Theme {
+    fn from(raw: RawTheme) -> Self {
+        let name = raw.name.unwrap_or(match raw.mode.as_deref() {
+            Some("light") => ThemeName::Winterland,
+            _ => ThemeName::Rinde,
+        });
+        let accent = match raw.accent {
+            // Grün war der alte Standard; im neuen Design ist Grün nur Statusfarbe.
+            Some(a) if !a.eq_ignore_ascii_case("#4caf50") => a,
+            _ => DEFAULT_ACCENT.to_string(),
+        };
         Self {
-            mode: ThemeMode::System,
-            accent: default_accent(),
-            background_dim: default_dim(),
+            name,
+            accent,
+            pattern: raw.pattern.unwrap_or(true),
+            pixel_titles: raw.pixel_titles.unwrap_or(true),
+            reduce_motion: raw.reduce_motion.unwrap_or(false),
         }
     }
 }
@@ -63,11 +91,6 @@ impl Theme {
                 "Ungültige Akzentfarbe {:?} (erwartet #rrggbb)",
                 self.accent
             )));
-        }
-        if self.background_dim > 90 {
-            return Err(Error::Invalid(
-                "Abdunklung muss zwischen 0 und 90 % liegen".into(),
-            ));
         }
         Ok(())
     }
@@ -93,9 +116,9 @@ pub const WIDGETS: [&str; 6] = [
 pub struct Settings {
     #[serde(default)]
     pub theme: Theme,
-    /// Dateiname des Hintergrundbilds im Datenverzeichnis.
+    /// Fensterrahmen des Systems statt der eigenen Kopfleiste (hilft unter manchen Linux-Fenstermanagern).
     #[serde(default)]
-    pub background: Option<String>,
+    pub system_frame: bool,
     #[serde(default = "default_widgets")]
     pub widgets: Vec<Widget>,
     #[serde(default)]
@@ -116,7 +139,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             theme: Theme::default(),
-            background: None,
+            system_frame: false,
             widgets: default_widgets(),
             language: Language::default(),
         }
@@ -143,8 +166,6 @@ impl Settings {
 pub struct SettingsStore {
     root: PathBuf,
 }
-
-const IMAGE_EXTENSIONS: [&str; 4] = ["png", "jpg", "jpeg", "webp"];
 
 impl SettingsStore {
     pub fn new(root: impl Into<PathBuf>) -> Self {
@@ -173,12 +194,6 @@ impl SettingsStore {
         settings.theme.validate()?;
         let mut settings = settings.clone();
         settings.normalize();
-        // Nur Hintergründe zulassen, die Pinecone selbst abgelegt hat.
-        if let Some(bg) = &settings.background
-            && (bg.contains(['/', '\\']) || !self.root.join(bg).is_file())
-        {
-            settings.background = None;
-        }
         std::fs::create_dir_all(&self.root).map_err(Error::io(&self.root))?;
         let path = self.path();
         let json = serde_json::to_vec_pretty(&settings).map_err(Error::json("settings.json"))?;
@@ -186,52 +201,6 @@ impl SettingsStore {
         std::fs::write(&tmp, json).map_err(Error::io(&tmp))?;
         std::fs::rename(&tmp, &path).map_err(Error::io(&path))?;
         Ok(settings)
-    }
-
-    /// Kopiert ein Bild als `background.<ext>` ins Datenverzeichnis und setzt es als Hintergrund.
-    pub fn set_background(&self, source: &Path) -> Result<Settings> {
-        let ext = source
-            .extension()
-            .and_then(|e| e.to_str())
-            .map(str::to_ascii_lowercase)
-            .filter(|e| IMAGE_EXTENSIONS.contains(&e.as_str()))
-            .ok_or_else(|| Error::Invalid("Hintergrundbild muss PNG, JPG oder WebP sein".into()))?;
-        let meta = std::fs::metadata(source).map_err(Error::io(source))?;
-        if meta.len() > 20 * 1024 * 1024 {
-            return Err(Error::Invalid(
-                "Hintergrundbild ist größer als 20 MB".into(),
-            ));
-        }
-        let mut settings = self.load()?;
-        self.remove_background_files()?;
-        // Neuer Name je Bild, damit die Oberfläche kein altes Bild aus dem Cache zeigt.
-        let name = format!("background-{}.{ext}", crate::stats::now_secs());
-        std::fs::create_dir_all(&self.root).map_err(Error::io(&self.root))?;
-        let target = self.root.join(&name);
-        std::fs::copy(source, &target).map_err(Error::io(&target))?;
-        settings.background = Some(name);
-        self.save(&settings)
-    }
-
-    pub fn clear_background(&self) -> Result<Settings> {
-        let mut settings = self.load()?;
-        self.remove_background_files()?;
-        settings.background = None;
-        self.save(&settings)
-    }
-
-    fn remove_background_files(&self) -> Result<()> {
-        let Ok(entries) = std::fs::read_dir(&self.root) else {
-            return Ok(());
-        };
-        for e in entries.flatten() {
-            let name = e.file_name().to_string_lossy().into_owned();
-            if name.starts_with("background") && IMAGE_EXTENSIONS.iter().any(|x| name.ends_with(x))
-            {
-                std::fs::remove_file(e.path()).map_err(Error::io(e.path()))?;
-            }
-        }
-        Ok(())
     }
 
     pub fn export_theme(&self, target: &Path) -> Result<()> {
@@ -280,7 +249,7 @@ mod tests {
         assert_eq!(s.widgets.len(), WIDGETS.len());
 
         let mut s = s;
-        s.theme.mode = ThemeMode::Dark;
+        s.theme.name = ThemeName::Kiefer;
         s.theme.accent = "#e91e63".into();
         s.language = Language::En;
         s.widgets.reverse();
@@ -316,29 +285,31 @@ mod tests {
         let mut bad = s.clone();
         bad.theme.accent = "rot".into();
         assert!(store.save(&bad).is_err());
-        bad.theme.accent = "#123456".into();
-        bad.theme.background_dim = 99;
-        assert!(store.save(&bad).is_err());
-        // Fremde Pfade als Hintergrund werden verworfen.
-        let mut s2 = s;
-        s2.background = Some("../../etc/passwd".into());
-        assert_eq!(store.save(&s2).unwrap().background, None);
     }
 
     #[test]
-    fn background_and_theme_files() {
+    fn migrates_old_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("settings.json"),
+            r##"{"theme":{"mode":"light","accent":"#4caf50","backgroundDim":60},"background":"background-1.png"}"##,
+        )
+        .unwrap();
+        let s = SettingsStore::new(dir.path()).load().unwrap();
+        assert_eq!(s.theme.name, ThemeName::Winterland);
+        assert_eq!(s.theme.accent, DEFAULT_ACCENT);
+        assert!(s.theme.pattern && s.theme.pixel_titles && !s.theme.reduce_motion);
+
+        let custom: Theme =
+            serde_json::from_str(r##"{"mode":"dark","accent":"#7fb8e0"}"##).unwrap();
+        assert_eq!(custom.name, ThemeName::Rinde);
+        assert_eq!(custom.accent, "#7fb8e0");
+    }
+
+    #[test]
+    fn theme_files() {
         let dir = tempfile::tempdir().unwrap();
         let store = SettingsStore::new(dir.path().join("data"));
-        let img = dir.path().join("bild.PNG");
-        std::fs::write(&img, b"\x89PNG").unwrap();
-        let s = store.set_background(&img).unwrap();
-        let name = s.background.clone().unwrap();
-        assert!(name.starts_with("background-") && name.ends_with(".png"));
-        assert!(dir.path().join("data").join(&name).is_file());
-        assert!(store.set_background(&dir.path().join("x.exe")).is_err());
-        assert_eq!(store.clear_background().unwrap().background, None);
-        assert!(!dir.path().join("data").join(&name).exists());
-
         let mut s = store.load().unwrap();
         s.theme.accent = "#ff9800".into();
         store.save(&s).unwrap();

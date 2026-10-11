@@ -2,8 +2,7 @@
   import { onMount, untrack } from "svelte";
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
-  import { ACCENTS } from "../lib/settings.svelte";
-  import ProfileIcon from "./ProfileIcon.svelte";
+  import ProfileIcon, { MOTIFS, motifOf, type Motif } from "./ProfileIcon.svelte";
   import type { JavaInstallation, LoaderKind, LoaderVersion, Profile, VersionInfo } from "../lib/types";
 
   interface Props {
@@ -27,8 +26,8 @@
   let javaMode: "auto" | "custom" = $state(initial?.java ? "custom" : "auto");
   let javaPath = $state(initial?.java ?? "");
   let jvmArgs = $state(initial?.jvmArgs.join(" ") ?? "");
-  let icon = $state(initial?.icon ?? "");
-  let color: string | null = $state(initial?.color ?? null);
+  // Motiv (`motif:<name>`) oder leer für Initialen; alte Emoji-Symbole werden nicht mehr angeboten.
+  let icon = $state(motifOf(initial?.icon) ? initial!.icon! : "");
 
   let versions: VersionInfo[] = $state([]);
   let loaderVersions: LoaderVersion[] = $state([]);
@@ -102,8 +101,8 @@
       memoryMb,
       jvmArgs: jvmArgs.split(/\s+/).filter(Boolean),
       java: javaMode === "custom" && javaPath.trim() ? javaPath.trim() : null,
-      icon: icon.trim() || null,
-      color,
+      icon: icon || null,
+      color: initial?.color ?? null,
     };
     try {
       const saved = profile ? await api.updateProfile(profile.id, input) : await api.createProfile(input);
@@ -187,14 +186,17 @@
       <div class="field">
         <span class="field-label">{t("dialog.look")}</span>
         <div class="look">
-          <ProfileIcon profile={{ name: name || "?", icon: icon.trim() || null, color }} size={38} />
-          <input class="icon-input" bind:value={icon} maxlength="8" placeholder={t("dialog.iconPlaceholder")} aria-label={t("dialog.icon")} />
-          <div class="swatches" role="radiogroup" aria-label={t("dialog.color")}>
-            <button type="button" class="swatch none" class:selected={color === null} role="radio" aria-checked={color === null}
-              title={t("dialog.noColor")} onclick={() => (color = null)}>∅</button>
-            {#each ACCENTS as c (c)}
-              <button type="button" class="swatch" class:selected={color === c} role="radio" aria-checked={color === c}
-                style:background={c} title={c} aria-label={c} onclick={() => (color = c)}></button>
+          <div class="motifs" role="radiogroup" aria-label={t("dialog.icon")}>
+            <button type="button" class="motif" class:selected={icon === ""} role="radio" aria-checked={icon === ""}
+              title={t("dialog.initials")} onclick={() => (icon = "")}>
+              <ProfileIcon profile={{ name: name || "?", icon: null }} size={36} />
+            </button>
+            {#each Object.keys(MOTIFS) as Motif[] as m (m)}
+              <button type="button" class="motif" class:selected={icon === `motif:${m}`} role="radio"
+                aria-checked={icon === `motif:${m}`} title={t(`motif.${m}`)} aria-label={t(`motif.${m}`)}
+                onclick={() => (icon = `motif:${m}`)}>
+                <ProfileIcon profile={{ name, icon: `motif:${m}` }} size={36} />
+              </button>
             {/each}
           </div>
         </div>
@@ -321,35 +323,21 @@
     gap: 10px;
   }
 
-  .icon-input {
-    width: 110px;
-    flex-shrink: 0;
-  }
-
-  .swatches {
+  .motifs {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
 
-  .swatch {
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border-radius: 50%;
-    border: 2px solid transparent;
+  .motif {
+    padding: 3px;
+    min-height: 0;
+    background: transparent;
   }
 
-  .swatch.none {
-    background: var(--surface-3);
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1;
-  }
-
-  .swatch.selected {
-    border-color: var(--text);
-    box-shadow: 0 0 0 2px var(--surface);
+  .motif.selected {
+    box-shadow: inset 0 -3px 0 var(--accent);
+    background: var(--surface-active);
   }
 
   .warning {

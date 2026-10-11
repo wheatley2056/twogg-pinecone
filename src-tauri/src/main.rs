@@ -175,8 +175,6 @@ fn main() {
             dashboard::open_screenshot,
             dashboard::get_settings,
             dashboard::save_settings,
-            dashboard::set_background,
-            dashboard::clear_background,
             dashboard::export_theme,
             dashboard::import_theme,
             content::content_list,

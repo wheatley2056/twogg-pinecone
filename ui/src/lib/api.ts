@@ -170,8 +170,6 @@ export const api = {
 
   getSettings: () => invoke<Settings>("get_settings"),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
-  setBackground: (path: string) => invoke<Settings>("set_background", { path }),
-  clearBackground: () => invoke<Settings>("clear_background"),
   exportTheme: (path: string) => invoke<void>("export_theme", { path }),
   importTheme: (path: string) => invoke<Settings>("import_theme", { path }),
   stopGame: (id: string) => invoke<void>("stop_game", { id }),

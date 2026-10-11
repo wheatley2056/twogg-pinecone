@@ -120,13 +120,12 @@ export interface ServerStatus {
   favicon: string | null;
 }
 
-export type ThemeMode = "system" | "light" | "dark";
+export type ThemeName = "rinde" | "kiefer" | "winterland";
 export type WidgetId = "recent" | "news" | "packs" | "servers" | "screenshots" | "playtime";
 
 export interface Settings {
-  theme: { mode: ThemeMode; accent: string; backgroundDim: number };
-  background: string | null;
-  backgroundPath: string | null;
+  theme: { name: ThemeName; accent: string; pattern: boolean; pixelTitles: boolean; reduceMotion: boolean };
+  systemFrame: boolean;
   widgets: { id: WidgetId; visible: boolean }[];
   language: "de" | "en";
 }

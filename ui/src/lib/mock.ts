@@ -14,9 +14,8 @@ let profiles: Profile[] = [
 let accounts: Account[] = [{ uuid: "1a70aea0-11fc-356b-8f09-325a0158a7d0", name: "Tobi", kind: "offline", active: true }];
 const stopped = new Set<string>();
 let settings: Settings = {
-  theme: { mode: "system", accent: "#4caf50", backgroundDim: 60 },
-  background: null,
-  backgroundPath: null,
+  theme: { name: "rinde", accent: "#e9a23b", pattern: true, pixelTitles: true, reduceMotion: false },
+  systemFrame: false,
   widgets: (["recent", "news", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
   language: "de",
 };
@@ -367,8 +366,6 @@ Object.assign(api, {
   contentInstallCurseforge: async () => ({ installed: [["Just Enough Items (JEI)", "jei-1.0.jar"]], alreadyPresent: [], warnings: [] }),
   getSettings: async () => settings,
   saveSettings: async (s: Settings) => (settings = s),
-  setBackground: async () => settings,
-  clearBackground: async () => (settings = { ...settings, background: null, backgroundPath: null }),
   exportTheme: async () => {},
   importTheme: async () => settings,
   launch: async (id: string, onEvent: (e: LaunchEvent) => void) => {
