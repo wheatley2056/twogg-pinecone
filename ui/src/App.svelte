@@ -191,6 +191,7 @@
           onChanged={onGameExit}
           onDeleted={reloadProfiles}
           onAddContent={(kind) => discover(selected.id, kind)}
+          onCreated={onImported}
         />
       {/key}
     {:else if view === "settings"}

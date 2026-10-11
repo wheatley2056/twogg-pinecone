@@ -6,6 +6,7 @@ mod content;
 mod dashboard;
 mod dto;
 mod game;
+mod migrate;
 mod open;
 mod packs;
 
@@ -157,6 +158,8 @@ fn main() {
             packs::pack_rollback,
             packs::pack_export,
             open::take_open_requests,
+            migrate::migrate_plan,
+            migrate::migrate_apply,
             game::launch,
             game::stop_game,
         ])

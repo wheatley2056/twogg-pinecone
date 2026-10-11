@@ -12,6 +12,7 @@ pub mod launch;
 pub mod launcher;
 pub mod loader;
 pub mod manifest;
+pub mod migrate;
 pub mod modpack;
 pub mod modrinth;
 pub mod msa;

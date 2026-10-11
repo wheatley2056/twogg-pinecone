@@ -4,10 +4,11 @@
   import { t } from "../lib/i18n.svelte";
   import { ensureRun, runOf, stopGame } from "../lib/runs.svelte";
   import { open as openFile } from "@tauri-apps/plugin-dialog";
-  import type { ContentKind, PackInfo, PackUpdate, Profile } from "../lib/types";
+  import type { ContentKind, ImportResult, PackInfo, PackUpdate, Profile } from "../lib/types";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import ContentTab from "./ContentTab.svelte";
   import ShareDialog from "./ShareDialog.svelte";
+  import MigrateDialog from "./MigrateDialog.svelte";
   import PackUpdateDialog from "./PackUpdateDialog.svelte";
   import Icon from "./Icon.svelte";
   import ProfileDialog from "./ProfileDialog.svelte";
@@ -21,8 +22,10 @@
     onChanged: () => void;
     onDeleted: () => void;
     onAddContent: (kind: ContentKind) => void;
+    /** Neues Profil durch Versionswechsel angelegt. */
+    onCreated: (result: ImportResult) => void;
   }
-  let { profile, hasAccount, tab = $bindable(), onPlay, onChanged, onDeleted, onAddContent }: Props = $props();
+  let { profile, hasAccount, tab = $bindable(), onPlay, onChanged, onDeleted, onAddContent, onCreated }: Props = $props();
 
   const run = $derived(runOf(profile.id));
   let editing = $state(false);
@@ -39,6 +42,7 @@
   // null: geschlossen; target null: nur gesicherte Stände.
   let updateDialog = $state<{ target: { version: string | null; file: string | null } | null } | null>(null);
   let sharing = $state(false);
+  let migrating = $state(false);
   // Neu zeichnen der Inhalte nach Pack-Update oder Rollback.
   let contentKey = $state(0);
 
@@ -161,6 +165,9 @@
             <button role="menuitem" onclick={() => menuAction(() => api.openProfileFolder(profile.id))}>
               <Icon name="folder" size={16} />{t("profile.openFolder")}
             </button>
+            <button role="menuitem" onclick={() => menuAction(() => (migrating = true))}>
+              <Icon name="refresh" size={16} />{t("migrate.menu")}
+            </button>
             <button role="menuitem" onclick={() => menuAction(() => (sharing = true))}>
               <Icon name="share" size={16} />{t("share.menu")}
             </button>
@@ -272,6 +279,10 @@
       onChanged();
     }}
   />
+{/if}
+
+{#if migrating}
+  <MigrateDialog {profile} onClose={() => (migrating = false)} {onCreated} />
 {/if}
 
 {#if sharing}

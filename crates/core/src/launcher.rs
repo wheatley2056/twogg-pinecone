@@ -55,11 +55,25 @@ pub struct Launcher {
 
 impl Launcher {
     pub fn new(paths: Paths, downloader: Downloader) -> Result<Self> {
-        let installer = Installer::new(paths.clone(), downloader.clone());
-        let modrinth = Modrinth::new()?;
         let curseforge = curseforge::api_key_from_env()
             .map(CurseForge::new)
             .transpose()?;
+        Ok(Self::with_services(
+            paths,
+            downloader,
+            Modrinth::new()?,
+            curseforge,
+        ))
+    }
+
+    /// Mit eigenen API-Clients (z. B. gegen einen Mock-Server in Tests).
+    pub fn with_services(
+        paths: Paths,
+        downloader: Downloader,
+        modrinth: Modrinth,
+        curseforge: Option<CurseForge>,
+    ) -> Self {
+        let installer = Installer::new(paths.clone(), downloader.clone());
         let content = ContentManager::new(paths.clone(), downloader.clone(), modrinth.clone())
             .with_curseforge(curseforge.clone());
         let packs = PackManager::new(
@@ -75,7 +89,7 @@ impl Launcher {
             downloader.clone(),
             installer.environment().clone(),
         );
-        Ok(Self {
+        Self {
             content,
             packs,
             loaders: LoaderInstaller::new(paths.clone(), downloader),
@@ -85,7 +99,7 @@ impl Launcher {
             paths,
             installer,
             java,
-        })
+        }
     }
 
     pub fn content(&self) -> &ContentManager {

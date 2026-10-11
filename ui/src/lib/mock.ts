@@ -194,6 +194,34 @@ Object.assign(api, {
   packPreviewCancel: async () => {},
   packImportPending: async () => (await wait(800), { profile: profiles[0], missing: [] }),
   packShareLink: async (id: string) => (id === "fabric-test" ? "pinecone://modrinth/1KVo5zza/ssWn7YI0" : null),
+  migratePlan: async (id: string, target: { minecraft: string; loader: "fabric" | "quilt" | null }) => {
+    await wait(700);
+    const p = profiles.find((x) => x.id === id)!;
+    if (p.minecraft === target.minecraft && (p.loader?.kind ?? null) === target.loader) throw "Das Profil hat schon diese Version und diesen Loader";
+    const mods = target.loader !== null;
+    return {
+      fromMinecraft: p.minecraft, fromLoader: p.loader, minecraft: target.minecraft,
+      loader: target.loader ? { kind: target.loader, version: target.loader === "fabric" ? "0.19.5" : "0.30.1" } : null,
+      items: [
+        { key: "mods/fabric-api.jar", name: "Fabric API", kind: "mod", status: mods ? "update" : "missing", fromVersion: "0.162.0+26.3", toVersion: mods ? "0.116.17+1.21.1" : null, substitute: null },
+        { key: "mods/sodium.jar", name: "Sodium", kind: "mod", status: mods ? "update" : "missing", fromVersion: "mc26.3-0.9.2-fabric", toVersion: mods ? "mc1.21.1-0.8.13-fabric" : null, substitute: null },
+        { key: "mods/eigene-mod.jar", name: "eigene-mod", kind: "mod", status: "missing", fromVersion: null, toVersion: null, substitute: null },
+        { key: "mods/qfapi.jar", name: "Quilted Fabric API", kind: "mod", status: mods ? "substitute" : "missing", fromVersion: "11.0.0", toVersion: null, substitute: "Fabric API" },
+        { key: "shaderpacks/complementary.zip", name: "Complementary Shaders - Reimagined", kind: "shader", status: "compatible", fromVersion: "r5.9.3", toVersion: null, substitute: null },
+        { key: "resourcepacks/eigenes.zip", name: "eigenes", kind: "resourcepack", status: "kept", fromVersion: null, toVersion: null, substitute: null },
+      ],
+      packOffer: id === "fabric-test" ? { name: "Fabulously Optimized", platform: "modrinth", projectId: "1KVo5zza", versionId: "N276l2ON", version: "6.5.0" } : null,
+      worlds: 2,
+      downgrade: target.minecraft < p.minecraft,
+    };
+  },
+  migrateApply: async (id: string, options: { target: { minecraft: string } }) => {
+    await wait(1200);
+    const p = profiles.find((x) => x.id === id)!;
+    const copy = { ...p, id: `${id}-neu`, name: `${p.name} (${options.target.minecraft})`, minecraft: options.target.minecraft };
+    profiles = [...profiles, copy];
+    return { profile: copy, warnings: [] };
+  },
   takeOpenRequests: async () => [],
   onOpenPack: async () => () => {},
   packInstallModrinth: async () => (await wait(800), { profile: profiles[0], missing: [] }),

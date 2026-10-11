@@ -32,6 +32,9 @@ import type {
   SnapshotInfo,
   UpdatePlan,
   PreviewResult,
+  MigrateOptions,
+  MigrationPlan,
+  MigrationTarget,
 } from "./types";
 
 export const api = {
@@ -102,6 +105,9 @@ export const api = {
   packSnapshots: (id: string) => invoke<SnapshotInfo[]>("pack_snapshots", { id }),
   packRollback: (id: string, snapshot: string) => invoke<void>("pack_rollback", { id, snapshot }),
   packExport: (id: string, path: string, options: ExportOptions) => invoke<ExportReport>("pack_export", { id, path, options }),
+  migratePlan: (id: string, target: MigrationTarget) => invoke<MigrationPlan>("migrate_plan", { id, target }),
+  migrateApply: (id: string, options: MigrateOptions) =>
+    invoke<{ profile: Profile; warnings: string[] }>("migrate_apply", { id, options }),
   /** Beim Start übergebene Links/Dateien (einmalig) und später geöffnete. */
   takeOpenRequests: () => invoke<string[]>("take_open_requests"),
   onOpenPack: (handler: (request: string) => void) => listen<string>("open-pack", (e) => handler(e.payload)),

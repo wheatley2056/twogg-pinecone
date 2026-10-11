@@ -14,6 +14,7 @@ use pinecone_core::launch;
 use pinecone_core::launcher::{Launcher, PrepareEvent, Stage};
 use pinecone_core::loader::{LoaderKind, LoaderSpec};
 use pinecone_core::manifest::VersionJson;
+use pinecone_core::migrate::{ItemStatus, MigrateOptions, MigrationTarget, MissingChoice};
 use pinecone_core::modpack::{ExportOptions, PackSource, Resolution};
 use pinecone_core::modrinth::{ProjectType, SearchQuery};
 use pinecone_core::msa::{self, MsaClient};
@@ -165,6 +166,28 @@ enum ProfileCommand {
         /// Löschen bestätigen.
         #[arg(long)]
         yes: bool,
+    },
+    /// Auf andere Minecraft-Version/anderen Loader umziehen (als neues Profil).
+    /// Ohne --apply nur den Plan anzeigen.
+    Migrate {
+        name: String,
+        /// Ziel-Minecraft-Version.
+        #[arg(long)]
+        minecraft: String,
+        /// Ziel-Loader: fabric, quilt oder none (Standard: wie bisher).
+        #[arg(long)]
+        loader: Option<String>,
+        /// Name des neuen Profils.
+        #[arg(long = "as")]
+        new_name: Option<String>,
+        /// Welten nicht mitkopieren.
+        #[arg(long)]
+        no_worlds: bool,
+        /// Nicht verfügbare Mods weglassen statt deaktiviert mitnehmen.
+        #[arg(long)]
+        drop_missing: bool,
+        #[arg(long)]
+        apply: bool,
     },
 }
 
@@ -1028,6 +1051,114 @@ async fn profile_command(cmd: ProfileCommand, launcher: &Launcher) -> Result<()>
             }
             launcher.delete_profile(&profile.id)?;
             println!("Profil {:?} gelöscht", profile.name);
+        }
+        ProfileCommand::Migrate {
+            name,
+            minecraft,
+            loader,
+            new_name,
+            no_worlds,
+            drop_missing,
+            apply,
+        } => {
+            let profile = profiles.get(&name)?;
+            let loader = match loader.as_deref() {
+                None => profile.loader.as_ref().map(|l| l.kind),
+                Some("none" | "vanilla") => None,
+                Some(other) => Some(other.parse()?),
+            };
+            let target = MigrationTarget { minecraft, loader };
+            let plan = launcher.plan_migration(&profile, &target).await?;
+            let loader_label = |l: &Option<LoaderSpec>| match l {
+                Some(l) => format!("{} {}", l.kind.name(), l.version),
+                None => "Vanilla".into(),
+            };
+            println!(
+                "{} {} → {} {}",
+                plan.from_minecraft,
+                loader_label(&plan.from_loader),
+                plan.minecraft,
+                loader_label(&plan.loader)
+            );
+            if let Some(o) = &plan.pack_offer {
+                println!(
+                    "  Tipp: {} gibt es in Version {} für das Ziel: pinecone pack import {}:{} --version {}",
+                    o.name, o.version, o.platform, o.project_id, o.version_id
+                );
+            }
+            for item in &plan.items {
+                let (mark, detail) = match item.status {
+                    ItemStatus::Compatible => ("✓", "passt".to_string()),
+                    ItemStatus::Update => (
+                        "✓",
+                        format!(
+                            "{} → {}",
+                            item.from_version.as_deref().unwrap_or("?"),
+                            item.to_version.as_deref().unwrap_or("?")
+                        ),
+                    ),
+                    ItemStatus::Substitute => (
+                        "↺",
+                        format!(
+                            "ersetzt durch {}",
+                            item.substitute.as_deref().unwrap_or("?")
+                        ),
+                    ),
+                    ItemStatus::Kept => ("·", "bleibt unverändert".to_string()),
+                    ItemStatus::Missing => (
+                        "✗",
+                        if drop_missing {
+                            "nicht verfügbar, wird weggelassen"
+                        } else {
+                            "nicht verfügbar, wird deaktiviert"
+                        }
+                        .to_string(),
+                    ),
+                };
+                println!("  {mark} {} ({}): {detail}", item.name, item.key);
+            }
+            if plan.downgrade && plan.worlds > 0 && !no_worlds {
+                println!(
+                    "  Achtung: {} Welt(en) werden in eine ältere Version kopiert und können dort kaputtgehen (Original bleibt erhalten).",
+                    plan.worlds
+                );
+            }
+            if !apply {
+                println!("Mit --apply als neues Profil anlegen.");
+                return Ok(());
+            }
+            let missing = plan
+                .items
+                .iter()
+                .filter(|i| i.status == ItemStatus::Missing)
+                .map(|i| {
+                    let choice = if drop_missing {
+                        MissingChoice::Drop
+                    } else {
+                        MissingChoice::Disable
+                    };
+                    (i.key.clone(), choice)
+                })
+                .collect();
+            let result = launcher
+                .migrate(
+                    &profile,
+                    &MigrateOptions {
+                        target,
+                        name: new_name,
+                        include_worlds: !no_worlds,
+                        missing,
+                    },
+                )
+                .await?;
+            println!(
+                "Profil {:?} angelegt: {}",
+                result.profile.name,
+                describe(&result.profile)
+            );
+            for w in result.report.warnings {
+                println!("  Hinweis: {w}");
+            }
         }
     }
     Ok(())

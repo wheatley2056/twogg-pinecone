@@ -78,6 +78,8 @@ cargo run -p pinecone-cli -- account offline Tobi     # Offline-Account für Tes
 cargo run -p pinecone-cli -- account list             # Accounts, * = aktiv
 cargo run -p pinecone-cli -- run 1.21.1               # Version ohne Profil starten
 cargo run -p pinecone-cli -- run 1.8.9 --offline Tobi # einmalig offline, ohne zu speichern
+cargo run -p pinecone-cli -- profile migrate Fabric --minecraft 1.21.1            # Plan anzeigen
+cargo run -p pinecone-cli -- profile migrate Fabric --minecraft 1.21.1 --loader quilt --apply
 cargo run -p pinecone-cli -- java list                # gefundene Java-Installationen
 cargo run -p pinecone-cli -- java install jre-legacy  # Mojang-Runtime laden (hier Java 8)
 ```
@@ -127,6 +129,18 @@ bleiben, vom Pack entfernte Dateien werden gelöscht; bei echten Konflikten wäh
 (Vorschlag: Configs und `options.txt` behalten, Mods aus dem Pack nehmen). Vorher wird ein Snapshot
 unter `instances/<id>/snapshots/` angelegt (die letzten drei bleiben), aus dem man zurückrollen kann.
 `.mrpack`-Downloads sind auf die von Modrinth erlaubten Hosts beschränkt.
+
+## Version wechseln
+
+„Version wechseln …“ im Profilmenü (bzw. `profile migrate`) zieht ein Profil auf eine andere
+Minecraft-Version oder einen anderen Loader (Fabric, Quilt, Vanilla) um. Pinecone legt dafür ein
+neues Profil an und lässt das bisherige unverändert. Für jeden Inhalt wird die passende Version
+gesucht: Modrinth-Inhalte per Hash-Abgleich, CurseForge-Inhalte per Projekt; der Kanal (Release/Beta)
+wird nicht instabiler. Bekannte Gegenstücke werden ersetzt (z. B. Quilted Fabric API → Fabric API
+beim Wechsel zu Fabric). Mods, die es für das Ziel nicht gibt, kommen deaktiviert mit oder werden
+weggelassen; Ressourcenpakete, Shader und Configs werden übernommen. Welten lassen sich mitkopieren,
+bei einem Wechsel auf eine ältere Version warnt Pinecone. Gibt es das Modpack des Profils selbst für
+das Ziel, wird stattdessen diese Pack-Version angeboten.
 
 ## Modpacks teilen
 

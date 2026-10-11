@@ -309,3 +309,40 @@ export interface PreviewResult {
 
 /** Von außen geöffnet (Link, Datei) oder in der Bibliothek gewählt; leerer Link = Eingabefeld. */
 export type OpenRequest = { kind: "file"; path: string } | { kind: "link"; link: string };
+
+export interface MigrationTarget {
+  minecraft: string;
+  /** null = Vanilla. */
+  loader: LoaderKind | null;
+}
+
+export type ItemStatus = "compatible" | "update" | "substitute" | "kept" | "missing";
+export type MissingChoice = "disable" | "drop";
+
+export interface MigrationItem {
+  key: string;
+  name: string;
+  kind: ContentKind;
+  status: ItemStatus;
+  fromVersion: string | null;
+  toVersion: string | null;
+  substitute: string | null;
+}
+
+export interface MigrationPlan {
+  fromMinecraft: string;
+  fromLoader: LoaderSpec | null;
+  minecraft: string;
+  loader: LoaderSpec | null;
+  items: MigrationItem[];
+  packOffer: { name: string; platform: Platform; projectId: string; versionId: string; version: string } | null;
+  worlds: number;
+  downgrade: boolean;
+}
+
+export interface MigrateOptions {
+  target: MigrationTarget;
+  name: string | null;
+  includeWorlds: boolean;
+  missing: Record<string, MissingChoice>;
+}
