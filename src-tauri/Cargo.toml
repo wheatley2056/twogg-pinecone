@@ -23,6 +23,7 @@ tauri-plugin-single-instance.workspace = true
 tauri-plugin-updater.workspace = true
 notify.workspace = true
 serde.workspace = true
+reqwest.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tracing.workspace = true

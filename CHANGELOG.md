@@ -2,7 +2,11 @@
 
 ## Unveröffentlicht
 
-- Verständliche Meldung, wenn beim Suchen nach Updates noch kein Release veröffentlicht ist.
+- **Update-Kanal** wählbar (Einstellungen → Allgemein): „Release“ bekommt nur stabile Versionen,
+  „Beta“ auch Vorabversionen (auf GitHub als Pre-release veröffentlicht). Pinecone sucht dafür in
+  den GitHub-Releases die neueste passende Version.
+- Verständliche Meldung statt „Could not fetch a valid release JSON“, wenn es im Kanal noch keine
+  veröffentlichte Version gibt.
 
 ## 0.9.1
 

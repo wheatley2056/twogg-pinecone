@@ -86,12 +86,15 @@ jobs:
           PINECONE_MSA_CLIENT_ID: ${{ secrets.PINECONE_MSA_CLIENT_ID }}
           PINECONE_CURSEFORGE_API_KEY: ${{ secrets.PINECONE_CURSEFORGE_API_KEY }}
           PINECONE_UPDATE_PUBKEY: ${{ vars.PINECONE_UPDATE_PUBKEY }}
-          # Wo installierte Launcher nach Updates suchen; ohne Variable die Releases dieses Repos.
-          PINECONE_UPDATE_URL: ${{ vars.PINECONE_UPDATE_URL || format('https://github.com/{0}/releases/latest/download/latest.json', github.repository) }}
+          # Wo installierte Launcher nach Updates suchen: standardmäßig die Releases dieses Repos
+          # (Kanal Release = ohne Pre-release, Beta = alle); mit der Variable PINECONE_UPDATE_URL
+          # eine eigene Adresse ({channel} wird zu release bzw. beta).
+          PINECONE_UPDATE_REPO: ${{ !vars.PINECONE_UPDATE_URL && github.repository || '' }}
+          PINECONE_UPDATE_URL: ${{ vars.PINECONE_UPDATE_URL }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: TwoGG Pinecone ${{ github.ref_name }} (Beta)
-          releaseBody: Änderungen siehe CHANGELOG.md. Windows-Installer (.exe/.msi), Linux (AppImage, .deb, .rpm).
+          releaseName: TwoGG Pinecone ${{ github.ref_name }}
+          releaseBody: Änderungen siehe CHANGELOG.md. Windows-Installer (.exe/.msi), Linux (AppImage, .deb, .rpm). Beta-Versionen als Pre-release veröffentlichen.
           releaseDraft: true
           includeUpdaterJson: true
           args: --config src-tauri/tauri.release.conf.json

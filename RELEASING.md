@@ -18,10 +18,17 @@ npx tauri signer generate -w ~/.tauri/pinecone.key
 
 ## Neue Version
 
-Versionsschema: Während der Beta `0.9.x` (0.9.0, 0.9.1, …), danach `1.0.0`. Keine Vorab-Kennungen
-wie `-beta.1`: Der MSI-Installer akzeptiert nur Zahlen, und `releases/latest` (Updater) überspringt
-als „Pre-release“ markierte Releases. Releases in der Beta-Zeit heißen deshalb „… (Beta)“, werden
-aber als normales Release veröffentlicht.
+Versionsschema: `0.9.x` während der Beta, danach `1.0.0` usw. Keine Vorab-Kennungen wie `-beta.1`
+in der Versionsnummer: Der MSI-Installer akzeptiert nur Zahlen.
+
+**Update-Kanäle:** In den Einstellungen wählt man „Release“ oder „Beta“. Der Launcher sucht in den
+GitHub-Releases dieses Repos die neueste veröffentlichte Version des Kanals:
+
+- als **Pre-release** veröffentlicht → nur für den Kanal Beta,
+- als normales Release (**„Set as the latest release“**) → für beide Kanäle.
+
+Entwürfe sieht der Updater nie. Launcher 0.9.0 und 0.9.1 kennen die Kanäle noch nicht und schauen
+nur auf `releases/latest`; sie bekommen ein Update erst, wenn ein normales Release veröffentlicht ist.
 
 1. `CHANGELOG.md` um die neue Version ergänzen.
 2. Version an drei Stellen gleich setzen: `Cargo.toml` (`[workspace.package] version`),
@@ -30,9 +37,9 @@ aber als normales Release veröffentlicht.
 3. Committen und taggen: `git tag v0.9.1 && git push origin v0.9.1`.
 4. Der Workflow „Release“ baut Windows (NSIS-.exe, .msi) und Linux (AppImage, .deb, .rpm),
    signiert die Update-Pakete und legt ein **Release als Entwurf** mit `latest.json` an.
-5. Entwurf prüfen (Installer auf Windows und Linux ausprobieren), Release-Notizen ergänzen,
-   veröffentlichen. Erst dann sehen installierte Launcher das Update
-   (`releases/latest/download/latest.json`).
+5. Entwurf prüfen (Installer auf Windows und Linux ausprobieren), Release-Notizen ergänzen und
+   veröffentlichen: für den Beta-Kanal mit „Set as a pre-release“, für alle als normales Release.
+   Erst dann sehen installierte Launcher das Update.
 
 ## Lokal bauen
 
@@ -53,5 +60,5 @@ GitHub-Repo geht das nicht. Möglichkeiten:
 - Repo (oder ein separates Release-Repo) öffentlich machen, oder
 - `latest.json` und die Installer auf einem eigenen Server ablegen (z. B. bei TwoGG) und die
   GitHub-Variable `PINECONE_UPDATE_URL` auf diese Adresse setzen (der Workflow nimmt sie statt der
-  Releases dieses Repos). Die Adressen in `latest.json`
+  Releases dieses Repos; `{channel}` in der Adresse wird zu `release` bzw. `beta`). Die Adressen in `latest.json`
   müssen dann ebenfalls auf diesen Server zeigen.
