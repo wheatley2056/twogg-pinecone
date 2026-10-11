@@ -2,6 +2,7 @@
   import { LOADERS } from "../lib/profiles";
   import { onMount, untrack } from "svelte";
   import { api, errorText } from "../lib/api";
+  import { tracked } from "../lib/installs.svelte";
   import { t } from "../lib/i18n.svelte";
   import Icon from "./Icon.svelte";
   import type { ImportResult, LoaderKind, LoaderSpec, MigrationPlan, MissingChoice, Profile, VersionInfo } from "../lib/types";
@@ -87,12 +88,13 @@
     busy = true;
     error = null;
     try {
-      const r =
+      const r = await tracked({ title: offer.name, iconUrl: null, target: t("discover.newInstance") }, () =>
         offer.platform === "curseforge"
-          ? await api.packInstallCurseforge(Number(offer.projectId), Number(offer.versionId))
+          ? api.packInstallCurseforge(Number(offer.projectId), Number(offer.versionId))
           : offer.platform === "twogg"
-            ? await api.packInstallTwogg(offer.projectId, offer.versionId)
-            : await api.packInstallModrinth(offer.projectId, offer.versionId);
+            ? api.packInstallTwogg(offer.projectId, offer.versionId)
+            : api.packInstallModrinth(offer.projectId, offer.versionId),
+      );
       onCreated(r);
       onClose();
     } catch (e) {

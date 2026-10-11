@@ -2,6 +2,7 @@
   // Overlays unter der Kopfleiste: Aktivität (laufende Downloads/Starts) und Benachrichtigungen.
   import { t } from "../../lib/i18n.svelte";
   import { dismiss, markAllRead, notices } from "../../lib/notifications.svelte";
+  import { installs } from "../../lib/installs.svelte";
   import { runs } from "../../lib/runs.svelte";
   import type { Profile } from "../../lib/types";
   import Icon from "../Icon.svelte";
@@ -44,6 +45,20 @@
 <div class="panel" bind:this={root} role="dialog" aria-label={panel === "activity" ? t("shell.activity") : t("shell.notifications")}>
   {#if panel === "activity"}
     <h2 class="title">{t("shell.activity")}</h2>
+    {#each installs as job (job.id)}
+      <div class="item static">
+        {#if job.iconUrl}
+          <img class="logo" src={job.iconUrl} alt="" width="36" height="36" />
+        {:else}
+          <ProfileIcon profile={{ name: job.title, icon: null }} size={36} />
+        {/if}
+        <span class="body">
+          <span class="name">{job.title}</span>
+          <span class="meta">{t("shell.installing", { target: job.target })}</span>
+          <span class="progress"><span class="bar"><span class="fill"></span></span></span>
+        </span>
+      </div>
+    {/each}
     {#each active as { id, run, profile } (id)}
       <button class="item" onclick={() => ((onClose(), onOpenProfile(id)))}>
         <ProfileIcon profile={profile!} size={36} />
@@ -61,7 +76,7 @@
         </span>
       </button>
     {:else}
-      <p class="empty">{t("shell.noActivity")}</p>
+      {#if installs.length === 0}<p class="empty">{t("shell.noActivity")}</p>{/if}
     {/each}
   {:else}
     <h2 class="title">{t("shell.notifications")}</h2>
@@ -88,6 +103,38 @@
 </div>
 
 <style>
+  .logo {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    object-fit: cover;
+  }
+
+  .bar {
+    position: relative;
+    flex: 1;
+    height: 4px;
+    overflow: hidden;
+    background: var(--line-strong);
+  }
+
+  .fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    background: var(--accent);
+    animation: slide 1.1s ease-in-out infinite;
+  }
+
+  @keyframes slide {
+    from {
+      left: -40%;
+    }
+    to {
+      left: 100%;
+    }
+  }
+
   .panel {
     position: absolute;
     top: 8px;

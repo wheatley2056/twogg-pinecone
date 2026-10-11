@@ -7,7 +7,7 @@
   import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
   import type { JavaInstallation, LoaderKind, LoaderVersion, Profile, VersionInfo } from "../../lib/types";
-  import ProfileIcon, { MOTIFS, motifOf, type Motif } from "../ProfileIcon.svelte";
+  import ProfileIcon, { MOTIFS, imageOf, keptIcon, type Motif } from "../ProfileIcon.svelte";
   import Segmented from "../ui/Segmented.svelte";
 
   interface Props {
@@ -33,8 +33,9 @@
   let javaMode: "auto" | "custom" = $state(initial?.java ? "custom" : "auto");
   let javaPath = $state(initial?.java ?? "");
   let jvmArgs = $state(initial?.jvmArgs.join(" ") ?? "");
-  // Motiv (`motif:<name>`) oder leer für Initialen.
-  let icon = $state(motifOf(initial?.icon) ? initial!.icon! : "");
+  // Motiv (`motif:<name>`), Pack-Logo (`data:`-URL) oder leer für Initialen.
+  let icon = $state(keptIcon(initial?.icon) ?? "");
+  const packLogo = imageOf(initial?.icon);
 
   let versions: VersionInfo[] = $state([]);
   let loaderVersions: LoaderVersion[] = $state([]);
@@ -113,7 +114,7 @@
           memoryMb: initial.memoryMb ?? 4096,
           jvmArgs: initial.jvmArgs,
           java: initial.java,
-          icon: motifOf(initial.icon) ? initial.icon : null,
+          icon: keptIcon(initial.icon),
           color: initial.color,
         }),
   );
@@ -154,6 +155,12 @@
           title={t("dialog.initials")} aria-label={t("dialog.initials")} onclick={() => (icon = "")}>
           <ProfileIcon profile={{ name: name || "?", icon: null }} size={34} />
         </button>
+        {#if packLogo}
+          <button type="button" class="motif" class:selected={icon === packLogo} role="radio" aria-checked={icon === packLogo}
+            title={t("dialog.packLogo")} aria-label={t("dialog.packLogo")} onclick={() => (icon = packLogo)}>
+            <ProfileIcon profile={{ name, icon: packLogo }} size={34} />
+          </button>
+        {/if}
         {#each Object.keys(MOTIFS) as Motif[] as m (m)}
           <button type="button" class="motif" class:selected={icon === `motif:${m}`} role="radio"
             aria-checked={icon === `motif:${m}`} title={t(`motif.${m}`)} aria-label={t(`motif.${m}`)}

@@ -291,6 +291,17 @@ pub async fn pack_updates_all(state: State<'_, AppState>) -> CmdResult<Vec<Profi
     Ok(found)
 }
 
+/// Pack-Logos für ältere Pack-Instanzen nachladen; Anzahl der neuen Symbole.
+#[tauri::command]
+pub async fn pack_fill_icons(state: State<'_, AppState>) -> CmdResult<usize> {
+    state
+        .launcher
+        .packs()
+        .fill_missing_icons()
+        .await
+        .map_err(err)
+}
+
 /// Lädt die Zielversion (Modrinth: neueste passende bzw. bestimmte; sonst Datei) und plant.
 #[tauri::command]
 pub async fn pack_plan_update(

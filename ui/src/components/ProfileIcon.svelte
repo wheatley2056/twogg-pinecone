@@ -18,6 +18,16 @@
     const name = icon?.startsWith("motif:") ? icon.slice(6) : null;
     return name && name in MOTIFS ? (name as Motif) : null;
   }
+
+  /** Pack-Logo (beim Import gesetzt) als `data:`-URL. */
+  export function imageOf(icon: string | null | undefined): string | null {
+    return icon?.startsWith("data:image/") ? icon : null;
+  }
+
+  /** Symbol, das der Instanz-Dialog übernimmt: Motiv oder Pack-Logo. */
+  export function keptIcon(icon: string | null | undefined): string | null {
+    return motifOf(icon) || imageOf(icon) ? icon! : null;
+  }
 </script>
 
 <script lang="ts">
@@ -33,6 +43,7 @@
   let { profile, size = 36, cut = 0 }: Props = $props();
 
   const motif = $derived(motifOf(profile.icon));
+  const image = $derived(imageOf(profile.icon));
   // Ohne Motiv: Anfangsbuchstaben der ersten beiden Wörter.
   const initials = $derived(
     profile.name
@@ -49,11 +60,14 @@
   class="icon"
   style:width="{size}px"
   style:height="{size}px"
+  class:image
   style:background={motif ? MOTIFS[motif].bg : null}
   style:clip-path={cut ? `polygon(${cut}px 0, 100% 0, 100% 100%, 0 100%, 0 ${cut}px)` : null}
   aria-hidden="true"
 >
-  {#if motif === "shield"}
+  {#if image}
+    <img src={image} alt="" width={size} height={size} />
+  {:else if motif === "shield"}
     <svg width={glyph} height={glyph} viewBox="0 0 24 24">
       <path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z" fill={MOTIFS.shield.fg} />
       <path d="M12 7v10M8.5 11h7" stroke={MOTIFS.shield.bg} stroke-width="2" />
@@ -72,6 +86,16 @@
 </span>
 
 <style>
+  .icon.image {
+    background: transparent;
+  }
+
+  .icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   .icon {
     display: inline-grid;
     place-items: center;

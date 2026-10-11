@@ -128,6 +128,7 @@ export const api = {
     invoke<InstallReport>("content_install_curseforge", { id, kind, project, file }),
   packInfo: (id: string) => invoke<PackInfo | null>("pack_info", { id }),
   packCheckUpdate: (id: string) => invoke<PackUpdate | null>("pack_check_update", { id }),
+  packFillIcons: () => invoke<number>("pack_fill_icons"),
   packUpdatesAll: () => invoke<{ profile: Profile; update: PackUpdate }[]>("pack_updates_all"),
   packPlanUpdate: (id: string, version: string | null = null, file: string | null = null) =>
     invoke<UpdatePlan>("pack_plan_update", { id, version, file }),

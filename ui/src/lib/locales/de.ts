@@ -63,6 +63,7 @@ const de = {
   "dialog.look": "Aussehen",
   "dialog.icon": "Symbol",
   "dialog.initials": "Initialen",
+  "dialog.packLogo": "Pack-Logo",
   "motif.shield": "Wappen",
   "motif.block": "Block",
   "motif.house": "Haus",
@@ -522,6 +523,7 @@ const de = {
   "shell.maximize": "Maximieren",
   "shell.close": "Schließen",
   "shell.noActivity": "Gerade lädt nichts.",
+  "shell.installing": "Wird installiert · {target}",
   "shell.noNotifications": "Keine Benachrichtigungen.",
   "shell.dismiss": "Ausblenden",
   "play.play": "Spielen",
@@ -821,6 +823,7 @@ const de = {
   "discover.chooseWorld": "In welche Welt?",
   "discover.noWorlds": "Diese Instanz hat noch keine Welt. Starte sie einmal und lege eine an.",
   "events.pack": "Event-Pack",
+  "events.packPage": "Seite des Packs öffnen",
   "events.openInstance": "Instanz öffnen",
   "events.installPack": "Event-Pack installieren",
 };

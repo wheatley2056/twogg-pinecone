@@ -6,6 +6,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { api, errorText } from "../../lib/api";
   import { locale, t } from "../../lib/i18n.svelte";
+  import { tracked } from "../../lib/installs.svelte";
   import { versionLabel } from "../../lib/profiles";
   import type {
     Category,
@@ -170,7 +171,7 @@
       description: p.summary,
       iconUrl: p.iconUrl,
       tags: p.latest ? [`${p.latest.loader ? p.latest.loader[0].toUpperCase() + p.latest.loader.slice(1) : "Vanilla"} ${p.latest.minecraft}`] : [],
-      url: "",
+      url: p.pageUrl ?? "",
       twogg: p,
     };
   }
@@ -186,7 +187,7 @@
       description: r.subtitle,
       iconUrl: r.iconUrl ?? pack?.iconUrl ?? null,
       tags: [],
-      url: r.source === "modrinth" ? `https://modrinth.com/project/${r.projectId}` : "",
+      url: r.source === "modrinth" ? `https://modrinth.com/project/${r.projectId}` : (pack?.pageUrl ?? ""),
       twogg: pack,
       motif: r.motif,
     };
@@ -265,20 +266,25 @@
     versionMenu = null;
     error = message = null;
     installing = new Set([...installing, card.key]);
+    const entry = { title: card.title, iconUrl: card.iconUrl, target: type === "modpack" || card.source === "twogg" ? t("discover.newInstance") : (target?.name ?? "") };
     try {
       if (card.source === "twogg") {
-        onPackInstalled(await api.packInstallTwogg(card.projectId, version));
+        onPackInstalled(await tracked(entry, () => api.packInstallTwogg(card.projectId, version)));
       } else if (type === "modpack") {
         onPackInstalled(
-          card.source === "curseforge"
-            ? await api.packInstallCurseforge(Number(card.projectId), version ? Number(version) : null)
-            : await api.packInstallModrinth(card.projectId, version),
+          await tracked(entry, () =>
+            card.source === "curseforge"
+              ? api.packInstallCurseforge(Number(card.projectId), version ? Number(version) : null)
+              : api.packInstallModrinth(card.projectId, version),
+          ),
         );
       } else if (targetId && contentKind) {
-        const r =
+        const kind = contentKind;
+        const r = await tracked(entry, () =>
           card.source === "curseforge"
-            ? await api.contentInstallCurseforge(targetId, contentKind, Number(card.projectId), version ? Number(version) : null)
-            : await api.contentInstall(targetId, contentKind, card.projectId, version);
+            ? api.contentInstallCurseforge(targetId, kind, Number(card.projectId), version ? Number(version) : null)
+            : api.contentInstall(targetId, kind, card.projectId, version),
+        );
         installed = new Set([...installed, card.key]);
         const parts = [];
         if (r.installed.length) parts.push(t("content.installedMsg", { names: r.installed.map(([n, v]) => `${n} ${v}`).join(", ") }));
