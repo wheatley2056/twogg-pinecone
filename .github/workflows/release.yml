@@ -63,6 +63,20 @@ jobs:
           cache: npm
       - run: npm ci
 
+      # Der Bundler prüft die frische Signatur gegen plugins.updater.pubkey aus der Konfiguration.
+      - name: Öffentlichen Schlüssel in die Release-Konfiguration
+        shell: bash
+        env:
+          PUBKEY: ${{ vars.PINECONE_UPDATE_PUBKEY }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = "src-tauri/tauri.release.conf.json";
+            const c = JSON.parse(fs.readFileSync(p, "utf8"));
+            c.plugins = { updater: { pubkey: process.env.PUBKEY.trim() } };
+            fs.writeFileSync(p, JSON.stringify(c, null, 2));
+          '
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
