@@ -4,6 +4,8 @@ Minecraft-Launcher der TwoGG-Community: Rust-Kern, Desktop-App mit Tauri 2 und S
 Windows und Linux, Fabric und Quilt, Modrinth und CurseForge, TwoGG-Events und -Modpacks.
 Architektur und Phasen stehen in [PLAN.md](PLAN.md), Änderungen in [CHANGELOG.md](CHANGELOG.md).
 
+Website mit Download: https://wheatley2056.github.io/twogg-pinecone/ (Quelle in `site/`).
+
 > **Beta.** Pinecone ist in der Beta-Phase. Fehler bitte mit dem Diagnose-ZIP
 > (Einstellungen → Allgemein → „Hilfe & Diagnose“) melden.
 

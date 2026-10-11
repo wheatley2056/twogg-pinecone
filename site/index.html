@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TwoGG Pinecone – der Minecraft-Launcher der TwoGG-Community</title>
+<meta name="description" content="Pinecone ist der Minecraft-Launcher der TwoGG-Community: Instanzen mit Fabric und Quilt, Modrinth und CurseForge, TwoGG-Events, Event-Packs und Freundesliste. Für Windows und Linux.">
+<meta property="og:title" content="TwoGG Pinecone">
+<meta property="og:description" content="Der Minecraft-Launcher der TwoGG-Community. Für Windows und Linux.">
+<meta property="og:image" content="img/play.webp">
+<meta name="theme-color" content="#12100D">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+@font-face { font-family: "Pixelify Sans"; font-weight: 600; font-display: swap; src: url(fonts/pixelify-sans-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Pixelify Sans"; font-weight: 700; font-display: swap; src: url(fonts/pixelify-sans-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 400; font-display: swap; src: url(fonts/figtree-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 500; font-display: swap; src: url(fonts/figtree-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 600; font-display: swap; src: url(fonts/figtree-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 700; font-display: swap; src: url(fonts/figtree-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url(fonts/jetbrains-mono-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url(fonts/jetbrains-mono-latin-500-normal.woff2) format("woff2"); }
+
+:root {
+  --bg: #12100D; --bar: #0D0B09; --side: #0F0D0B; --stage: #17120D;
+  --surface: #1C1814; --surface-2: #241F19; --surface-active: #2A2219;
+  --line: #2A231B; --line-strong: #33281F; --line-dashed: #4A3D2E;
+  --text: #F1E8DA; --text-soft: #D2C4AC; --text-muted: #B5A790; --text-dim: #8F8270;
+  --harz: #E9A23B; --harz-hover: #F3BC64; --harz-split: #D48F2C; --harz-edge: #B8742A; --harz-light: #F6C77A;
+  --ink: #1B1206; --nadel: #8CCB7E;
+  --pixel: "Pixelify Sans", "Figtree", sans-serif;
+  --ui: "Figtree", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --cut-1: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+  --cut-2: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --cut-play: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  --wrap: 1180px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.55 var(--ui); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--pixel); font-weight: 600; line-height: 1; margin: 0; font-variant-ligatures: none; letter-spacing: 0.5px; }
+p { margin: 0; }
+a { color: var(--harz); text-decoration: none; }
+a:hover { color: var(--harz-hover); }
+:focus-visible { outline: 2px solid var(--harz); outline-offset: 3px; }
+img { display: block; max-width: 100%; height: auto; }
+.wrap { width: min(var(--wrap), 100% - 32px); margin-inline: auto; }
+.label { font: 500 11px/1 var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); }
+.mono { font-family: var(--mono); }
+
+/* Kopfleiste */
+.top { position: sticky; top: 0; z-index: 10; background: rgba(13, 11, 9, 0.88); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 28px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font: 600 22px/1 var(--pixel); font-variant-ligatures: none; }
+.brand svg { width: 18px; height: 26px; }
+.top nav { display: flex; gap: 22px; margin-left: 12px; }
+.top nav a { color: var(--text-muted); font: 600 16px/1 var(--pixel); font-variant-ligatures: none; padding: 21px 0 19px; border-bottom: 3px solid transparent; }
+.top nav a:hover { color: var(--text); border-bottom-color: var(--harz); }
+.top .spacer { flex: 1; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 0; cursor: pointer; font: 700 14px/1 var(--ui); padding: 12px 18px; clip-path: var(--cut-2); }
+.btn svg { width: 17px; height: 17px; flex: none; }
+.btn.harz { background: var(--harz); color: var(--ink); box-shadow: inset 0 -3px 0 var(--harz-edge); }
+.btn.harz:hover { background: var(--harz-hover); color: var(--ink); }
+.btn.dark { background: var(--surface-2); color: var(--text); box-shadow: inset 0 -3px 0 var(--bar); }
+.btn.dark:hover { background: var(--surface-active); color: var(--text); }
+
+/* Hero */
+.hero { position: relative; background: var(--stage); border-bottom: 1px solid var(--line); overflow: hidden; }
+.hero .scales { position: absolute; top: 0; right: 0; width: 55%; height: 100%; pointer-events: none; }
+.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr); gap: 56px; align-items: center; padding: 84px 0 92px; }
+.badge { display: inline-block; background: var(--harz); color: var(--ink); font: 500 11px/1 var(--mono); letter-spacing: 1.5px; padding: 8px 12px; clip-path: var(--cut-1); }
+.hero h1 { font-size: clamp(44px, 6vw, 66px); line-height: 0.95; margin: 22px 0 22px; }
+.hero h1 em { font-style: normal; color: var(--harz); }
+.hero p.lead { color: var(--text-soft); font-size: 18px; max-width: 34em; }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-top: 34px; }
+.play { display: inline-flex; align-items: center; gap: 14px; background: var(--harz); color: var(--ink); clip-path: var(--cut-play); box-shadow: inset 0 -5px 0 var(--harz-edge), inset 0 2px 0 var(--harz-light); padding: 22px 34px 24px; font: 700 24px/1 var(--pixel); letter-spacing: 3px; text-transform: uppercase; font-variant-ligatures: none; }
+.play:hover { background: var(--harz-hover); color: var(--ink); }
+.play svg { width: 22px; height: 22px; }
+.cta .meta { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.cta .meta b { color: var(--text); font-weight: 600; }
+.window { background: var(--bar); border: 1px solid var(--line-strong); border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 6px rgba(13, 11, 9, 0.6); }
+.window img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+
+/* Abschnitte */
+section { padding: 96px 0; border-bottom: 1px solid var(--line); }
+.head { max-width: 46em; margin-bottom: 44px; }
+.head .label { display: block; margin-bottom: 16px; }
+.head h2 { font-size: clamp(30px, 4vw, 40px); margin-bottom: 16px; }
+.head p { color: var(--text-soft); font-size: 17px; }
+
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.card { background: var(--surface); padding: 24px 24px 26px; clip-path: var(--cut-2); box-shadow: inset 0 -3px 0 var(--bar); }
+.card .ico { width: 44px; height: 44px; display: grid; place-items: center; background: var(--surface-2); color: var(--harz); clip-path: var(--cut-1); margin-bottom: 18px; }
+.card .ico svg { width: 22px; height: 22px; }
+.card h3 { font-size: 19px; margin-bottom: 10px; }
+.card p { color: var(--text-muted); font-size: 14.5px; }
+.card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.tag { font: 400 11.5px/1 var(--mono); color: var(--text-soft); background: var(--surface-2); padding: 6px 8px; }
+
+/* Wechselnde Zeilen mit Screenshot */
+.row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 56px; align-items: center; }
+.row + .row { margin-top: 88px; }
+.row.flip > :first-child { order: 2; }
+.row h3 { font-size: 28px; margin: 14px 0 16px; }
+.row p { color: var(--text-soft); }
+.row ul { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
+.row li { position: relative; padding-left: 22px; color: var(--text-soft); font-size: 15px; }
+.row li::before { content: ""; position: absolute; left: 2px; top: 8px; width: 8px; height: 8px; background: var(--harz); clip-path: polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px); }
+.shot { background: var(--bar); border: 1px solid var(--line-strong); border-radius: 10px; overflow: hidden; }
+.shot img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+
+/* Galerie */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 18px; }
+.tabs button { border: 0; cursor: pointer; background: var(--surface); color: var(--text-muted); font: 600 15px/1 var(--pixel); font-variant-ligatures: none; padding: 12px 16px; clip-path: var(--cut-1); }
+.tabs button:hover { color: var(--text); }
+.tabs button[aria-selected="true"] { background: var(--harz); color: var(--ink); }
+.gallery figcaption { color: var(--text-muted); font-size: 14px; margin-top: 14px; }
+
+/* Download */
+.downloads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.os { background: var(--surface); padding: 28px; clip-path: var(--cut-2); box-shadow: inset 0 -3px 0 var(--bar); }
+.os.suggested { background: var(--surface-active); }
+.os .title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.os h3 { font-size: 24px; }
+.os .hint { color: var(--text-muted); font-size: 14px; margin-bottom: 22px; }
+.os .files { display: grid; gap: 8px; }
+.file { display: flex; align-items: center; gap: 14px; background: var(--surface-2); color: var(--text); padding: 13px 16px; clip-path: var(--cut-1); }
+.file:hover { background: var(--line-strong); color: var(--text); }
+.file.main { background: var(--harz); color: var(--ink); box-shadow: inset 0 -3px 0 var(--harz-edge); }
+.file.main:hover { background: var(--harz-hover); color: var(--ink); }
+.file svg { width: 18px; height: 18px; flex: none; }
+.file .name { font-weight: 600; font-size: 14.5px; }
+.file .ext { margin-left: auto; font: 400 12px/1 var(--mono); opacity: 0.8; }
+.chip-ok { font: 500 11px/1 var(--mono); letter-spacing: 1px; color: var(--nadel); text-transform: uppercase; }
+.release-line { margin-top: 18px; color: var(--text-dim); font: 400 12.5px/1.5 var(--mono); }
+.notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.note { border: 1px dashed var(--line-dashed); padding: 20px 22px; }
+.note h4 { margin: 0 0 8px; font: 600 15px/1.2 var(--ui); }
+.note p { color: var(--text-muted); font-size: 14px; }
+code { font: 400 0.9em var(--mono); background: var(--surface-2); padding: 2px 6px; color: var(--text-soft); }
+
+/* FAQ */
+.faq { display: grid; gap: 8px; max-width: 860px; }
+details { background: var(--surface); clip-path: var(--cut-1); }
+summary { cursor: pointer; list-style: none; padding: 18px 22px; font-weight: 600; display: flex; justify-content: space-between; gap: 16px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font: 500 18px/1 var(--mono); color: var(--harz); }
+details[open] summary::after { content: "–"; }
+details p { padding: 0 22px 20px; color: var(--text-soft); font-size: 15px; }
+
+footer { padding: 44px 0 56px; color: var(--text-dim); font-size: 13.5px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 18px 40px; justify-content: space-between; }
+footer nav { display: flex; flex-wrap: wrap; gap: 20px; }
+footer a { color: var(--text-muted); }
+footer .claim { font: 500 11px/1 var(--mono); letter-spacing: 2px; color: var(--text-dim); margin-top: 10px; }
+
+@media (max-width: 960px) {
+  .hero .wrap, .row { grid-template-columns: 1fr; gap: 40px; }
+  .row.flip > :first-child { order: 0; }
+  .grid, .notes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero .scales { width: 100%; }
+}
+@media (max-width: 640px) {
+  .top nav { display: none; }
+  .grid, .notes, .downloads { grid-template-columns: 1fr; }
+  section { padding: 68px 0; }
+  .hero .wrap { padding: 56px 0 64px; }
+  .play { padding: 18px 26px 20px; font-size: 20px; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <pattern id="pc-scales" width="28" height="20" patternUnits="userSpaceOnUse">
+      <path d="M0 10 Q7 0 14 10 Q21 0 28 10 M-7 20 Q0 10 7 20 Q14 10 21 20 Q28 10 35 20" fill="none" stroke="#E9A23B" stroke-width="1.2" stroke-opacity="0.10"/>
+    </pattern>
+    <symbol id="logo" viewBox="0 0 9 13" shape-rendering="crispEdges">
+      <path fill="#8CCB7E" d="M3 0h1v1H3z M5 0h1v1H5z M4 1h1v1H4z"/>
+      <path fill="#5A3416" d="M3 2h3v1H3z M2 3h1v1H2z M6 3h1v1H6z M1 4h1v1H1z M7 4h1v1H7z M0 6h1v2H0z M8 6h1v2H8z M1 9h1v1H1z M7 9h1v1H7z M2 10h1v1H2z M6 10h1v1H6z M3 11h1v1H3z M5 11h1v1H5z M4 12h1v1H4z"/>
+      <path fill="#E9A23B" d="M3 3h3v1H3z M2 4h5v1H2z M1 5h7v4H1z M2 9h5v1H2z M3 10h3v1H3z M4 11h1v1H4z"/>
+      <path fill="#A8641F" d="M4 3h1v1H4z M3 4h1v1H3z M5 4h1v1H5z M2 5h1v1H2z M6 5h1v1H6z M3 6h1v1H3z M5 6h1v1H5z M2 7h1v1H2z M6 7h1v1H6z M3 8h1v1H3z M5 8h1v1H5z M4 9h1v1H4z M4 10h1v1H4z"/>
+      <path fill="#F6C77A" d="M4 5h1v1H4z M4 7h1v1H4z"/>
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-4 1.3-4-2-6-2.5M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12 12 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M6 4l14 8-14 8z"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v10l8 4 8-4V7zM4 7l8 4 8-4M12 11v10"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5zM3 13l9 5 9-5"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.6-4.5M4 4v3h3M4 13a8 8 0 0 0 14.6 4.5M20 20v-3h-3"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.4 3.5 8.5s-1 5.9-3.5 8.5c-2.5-2.6-3.5-5.4-3.5-8.5s1-5.9 3.5-8.5"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.8-1.7 0-1.3-1.3-1.6-1.3-2.8 0-1 .8-1.6 1.8-1.6h2.2a4 4 0 0 0 4-4c0-3.8-3.8-6.9-8.5-6.9z"/><circle cx="7.5" cy="12" r="1"/><circle cx="10" cy="8" r="1"/><circle cx="15" cy="8" r="1"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/><path d="M12 8v8M9 11h6" stroke-linecap="round"/></symbol>
+    <symbol id="i-windows" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10 4.5v7H3zM11 4.3 21 3v8.5H11zM3 12.5h7v7l-7-1zM11 12.5h10V21l-10-1.3z"/></symbol>
+    <symbol id="i-linux" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-2.2 0-3.3 1.8-3.3 4.3 0 1.6-.6 2.8-1.7 4.2C5.6 13.3 5 15 5.4 17c.3 1.7 2 3.5 6.6 3.5s6.3-1.8 6.6-3.5c.4-2-.2-3.7-1.6-5.5-1.1-1.4-1.7-2.6-1.7-4.2C15.3 4.8 14.2 3 12 3z"/><path d="M10.2 8.2h.01M13.8 8.2h.01M10.5 11c.9.6 2.1.6 3 0"/></symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Pinecone Startseite"><svg aria-hidden="true"><use href="#logo"/></svg>Pinecone</a>
+    <nav aria-label="Seitennavigation">
+      <a href="#funktionen">Funktionen</a>
+      <a href="#twogg">TwoGG</a>
+      <a href="#einblicke">Einblicke</a>
+      <a href="#download">Download</a>
+      <a href="#fragen">Fragen</a>
+    </nav>
+    <span class="spacer"></span>
+    <a class="btn dark" href="https://github.com/wheatley2056/twogg-pinecone"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <svg class="scales" aria-hidden="true"><rect width="100%" height="100%" fill="url(#pc-scales)"/></svg>
+    <div class="wrap">
+      <div>
+        <span class="badge">BETA · WINDOWS &amp; LINUX</span>
+        <h1>Dein Minecraft.<br><em>Unser Wald.</em></h1>
+        <p class="lead">Pinecone ist der Minecraft-Launcher der TwoGG-Community. Instanzen, Mods und Modpacks an einem Ort, dazu TwoGG-Events, Event-Packs und deine Freunde, direkt im Launcher.</p>
+        <div class="cta">
+          <a class="play" id="hero-download" href="#download"><svg aria-hidden="true"><use href="#i-download"/></svg><span>Herunterladen</span></a>
+          <p class="meta" id="hero-meta"><b>Kostenlos und Open Source.</b><br>Für Windows 10/11 und Linux.</p>
+        </div>
+      </div>
+      <div class="window">
+        <img src="img/play.webp" width="1280" height="800" alt="Pinecone, Seite Spielen: Event-Teaser für REVIVAL: Avalon, Event-Kalender, zuletzt gespielte Instanzen und der große Spielen-Button">
+      </div>
+    </div>
+  </div>
+
+  <section id="funktionen">
+    <div class="wrap">
+      <div class="head">
+        <span class="label">Funktionen</span>
+        <h2>Alles, was du zum Spielen brauchst</h2>
+        <p>Pinecone kümmert sich um Versionen, Java und Downloads. Du entscheidest nur, was du spielen willst.</p>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-box"/></svg></div>
+          <h3>Instanzen</h3>
+          <p>Jede Instanz hat ihren eigenen Spielordner mit Mods, Welten und Einstellungen. Vanilla, Fabric oder Quilt, jede Minecraft-Version.</p>
+          <div class="tags"><span class="tag">Fabric</span><span class="tag">Quilt</span><span class="tag">Vanilla</span></div>
+        </article>
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-search"/></svg></div>
+          <h3>Entdecken</h3>
+          <p>Modpacks, Mods, Ressourcenpakete, Shader und Datenpakete durchsuchen und mit einem Klick installieren, samt Abhängigkeiten.</p>
+          <div class="tags"><span class="tag">Modrinth</span><span class="tag">CurseForge</span><span class="tag">TwoGG</span></div>
+        </article>
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-layers"/></svg></div>
+          <h3>Modpacks</h3>
+          <p>Importieren aus Datei oder Link, Updates mit Sicherung vorher. Deine eigenen Änderungen an Configs und Mods bleiben erhalten.</p>
+          <div class="tags"><span class="tag">.mrpack</span><span class="tag">CurseForge-ZIP</span></div>
+        </article>
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-swap"/></svg></div>
+          <h3>Version wechseln</h3>
+          <p>Zieh eine Instanz auf eine andere Minecraft-Version oder einen anderen Loader um. Pinecone sucht die passenden Mods dafür.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-sync"/></svg></div>
+          <h3>Sync-Packs</h3>
+          <p>Eigene Sammlungen wie „Basics“ oder „Shader-Setup“ einmal anlegen und in jeder Instanz per Schalter an- und ausmachen.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-user"/></svg></div>
+          <h3>Skins</h3>
+          <p>Skin-Bibliothek mit 3D-Vorschau und Editor. Skin und Cape deines Kontos direkt aus dem Launcher setzen.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-globe"/></svg></div>
+          <h3>Welten &amp; Server</h3>
+          <p>Welten sichern und aufräumen, Server mit Live-Status sehen und direkt beitreten. Screenshots und Logs je Instanz.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-palette"/></svg></div>
+          <h3>Dein Look</h3>
+          <p>Drei Themes (Rinde, Kiefer, Winterland), fünf Akzentfarben, Pixel-Überschriften und reduzierte Animationen auf Wunsch.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-shield"/></svg></div>
+          <h3>Sicher &amp; offen</h3>
+          <p>Anmeldung mit deinem Microsoft-Konto, Tokens im Schlüsselbund des Systems. Signierte Updates, Quellcode offen auf GitHub.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="twogg">
+    <div class="wrap">
+      <div class="head">
+        <span class="label">TwoGG eingebaut</span>
+        <h2>Gemacht für die Community</h2>
+        <p>Pinecone ist kein Launcher, der zufällig auch TwoGG kann. Events, Server und kuratierte Inhalte der Community sind fester Bestandteil.</p>
+      </div>
+
+      <div class="row">
+        <div>
+          <span class="label">Events</span>
+          <h3>Vom Event direkt ins Spiel</h3>
+          <p>Die Events von twogg.app siehst du im Launcher: Termine, Beschreibung, deine Anmeldung.</p>
+          <ul>
+            <li>Mit twogg.app verbinden (Discord oder E-Mail) und den eigenen Stand sehen</li>
+            <li>Das passende Event-Pack mit einem Klick installieren</li>
+            <li>Event-Server direkt beitreten</li>
+          </ul>
+        </div>
+        <figure class="shot" style="margin:0"><img src="img/events.webp" width="1280" height="800" loading="lazy" alt="Events-Seite mit REVIVAL: Avalon, Event-Pack und twogg.app-Verknüpfung"></figure>
+      </div>
+
+      <div class="row flip">
+        <div>
+          <span class="label">Freunde</span>
+          <h3>Sieh, wer gerade spielt</h3>
+          <p>Die Pinecone-Freundesliste nutzt dein Minecraft-Konto, du brauchst kein weiteres Konto.</p>
+          <ul>
+            <li>Freunde per Spielername hinzufügen</li>
+            <li>Sehen, wer online ist und was gespielt wird</li>
+            <li>Dein Status ist nur für Freunde sichtbar</li>
+          </ul>
+        </div>
+        <figure class="shot" style="margin:0"><img src="img/friends.webp" width="1280" height="800" loading="lazy" alt="Geöffnete Freundesliste mit Anfrage und Freunden, die online sind"></figure>
+      </div>
+
+      <div class="row">
+        <div>
+          <span class="label">TwoGG-Auswahl</span>
+          <h3>Vom Team geprüft</h3>
+          <p>In „Entdecken“ stehen oben die Empfehlungen des TwoGG-Teams: Event-Packs, Performance-Packs und Shader, die zu unseren Servern passen. TwoGG-Modpacks gibt es nur über Pinecone.</p>
+          <ul>
+            <li>Community-Server mit Live-Status auf der Startseite</li>
+            <li>Neuigkeiten aus der Community im Launcher</li>
+          </ul>
+        </div>
+        <figure class="shot" style="margin:0"><img src="img/discover.webp" width="1280" height="800" loading="lazy" alt="Entdecken mit TwoGG-Auswahl und Ergebnissen von Modrinth und CurseForge"></figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="einblicke">
+    <div class="wrap">
+      <div class="head">
+        <span class="label">Einblicke</span>
+        <h2>So sieht Pinecone aus</h2>
+      </div>
+      <div class="gallery">
+        <div class="tabs" role="tablist" aria-label="Screenshots">
+          <button role="tab" aria-selected="true" data-img="play" data-cap="Spielen: aktuelles Event, Kalender, zuletzt gespielt und der Community-Server.">Spielen</button>
+          <button role="tab" aria-selected="false" data-img="library" data-cap="Bibliothek: Instanzen in Gruppen, Inhalte mit Quelle und Status, Sync-Packs per Schalter.">Bibliothek</button>
+          <button role="tab" aria-selected="false" data-img="discover" data-cap="Entdecken: Modrinth, CurseForge und TwoGG in einer Suche.">Entdecken</button>
+          <button role="tab" aria-selected="false" data-img="events" data-cap="Events: Termine von twogg.app, Event-Pack und Anmeldung.">Events</button>
+          <button role="tab" aria-selected="false" data-img="appearance" data-cap="Darstellung: Theme und Akzentfarbe mit Live-Vorschau.">Darstellung</button>
+          <button role="tab" aria-selected="false" data-img="winterland" data-cap="Theme Winterland: hell, für tagsüber.">Winterland</button>
+        </div>
+        <figure style="margin:0">
+          <div class="shot"><img id="gallery-img" src="img/play.webp" width="1280" height="800" loading="lazy" alt="Screenshot von Pinecone"></div>
+          <figcaption id="gallery-cap">Spielen: aktuelles Event, Kalender, zuletzt gespielt und der Community-Server.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <div class="head">
+        <span class="label">Download</span>
+        <h2>Pinecone herunterladen</h2>
+        <p>Pinecone ist in der Beta. Updates kommen automatisch, sobald eine neue Version erscheint.</p>
+      </div>
+      <div class="downloads">
+        <div class="os" id="os-windows">
+          <div class="title"><h3>Windows</h3><span class="chip-ok" hidden>Empfohlen für dich</span></div>
+          <p class="hint">Windows 10 und 11, 64 Bit.</p>
+          <div class="files">
+            <a class="file main" data-asset="setup" href="https://github.com/wheatley2056/twogg-pinecone/releases/latest"><svg aria-hidden="true"><use href="#i-windows"/></svg><span class="name">Installer</span><span class="ext">.exe</span></a>
+            <a class="file" data-asset="msi" href="https://github.com/wheatley2056/twogg-pinecone/releases/latest"><svg aria-hidden="true"><use href="#i-download"/></svg><span class="name">MSI-Paket</span><span class="ext">.msi</span></a>
+          </div>
+        </div>
+        <div class="os" id="os-linux">
+          <div class="title"><h3>Linux</h3><span class="chip-ok" hidden>Empfohlen für dich</span></div>
+          <p class="hint">x86_64. Braucht WebKitGTK 4.1 (bei aktuellen Distributionen dabei).</p>
+          <div class="files">
+            <a class="file main" data-asset="appimage" href="https://github.com/wheatley2056/twogg-pinecone/releases/latest"><svg aria-hidden="true"><use href="#i-linux"/></svg><span class="name">AppImage</span><span class="ext">.AppImage</span></a>
+            <a class="file" data-asset="deb" href="https://github.com/wheatley2056/twogg-pinecone/releases/latest"><svg aria-hidden="true"><use href="#i-download"/></svg><span class="name">Debian, Ubuntu, Mint</span><span class="ext">.deb</span></a>
+            <a class="file" data-asset="rpm" href="https://github.com/wheatley2056/twogg-pinecone/releases/latest"><svg aria-hidden="true"><use href="#i-download"/></svg><span class="name">Fedora, openSUSE</span><span class="ext">.rpm</span></a>
+          </div>
+        </div>
+      </div>
+      <p class="release-line" id="release-line">Alle Versionen und Änderungen: <a href="https://github.com/wheatley2056/twogg-pinecone/releases">GitHub Releases</a></p>
+      <div class="notes">
+        <div class="note">
+          <h4>Windows-Warnung</h4>
+          <p>Der Installer ist noch nicht mit einem Zertifikat signiert. Zeigt Windows „Der Computer wurde durch Windows geschützt“, klick auf „Weitere Informationen“ und dann „Trotzdem ausführen“.</p>
+        </div>
+        <div class="note">
+          <h4>AppImage starten</h4>
+          <p>Nach dem Download ausführbar machen: <code>chmod +x Pinecone*.AppImage</code>, dann per Doppelklick oder im Terminal starten.</p>
+        </div>
+        <div class="note">
+          <h4>Fehler gefunden?</h4>
+          <p>In Pinecone unter Einstellungen → Allgemein → „Hilfe &amp; Diagnose“ ein Diagnose-ZIP erstellen und mit einer kurzen Beschreibung melden.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fragen">
+    <div class="wrap">
+      <div class="head">
+        <span class="label">Fragen</span>
+        <h2>Häufige Fragen</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Kostet Pinecone etwas?</summary>
+          <p>Nein. Pinecone ist kostenlos und Open Source (MIT oder Apache-2.0). Du brauchst nur eine eigene Minecraft: Java Edition.</p>
+        </details>
+        <details>
+          <summary>Brauche ich ein TwoGG-Konto?</summary>
+          <p>Nein. Zum Spielen reicht dein Microsoft-Konto. Die Verbindung mit twogg.app ist optional und zeigt dir deine Event-Anmeldungen im Launcher. Die Freundesliste läuft über dein Minecraft-Konto.</p>
+        </details>
+        <details>
+          <summary>Kann ich meine Modpacks von anderen Launchern mitnehmen?</summary>
+          <p>Ja. Modrinth-Packs (<code>.mrpack</code>) und CurseForge-Packs (ZIP) lassen sich importieren, ebenso Links von Modrinth. Eigene Instanzen kannst du als <code>.mrpack</code> exportieren und teilen.</p>
+        </details>
+        <details>
+          <summary>Werden Forge und NeoForge unterstützt?</summary>
+          <p>Noch nicht. Pinecone unterstützt Vanilla, Fabric und Quilt. Forge und NeoForge stehen auf der Liste.</p>
+        </details>
+        <details>
+          <summary>Wie bekomme ich Updates?</summary>
+          <p>Pinecone prüft beim Start auf neue Versionen und installiert sie auf Wunsch. Updates sind signiert, der Launcher installiert nur Pakete von TwoGG.</p>
+        </details>
+        <details>
+          <summary>Wo liegen meine Daten?</summary>
+          <p>Unter Windows in <code>%APPDATA%\TwoGG\Pinecone</code>, unter Linux in <code>~/.local/share/twogg-pinecone</code>. Anmeldedaten speichert Pinecone im Schlüsselbund des Systems, nicht in Dateien.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <a class="brand" href="#top"><svg aria-hidden="true"><use href="#logo"/></svg>Pinecone</a>
+      <p class="claim">A TWOGG LAUNCHER</p>
+    </div>
+    <nav aria-label="Weitere Links">
+      <a href="https://twogg.app">twogg.app</a>
+      <a href="https://github.com/wheatley2056/twogg-pinecone">Quellcode</a>
+      <a href="https://github.com/wheatley2056/twogg-pinecone/releases">Releases</a>
+    </nav>
+    <p style="flex-basis:100%;margin-top:8px">Kein offizielles Minecraft-Produkt. Nicht von Mojang oder Microsoft genehmigt oder mit ihnen verbunden. Minecraft ist eine Marke von Mojang AB.</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const REPO = "wheatley2056/twogg-pinecone";
+  const ua = navigator.userAgent;
+  const os = /Windows/i.test(ua) ? "windows" : /Linux|X11/i.test(ua) && !/Android/i.test(ua) ? "linux" : null;
+
+  if (os) {
+    const box = document.getElementById("os-" + os);
+    box.classList.add("suggested");
+    box.querySelector(".chip-ok").hidden = false;
+  }
+
+  const patterns = {
+    setup: /-setup\.exe$/i,
+    msi: /\.msi$/i,
+    appimage: /\.AppImage$/,
+    deb: /\.deb$/i,
+    rpm: /\.rpm$/i,
+  };
+  const pick = (assets, re) => {
+    const all = assets.filter((a) => re.test(a.name));
+    return all.find((a) => /de-DE/.test(a.name)) || all[0];
+  };
+
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: "application/vnd.github+json" } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((rel) => {
+      const version = rel.tag_name.replace(/^v/, "");
+      for (const link of document.querySelectorAll("[data-asset]")) {
+        const asset = pick(rel.assets, patterns[link.dataset.asset]);
+        if (asset) link.href = asset.browser_download_url;
+      }
+      const main = os && document.querySelector(`#os-${os} .file.main`);
+      const hero = document.getElementById("hero-download");
+      if (main) {
+        hero.href = main.href;
+        hero.querySelector("span").textContent = "Herunterladen";
+      }
+      document.getElementById("hero-meta").innerHTML =
+        `<b>Version ${version}</b>${os ? ` für ${os === "windows" ? "Windows" : "Linux"}` : ""}<br>Kostenlos und Open Source.`;
+      const date = new Date(rel.published_at).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
+      document.getElementById("release-line").innerHTML =
+        `Version ${version} vom ${date} · <a href="${rel.html_url}">Änderungen</a> · <a href="https://github.com/${REPO}/releases">Alle Versionen</a>`;
+    })
+    .catch(() => {
+      /* Noch kein Release oder API nicht erreichbar: Links zeigen auf die Release-Seite. */
+    });
+
+  const tabs = document.querySelectorAll(".tabs [role=tab]");
+  const img = document.getElementById("gallery-img");
+  const cap = document.getElementById("gallery-cap");
+  tabs.forEach((tab) =>
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+      img.src = `img/${tab.dataset.img}.webp`;
+      cap.textContent = tab.dataset.cap;
+    }),
+  );
+})();
+</script>
+</body>
+</html>
