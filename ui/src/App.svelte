@@ -9,26 +9,24 @@
   import { runOf, startGame } from "./lib/runs.svelte";
   import { loadSettings, settings } from "./lib/settings.svelte";
   import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
-  import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType } from "./lib/types";
+  import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType, SyncPack } from "./lib/types";
   import Discover from "./components/Discover.svelte";
   import PlayPage from "./components/pages/PlayPage.svelte";
   import ImportDialog from "./components/ImportDialog.svelte";
-  import Library from "./components/Library.svelte";
+  import InstanceView, { type InstanceTab } from "./components/library/InstanceView.svelte";
+  import NewSyncDialog from "./components/library/NewSyncDialog.svelte";
+  import SyncPackView from "./components/library/SyncPackView.svelte";
+  import LibraryPage from "./components/pages/LibraryPage.svelte";
   import MissingDialog from "./components/MissingDialog.svelte";
   import ProfileDialog from "./components/ProfileDialog.svelte";
-  import ProfileView from "./components/ProfileView.svelte";
   import Settings from "./components/Settings.svelte";
-  import SyncPacks from "./components/SyncPacks.svelte";
   import Skins from "./components/Skins.svelte";
-  import Screenshots from "./components/Screenshots.svelte";
   import Friends from "./components/shell/Friends.svelte";
   import Panels from "./components/shell/Panels.svelte";
   import PlayBar from "./components/shell/PlayBar.svelte";
   import TitleBar, { type Tab } from "./components/shell/TitleBar.svelte";
-  import Segmented from "./components/ui/Segmented.svelte";
 
-  type View = Tab | "syncpacks" | "screenshots" | "profile" | "settings";
-  type LibraryView = "library" | "syncpacks" | "screenshots";
+  type View = Tab | "settings";
 
   const SELECTED_KEY = "pinecone.selected";
 
@@ -45,7 +43,11 @@
   let homeKey = $state(0);
   // Entdecken aus einem Profil heraus: Ziel und Inhaltsart vorbelegen.
   let discoverTarget = $state<{ profileId: string | null; type: ProjectType }>({ profileId: null, type: "mod" });
-  let profileTab = $state<"content" | "log">("content");
+  let instanceTab = $state<InstanceTab>("content");
+  // Rechts in der Bibliothek: Instanz (selectedId) oder ein Sync-Pack.
+  let syncId = $state<string | null>(null);
+  let syncPacks = $state<SyncPack[]>([]);
+  let creatingSync = $state(false);
   let missing = $state<ImportResult | null>(null);
   // Modpack-Vorschau: aus der Bibliothek, per pinecone://-Link oder beim Öffnen einer .mrpack-Datei.
   let openRequest = $state<OpenRequest | null>(null);
@@ -90,9 +92,8 @@
 
   const selected = $derived(profiles.find((p) => p.id === selectedId) ?? null);
   const hasAccount = $derived(accounts.some((a) => a.active));
-  const tab = $derived<Tab | null>(
-    view === "profile" || view === "syncpacks" || view === "screenshots" ? "library" : view === "settings" ? null : view,
-  );
+  const tab = $derived<Tab | null>(view === "settings" ? null : view);
+  const syncPack = $derived(syncId ? (syncPacks.find((s) => s.id === syncId) ?? null) : null);
   const activity = $derived(profiles.filter((p) => runOf(p.id).status === "preparing").length);
   const customFrame = $derived(!(settings.current?.systemFrame ?? false));
 
@@ -102,7 +103,6 @@
       if (!profiles.some((p) => p.id === selectedId)) {
         const first = [...profiles].sort(byRecent)[0];
         selectedId = first?.id ?? null;
-        if (view === "profile") view = "library";
       }
     } catch (e) {
       loadError = errorText(e);
@@ -152,11 +152,20 @@
     });
   });
 
-  function openProfile(id: string, tab: "content" | "log" = "content") {
+  function openProfile(id: string, tab: InstanceTab = "content") {
     select(id);
-    profileTab = tab;
-    view = "profile";
+    syncId = null;
+    instanceTab = tab;
+    view = "library";
   }
+
+  async function reloadSyncPacks() {
+    syncPacks = await api.syncpackList().catch(() => []);
+  }
+
+  $effect(() => {
+    if (view === "library") reloadSyncPacks();
+  });
 
   function onGameExit(id: string) {
     const run = runOf(id);
@@ -167,7 +176,7 @@
         kind: "error",
         title: t("notice.gameError", { name }),
         text: run.error,
-        action: { label: t("profile.tabLog"), run: () => openProfile(id, "log") },
+        action: { label: t("profile.tabLog"), run: () => openProfile(id, "logs") },
       });
     }
     reloadProfiles();
@@ -189,11 +198,6 @@
     panel = panel === p ? null : p;
   }
 
-  const libraryViews = $derived<{ id: LibraryView; label: string }[]>([
-    { id: "library", label: t("library.instances") },
-    { id: "syncpacks", label: t("nav.syncpacks") },
-    { id: "screenshots", label: t("nav.screenshots") },
-  ]);
 </script>
 
 <div class="app" class:framed={customFrame}>
@@ -209,14 +213,9 @@
     onPanel={togglePanel}
   />
 
-  <main class="view" class:bleed={view === "home" && profiles.length > 0}>
+  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library"}>
     {#if loadError}
       <p class="error">{loadError}</p>
-    {/if}
-    {#if view === "library" || view === "syncpacks" || view === "screenshots"}
-      <div class="subnav">
-        <Segmented items={libraryViews} value={view} label={t("tab.library")} variant="soft" onchange={(id) => (view = id)} />
-      </div>
     {/if}
     {#if view === "home"}
       {#if profiles.length === 0}
@@ -238,14 +237,47 @@
         {/key}
       {/if}
     {:else if view === "library"}
-      <Library
+      <LibraryPage
         {profiles}
-        {hasAccount}
-        onOpen={(id) => openProfile(id)}
-        onPlay={play}
+        {syncPacks}
+        current={syncId ? `sync:${syncId}` : selectedId}
+        onSelect={(id) => openProfile(id, instanceTab)}
+        onSelectSync={(id) => (syncId = id)}
         onCreate={() => (creating = true)}
-        onOpenPack={openPack}
-      />
+        onCreateSync={() => (creatingSync = true)}
+        onImport={() => openPack({ kind: "link", link: "" })}
+      >
+        {#if syncPack}
+          {#key syncPack.id}
+            <SyncPackView
+              pack={syncPack}
+              {profiles}
+              onChanged={async (p) => {
+                await reloadSyncPacks();
+                if (!p) syncId = null;
+              }}
+            />
+          {/key}
+        {:else if selected}
+          {#key selected.id}
+            <InstanceView
+              profile={selected}
+              bind:tab={instanceTab}
+              onChanged={() => onGameExit(selected.id)}
+              onDeleted={reloadProfiles}
+              onAddContent={(kind) => discover(selected.id, kind)}
+              onCreated={onImported}
+              onJoin={(address) => play(selected.id, address)}
+            />
+          {/key}
+        {:else}
+          <div class="welcome">
+            <h2>{t("welcome.title")}</h2>
+            <p class="muted">{t("welcome.text")}</p>
+            <button class="primary cut" onclick={() => (creating = true)}>{t("welcome.create")}</button>
+          </div>
+        {/if}
+      </LibraryPage>
     {:else if view === "discover"}
       {#key discoverTarget}
         <Discover
@@ -258,31 +290,14 @@
       {/key}
     {:else if view === "events"}
       <p class="muted placeholder">{t("events.soon")}</p>
-    {:else if view === "screenshots"}
-      <Screenshots {profiles} />
     {:else if view === "skins"}
       <Skins {accounts} />
-    {:else if view === "syncpacks"}
-      <SyncPacks {profiles} />
-    {:else if view === "profile" && selected}
-      {#key selected.id}
-        <ProfileView
-          profile={selected}
-          {hasAccount}
-          bind:tab={profileTab}
-          onPlay={() => play(selected.id)}
-          onChanged={() => onGameExit(selected.id)}
-          onDeleted={reloadProfiles}
-          onAddContent={(kind) => discover(selected.id, kind)}
-          onCreated={onImported}
-        />
-      {/key}
     {:else if view === "settings"}
       <Settings {info} />
     {/if}
 
     {#if panel}
-      <Panels {panel} {profiles} onClose={() => (panel = null)} onOpenProfile={(id) => openProfile(id, "log")} />
+      <Panels {panel} {profiles} onClose={() => (panel = null)} onOpenProfile={(id) => openProfile(id, "logs")} />
     {/if}
   </main>
 
@@ -311,6 +326,18 @@
   {#key openRequest}
     <ImportDialog request={openRequest} onClose={closeOpenRequest} {onImported} />
   {/key}
+{/if}
+
+{#if creatingSync}
+  <NewSyncDialog
+    onClose={() => (creatingSync = false)}
+    onCreated={async (p) => {
+      creatingSync = false;
+      await reloadSyncPacks();
+      syncId = p.id;
+      view = "library";
+    }}
+  />
 {/if}
 
 {#if creating}
@@ -349,10 +376,6 @@
 
   .view.bleed {
     padding: 0;
-  }
-
-  .subnav {
-    display: flex;
   }
 
   .welcome {

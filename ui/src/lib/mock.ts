@@ -159,6 +159,20 @@ const mockFriends: FriendsState = {
 };
 
 Object.assign(api, {
+  worlds: async (id: string) =>
+    id === "fabric-test"
+      ? [
+          { folder: "Avalon", name: "Avalon – Hauptwelt", gameMode: "survival", hardcore: false, lastPlayed: Date.now() - 2 * 3600_000, version: "1.21.11", size: 412_000_000, icon: null },
+          { folder: "Bauplatz", name: "Bauplatz", gameMode: "creative", hardcore: false, lastPlayed: Date.now() - 5 * 86400_000, version: "1.21.11", size: 38_000_000, icon: null },
+        ]
+      : [],
+  worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
+  worldDelete: async () => {},
+  worldOpenFolder: async () => {},
+  savedServers: async () => [
+    { name: "TwoGG Community", address: "mc.twogg.de", icon: null },
+    { name: "Avalon (Event)", address: "avalon.twogg.de", icon: null },
+  ],
   serverInfo: async () => ({ gameServer: { name: "TwoGG Server", address: "mc.twogg.de" } }),
   friends: async () => mockFriends,
   friendsPresence: async () => {},

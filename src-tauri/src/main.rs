@@ -7,6 +7,7 @@ mod dashboard;
 mod dto;
 mod friends;
 mod game;
+mod instance;
 mod migrate;
 mod open;
 mod packs;
@@ -190,6 +191,11 @@ fn main() {
             dashboard::get_settings,
             dashboard::save_settings,
             dashboard::export_theme,
+            instance::worlds_list,
+            instance::world_backup,
+            instance::world_delete,
+            instance::world_open_folder,
+            instance::servers_list,
             friends::friends_list,
             friends::friends_presence,
             friends::friends_request,

@@ -530,3 +530,22 @@ export interface FriendsState {
 export interface ServerInfo {
   gameServer: { name: string; address: string } | null;
 }
+
+export interface World {
+  folder: string;
+  name: string;
+  gameMode: "survival" | "creative" | "adventure" | "spectator" | null;
+  hardcore: boolean;
+  /** Unix-Zeit in Millisekunden. */
+  lastPlayed: number | null;
+  version: string | null;
+  size: number;
+  icon: string | null;
+}
+
+export interface SavedServer {
+  name: string;
+  address: string;
+  /** PNG als Base64. */
+  icon: string | null;
+}
