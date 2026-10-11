@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "TwoGG Pinecone",
   "mainBinaryName": "twogg-pinecone",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "identifier": "de.twogg.pinecone",
   "build": {
     "frontendDist": "../dist",
