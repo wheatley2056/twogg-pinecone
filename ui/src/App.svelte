@@ -19,7 +19,7 @@
   import LibraryPage from "./components/pages/LibraryPage.svelte";
   import MissingDialog from "./components/MissingDialog.svelte";
   import ProfileDialog from "./components/ProfileDialog.svelte";
-  import Settings from "./components/Settings.svelte";
+  import SettingsPage, { type SettingsSection } from "./components/pages/SettingsPage.svelte";
   import Skins from "./components/Skins.svelte";
   import Friends from "./components/shell/Friends.svelte";
   import Panels from "./components/shell/Panels.svelte";
@@ -48,6 +48,7 @@
   let syncId = $state<string | null>(null);
   let syncPacks = $state<SyncPack[]>([]);
   let creatingSync = $state(false);
+  let settingsSection = $state<SettingsSection>("general");
   let missing = $state<ImportResult | null>(null);
   // Modpack-Vorschau: aus der Bibliothek, per pinecone://-Link oder beim Öffnen einer .mrpack-Datei.
   let openRequest = $state<OpenRequest | null>(null);
@@ -213,7 +214,7 @@
     onPanel={togglePanel}
   />
 
-  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library" || view === "discover"}>
+  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library" || view === "discover" || view === "settings"}>
     {#if loadError}
       <p class="error">{loadError}</p>
     {/if}
@@ -293,7 +294,7 @@
     {:else if view === "skins"}
       <Skins {accounts} />
     {:else if view === "settings"}
-      <Settings {info} />
+      <SettingsPage {info} {accounts} bind:section={settingsSection} onAccountsChange={reloadAccounts} />
     {/if}
 
     {#if panel}
