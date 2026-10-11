@@ -1,7 +1,14 @@
 # TwoGG Pinecone
 
-Minecraft-Launcher der TwoGG-Community, geschrieben in Rust (später mit Tauri-GUI).
-Architektur und Phasen stehen in [PLAN.md](PLAN.md).
+Minecraft-Launcher der TwoGG-Community: Rust-Kern, Desktop-App mit Tauri 2 und Svelte 5.
+Windows und Linux, Fabric und Quilt, Modrinth und CurseForge, TwoGG-Events und -Modpacks.
+Architektur und Phasen stehen in [PLAN.md](PLAN.md), Änderungen in [CHANGELOG.md](CHANGELOG.md).
+
+> **Beta.** Pinecone ist in der Beta-Phase. Fehler bitte mit dem Diagnose-ZIP
+> (Einstellungen → Allgemein → „Hilfe & Diagnose“) melden.
+
+Der Server hinter `https://pinecone.twogg.app` (Neuigkeiten, TwoGG-Modpacks, Freunde, Admin-Seite)
+liegt im eigenen Repo [twogg-pinecone-server](https://github.com/wheatley2056/twogg-pinecone-server).
 
 ## Aufbau
 
@@ -27,18 +34,21 @@ npm run dev             # nur die Oberfläche im Browser, mit Beispieldaten (Moc
 npm run check           # Svelte/TypeScript prüfen
 ```
 
-Aufbau der App (angelehnt an Modrinth App, CurseForge und NoRisk): links eine Navigationsleiste
-mit Start, Bibliothek, Entdecken und Einstellungen. Die Bibliothek zeigt die Profile als Kacheln,
-die Profilseite hat einen großen Spielen-Button und die Tabs „Inhalte“ (Mods, Ressourcenpakete,
-Shader: aktivieren/deaktivieren, aktualisieren, entfernen, eigene Dateien) und „Spielausgabe“.
-„Entdecken“ durchsucht Modrinth; aus einem Profil heraus sind Version und Loader vorbelegt.
-Herkunft und Hash jeder Datei stehen in `instances/<id>/pack.lock.json`.
+Aufbau der App (nach dem Pinecone-Design-System, `docs/design/`): Kopfleiste mit den Bereichen
+**Spielen · Bibliothek · Entdecken · Events · Skins**, rechts Downloads, Benachrichtigungen und
+Einstellungen; unten auf jedem Screen die Spielleiste mit Instanzwahl, SPIELEN, Freunden und Konto.
 
-Die Startseite zeigt eine Übersicht (zuletzt gespielt, Server mit Live-Status und Quick-Join,
-neueste Screenshots, Spielzeit). Unter Einstellungen lassen sich Sprache (de/en), Hell/Dunkel/System,
-Akzentfarbe, Hintergrundbild und die Anordnung der Übersicht ändern; das Theme ist als Datei
-exportier- und importierbar. Gespeichert wird in `<data-dir>/settings.json`, die Spielzeit in
-`<data-dir>/stats.json`.
+- **Spielen**: Event-Teaser, Event-Kalender, zuletzt gespielte Instanzen und der Community-Server
+  mit Live-Status und Schnellbeitritt.
+- **Bibliothek**: Instanzen in Gruppen (TwoGG Events, eigene Instanzen, Sync-Packs). Jede Instanz hat
+  die Tabs Inhalt, Welten, Server, Screenshots, Logs und Einstellungen. Herkunft und Hash jeder Datei
+  stehen in `instances/<id>/pack.lock.json`.
+- **Entdecken**: Modpacks, Mods, Ressourcenpakete, Shader und Datenpakete von Modrinth, CurseForge
+  und TwoGG, mit der TwoGG-Auswahl oben.
+- **Events**: Events von twogg.app mit Anmeldung, Event-Pack und Server-Beitritt.
+- **Einstellungen**: Allgemein, Darstellung (Themes Rinde, Kiefer, Winterland, Akzentfarbe),
+  Java & Arbeitsspeicher, Konten, Downloads & Quellen, TwoGG-Verknüpfung. Gespeichert wird in
+  `<data-dir>/settings.json`, die Spielzeit in `<data-dir>/stats.json`.
 
 Das Spiel schreibt seine Konsolenausgabe nach `<profil>/.minecraft/logs/pinecone-console.log`;
 die App liest sie live mit. Wird der Launcher geschlossen, läuft das Spiel weiter.
@@ -132,7 +142,7 @@ unter `instances/<id>/snapshots/` angelegt (die letzten drei bleiben), aus dem m
 
 ## Version wechseln
 
-„Version wechseln …“ im Profilmenü (bzw. `profile migrate`) zieht ein Profil auf eine andere
+„Version wechseln …“ im Menü einer Instanz (bzw. `profile migrate`) zieht eine Instanz auf eine andere
 Minecraft-Version oder einen anderen Loader (Fabric, Quilt, Vanilla) um. Pinecone legt dafür ein
 neues Profil an und lässt das bisherige unverändert. Für jeden Inhalt wird die passende Version
 gesucht: Modrinth-Inhalte per Hash-Abgleich, CurseForge-Inhalte per Projekt; der Kanal (Release/Beta)
@@ -144,9 +154,9 @@ das Ziel, wird stattdessen diese Pack-Version angeboten.
 
 ## Sync-Packs und Vorlagen
 
-Unter „Sync-Packs“ legt man eigene Sammlungen an: Mods, Ressourcenpakete und Shader (als
+In der Bibliothek unter „Sync-Packs“ legt man eigene Sammlungen an: Mods, Ressourcenpakete und Shader (als
 Modrinth-/CurseForge-Projekt ohne feste Version), eigene Dateien wie Configs und Standardwerte für
-`options.txt`. Im Inhalte-Tab eines Profils schaltet man sie per Klick an und aus.
+`options.txt`. Im Tab Inhalt einer Instanz schaltet man sie per Klick an und aus.
 
 - **Sync-Pack**: bleibt verbunden und wird vor jedem Start abgeglichen. Für jedes Profil wird die
   zur Minecraft-Version und zum Loader passende Datei installiert (samt Abhängigkeiten). Ausschalten
@@ -186,19 +196,19 @@ cargo run -p pinecone-cli -- skin cape                 # Capes anzeigen; mit <id
 
 ## Screenshots
 
-„Screenshots“ zeigt alle Screenshots aller Profile, nach Tagen gruppiert und nach Profil filterbar.
-Vorschaubilder entstehen bei Bedarf in `<data-dir>/cache/thumbs/`. Neue Screenshots erscheinen
-automatisch (Datei-Watcher auf den Screenshot-Ordnern). In der Großansicht: blättern mit ←/→,
-kopieren, speichern unter, im Ordner zeigen, öffnen, löschen.
+Der Tab Screenshots einer Instanz zeigt ihre Screenshots, nach Tagen gruppiert. Vorschaubilder
+entstehen bei Bedarf in `<data-dir>/cache/thumbs/`. Neue Screenshots erscheinen automatisch
+(Datei-Watcher auf den Screenshot-Ordnern). In der Großansicht: blättern mit ←/→, kopieren,
+speichern unter, im Ordner zeigen, öffnen, löschen.
 
 ## Modpacks teilen
 
-„Teilen …“ im Profilmenü bietet zwei Wege:
+„Teilen …“ im Menü einer Instanz bietet zwei Wege:
 
 - **Link** (nur für Packs von Modrinth oder CurseForge): `pinecone://modrinth/<projekt>/<version>` bzw.
   `pinecone://curseforge/<projekt>/<datei>`. Der Link verweist auf genau die installierte Version bei
   der Originalquelle; eigene Änderungen sind nicht enthalten. Freunde fügen ihn unter
-  Bibliothek → „Link öffnen“ ein, oder klicken ihn an, falls Pinecone installiert ist.
+  Bibliothek → „Modpack importieren“ ein, oder klicken ihn an, falls Pinecone installiert ist.
   Modrinth-Adressen (`https://modrinth.com/modpack/<slug>`) funktionieren dort auch.
 - **Datei** (`.mrpack`): für eigene Zusammenstellungen. Aktive Mods sind immer dabei,
   Ressourcenpakete, Shader, `config/` und `options.txt` sind wählbar. Welten, `servers.dat`,
@@ -217,48 +227,24 @@ gesetzt als `PINECONE_CURSEFORGE_API_KEY` (beim Bauen gesetzt, wird er einkompil
 Autoren Downloads über andere Launcher gesperrt haben, meldet Pinecone mit Link zum manuellen
 Herunterladen.
 
-## TwoGG-Server (Neuigkeiten und TwoGG-Modpacks)
+## TwoGG: Server, Events und Freunde
 
-`crates/server` ist der Server hinter `https://pinecone.twogg.app`: Er liefert dem Launcher
-Neuigkeiten (Startseite, Widget „Neuigkeiten“) und TwoGG-Modpacks (Entdecken → TwoGG). Die
-Modpack-Dateien gibt es nur über kurzlebige, signierte Links, die der Launcher anfordert. Verwaltet
-wird alles unter `/admin` (React-Admin, Quellcode in `admin/`): Modpacks anlegen, Versionen als
-`.mrpack` hochladen (Minecraft-Version und Loader liest der Server aus der Datei), Neuigkeiten mit
-Markdown und Bild, geplante Veröffentlichung.
+Neuigkeiten, TwoGG-Modpacks, die TwoGG-Auswahl, der Community-Server und die Pinecone-Freundesliste
+kommen vom [Pinecone-Server](https://github.com/wheatley2056/twogg-pinecone-server)
+(`https://pinecone.twogg.app`, abweichend über `PINECONE_SERVER_URL` zur Laufzeit oder beim Bauen).
+TwoGG-Packs: `pinecone pack import twogg:<pack>` bzw. `pinecone://twogg/<pack>[/<version>]`; sie
+bekommen Updates wie Modrinth-Packs.
 
-```sh
-cd admin && npm ci && npm run build && cd ..
-PINECONE_ADMIN_PASSWORD=ein-langes-passwort PINECONE_ADMIN_DIR=admin/dist cargo run -p pinecone-server
-# → http://localhost:8080/admin ; der Launcher nutzt ihn mit PINECONE_SERVER_URL=http://localhost:8080
-```
-
-Launcher-Seite: `pinecone pack import twogg:<pack>` bzw. `pinecone://twogg/<pack>[/<version>]`;
-TwoGG-Packs bekommen Updates wie Modrinth-Packs. Die Server-Adresse ist `https://pinecone.twogg.app`,
-abweichend über `PINECONE_SERVER_URL` (Laufzeit oder beim Bauen). Deploy auf core01 (Docker-Stack,
-Nginx Proxy Manager, Backup): [deploy/pinecone/README.md](deploy/pinecone/README.md).
-
-Weitere Bereiche des Servers:
-
-- **Pinecone-Freunde** (`/api/v1/auth/challenge`, `/auth/verify`, `/me`, `/presence`, `/friends`,
-  `/friends/requests`): Anmeldung mit dem Minecraft-Konto über den Mojang-Session-Server
-  (`session/minecraft/join` im Launcher, `hasJoined` im Server, abweichend über
-  `PINECONE_SESSION_SERVER`). Sitzungen gelten 30 Tage, Status sehen nur Freunde, „online“ heißt
-  Präsenz in den letzten 90 Sekunden. Offline-Konten nehmen nicht teil.
-- **Community-Server** (`/admin` → Einstellungen): Name und Adresse des TwoGG-Servers für die
-  Spielen-Seite, ausgeliefert in `/api/v1/info`.
-- **TwoGG-Auswahl** (`/api/v1/recommendations?type=modpack|mod|resourcepack|shader|datapack`):
-  kuratierte Projekte (TwoGG-Pack, Modrinth oder CurseForge) für den Streifen in „Entdecken“.
-- **Event-Packs**: Ein Modpack kann einer twogg.app-Event-ID zugeordnet werden; die Events-Seite
-  bietet es dann zum Installieren an.
-
-Events, Anmeldungen und Freunde von twogg.app holt der Launcher direkt von `https://api.twogg.app`
-(Anmeldung mit Discord im Login-Fenster oder E-Mail; das Refresh-Token liegt im Schlüsselbund).
-CLI: `pinecone events` listet die kommenden Events.
+- **Freunde**: Anmeldung mit dem Minecraft-Konto über den Mojang-Session-Server, Anfragen per
+  Spielername, Status sehen nur Freunde. Offline-Konten nehmen nicht teil.
+- **twogg.app**: Events, Anmeldungen und Freunde holt der Launcher direkt von `https://api.twogg.app`
+  (Anmeldung mit Discord im Login-Fenster oder per E-Mail; das Refresh-Token liegt im
+  Schlüsselbund). CLI: `pinecone events` listet die kommenden Events.
 
 ## Logs, Diagnose und Updates
 
 Die App schreibt ihre Logs nach `<data-dir>/logs/` (eine Datei pro Tag, die letzten sieben bleiben).
-Unter Einstellungen → „Hilfe & Diagnose“ (oder im Spielausgabe-Tab eines Profils, bzw.
+Unter Einstellungen → Allgemein → „Hilfe & Diagnose“ (oder im Logs-Tab einer Instanz, bzw.
 `pinecone diag <datei.zip>`) entsteht ein ZIP mit Systeminfos, Launcher- und Spiel-Logs, den neuesten
 Crash-Reports, der Mod-Liste und der Profil-Konfiguration; Account-Daten fehlen, Tokens werden geschwärzt.
 
@@ -273,3 +259,8 @@ cargo test
 cargo clippy --all-targets -- -D warnings
 cargo test -p pinecone-core --test msa -- --ignored keyring   # echter OS-Schlüsselbund
 ```
+
+## Lizenz
+
+MIT oder Apache-2.0, nach Wahl ([LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE)).
+Eingebundene Fremdkomponenten (skinview3d, MC Skin Editor, Schriften unter OFL) behalten ihre Lizenzen.

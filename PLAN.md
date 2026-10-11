@@ -5,7 +5,7 @@ Greenfield-Projekt (das Arbeitsverzeichnis enthält nur die LATEST-Plugin-Config
 
 Name: **TwoGG Pinecone**, Kurzname Pinecone (Crate-Präfix `pinecone-`, Binary `pinecone`). Gemeint ist der Launcher der TwoGG-Community, nicht des LATEST-Events. Logo-Idee: Pixel-Art-Tannenzapfen. Hinweis: "Pinecone" ist auch eine Vektordatenbank-Firma, bei öffentlicher Verteilung (Domain, Repo) auf Verwechslung achten, deshalb immer mit Präfix "TwoGG".
 
-Neues Projekt außerhalb der Config: `C:\Users\wheatley\Desktop\twogg_pinecone\` (Pfad vor Start bestätigen).
+Repos: Launcher (`twogg-pinecone`: Kern, CLI, Desktop-App) und Server (`twogg-pinecone-server`: API für Neuigkeiten, TwoGG-Modpacks, Empfehlungen und Freunde, Admin-Seite, Deploy). Die Verträge zwischen beiden stehen in `crates/core/src/twogg.rs` und im README des Servers.
 
 ## Architektur
 Cargo-Workspace. Der Kern kennt keine GUI und ist auch per CLI testbar:
@@ -47,6 +47,7 @@ Crates: tokio, reqwest (rustls), serde/serde_json, sha1, zip, thiserror/anyhow, 
 9. **Politur**: Logfile-Export, Self-Update, Installer/Bundles (MSI/NSIS, AppImage/deb).
 10. **Optional**: Forge/NeoForge, eigenes TwoGG-Server-Profil mit Auto-Update (z. B. Horizons Unbound).
 11. **Redesign**: Neue Oberfläche nach dem Pinecone-Design-System (`docs/design/`), in Schritten 11a–11h (siehe unten).
+12. **Beta**: Server in eigenes Repo, Aufräumen, Version 0.9.0 als erste öffentliche Beta (siehe `RELEASING.md`, `CHANGELOG.md`). Betas zählen als 0.9.x hoch, 1.0.0 nach der Beta.
 
 ## Feature-Module (Erweiterung)
 Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
@@ -184,6 +185,3 @@ Vorgaben: `docs/design/design-system.md` (Regeln, Tokens, Komponenten) und der P
 - GUI: `cargo tauri dev`, Spielstart per Klick, Fortschritt und Logs sichtbar; `cargo tauri build` erzeugt Installer.
 - Redesign: Mock-UI bei 1280 × 800 je Screen neben die Referenz aus `docs/design/` legen (Playwright-Screenshots), alle drei Themes und fünf Akzente durchklicken, Tastatur-Durchlauf ohne Maus, Kontrast-Check.
 - `cargo clippy` und `cargo test` grün in CI.
-
-## Erster Umsetzungsschritt nach Freigabe
-Workspace anlegen (`core`, `cli`), `manifest`- und `download`-Module mit Tests, dann CLI-Befehl `pinecone install <version>` und `pinecone run <version> --offline <name>`.
