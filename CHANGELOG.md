@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 0.9.2
 
 - **Update-Kanal** wählbar (Einstellungen → Allgemein): „Release“ bekommt nur stabile Versionen,
   „Beta“ auch Vorabversionen (auf GitHub als Pre-release veröffentlicht). Pinecone sucht dafür in
