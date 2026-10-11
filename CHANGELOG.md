@@ -5,6 +5,9 @@
 - **Forge und NeoForge:** Instanzen mit Forge (ab 1.13 und ältere bis 1.12.2) und NeoForge,
   installiert über die offiziellen Installer. Modpacks mit Forge/NeoForge von Modrinth und
   CurseForge lassen sich importieren, die Suche filtert passend.
+- **Skin-Vorschau mit eigenen Animationen:** Ruhe, Gehen, Laufen, Winken, Jubeln und Tanzen mit
+  weichen Übergängen; der Kopf folgt dem Mauszeiger, Drehen lässt sich zuschalten. Mit
+  „Animationen reduzieren“ bewegt sich die Figur nur sanft.
 
 ## 0.9.2
 

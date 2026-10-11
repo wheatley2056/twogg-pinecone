@@ -13,6 +13,8 @@
   import SkinHead from "../SkinHead.svelte";
   import SkinPreview from "../SkinPreview.svelte";
   import Segmented from "../ui/Segmented.svelte";
+  import { ANIMATIONS, type AnimationId } from "../../lib/skinAnimations";
+  import { settings } from "../../lib/settings.svelte";
 
   let { accounts }: { accounts: Account[] } = $props();
 
@@ -29,6 +31,8 @@
   let editing = $state<{ skin: SavedSkin | null } | null>(null);
   let confirmDelete = $state(false);
   let renaming = $state<string | null>(null);
+  let animation = $state<AnimationId>("idle");
+  let rotate = $state(false);
 
   const active = $derived(accounts.find((a) => a.active) ?? null);
   const online = $derived(active?.kind === "microsoft");
@@ -130,7 +134,28 @@
   <main class="stage scales">
     {#if selected}
       <div class="preview">
-        <SkinPreview skin={images[selected.id] ?? null} model={selected.model} cape={activeCape} width={320} height={420} />
+        <SkinPreview
+          skin={images[selected.id] ?? null}
+          model={selected.model}
+          cape={activeCape}
+          width={320}
+          height={420}
+          {animation}
+          {rotate}
+          calm={settings.current?.theme.reduceMotion ?? false}
+        />
+      </div>
+      <div class="motion">
+        <Segmented
+          items={ANIMATIONS.map((id) => ({ id, label: t(`skins.anim.${id}`) }))}
+          value={animation}
+          label={t("skins.animation")}
+          variant="soft"
+          onchange={(id) => (animation = id)}
+        />
+        <button class="icon-only" class:on={rotate} aria-pressed={rotate} onclick={() => (rotate = !rotate)} aria-label={t("skins.rotate")} title={t("skins.rotate")}>
+          <Icon name="refresh" size={15} />
+        </button>
       </div>
     {:else}
       <p class="empty center">{t("skins.empty")}</p>
@@ -343,6 +368,26 @@
 
   .preview {
     position: relative;
+  }
+
+  .motion {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .motion :global(.segmented) {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  .motion .on {
+    color: var(--accent);
+    border-color: var(--edge-accent);
   }
 
   .panel {
