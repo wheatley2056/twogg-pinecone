@@ -9,7 +9,8 @@
 //! - **Vorlage**: wird einmal eingespielt und ist danach normaler Profil-Inhalt.
 //!
 //! Bringt ein Modpack oder der Nutzer dasselbe Projekt schon mit, gewinnt deren Fassung.
-//! Eigene Dateien und Optionen überschreiben nur, solange der Nutzer sie nicht geändert hat.
+//! Eigene Dateien und Optionen (inklusive Steuerung, `key_…`) werden beim ersten Einspielen
+//! gesetzt; danach nur noch, solange der Nutzer sie in der Instanz nicht geändert hat.
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -231,9 +232,12 @@ impl SyncManager {
                 }
             }
         }
-        for key in pack.options.keys() {
-            if key.is_empty() || key.contains([':', '\n', '\r']) {
+        for (key, value) in &pack.options {
+            if key.is_empty() || key == "version" || key.contains([':', '\n', '\r']) {
                 return Err(Error::Invalid(format!("Ungültige Option {key:?}")));
+            }
+            if value.contains(['\n', '\r']) {
+                return Err(Error::Invalid(format!("Ungültiger Wert für {key}")));
             }
         }
         std::fs::create_dir_all(&dir).map_err(Error::io(&dir))?;
@@ -360,6 +364,22 @@ impl SyncManager {
         std::fs::write(&path, json).map_err(Error::io(&path))
     }
 
+    /// Profile, in denen das Sync-Pack eingeschaltet ist.
+    pub fn enabled_in(&self, id: &str) -> Result<Vec<String>> {
+        let mut out = Vec::new();
+        for profile in self.profiles.list()? {
+            if self.state(&profile.id)?.enabled.contains(id) {
+                out.push(profile.id);
+            }
+        }
+        Ok(out)
+    }
+
+    /// Optionen und Steuerung aus der `options.txt` eines Profils, zum Übernehmen ins Sync-Pack.
+    pub fn profile_options(&self, profile_id: &str) -> BTreeMap<String, String> {
+        read_options(&self.profiles.game_dir(profile_id))
+    }
+
     /// Alle Sync-Packs mit ihrem Schalter für dieses Profil.
     pub fn for_profile(&self, profile_id: &str) -> Result<Vec<ProfileSyncPack>> {
         let state = self.state(profile_id)?;
@@ -408,7 +428,12 @@ impl SyncManager {
         let mut report = SyncReport::default();
         for id in state.enabled.clone() {
             match self.get(&id) {
-                Ok(pack) => self.apply(profile, &pack, &mut state, &mut report).await?,
+                // Ein fehlerhaftes Sync-Pack hält die anderen nicht auf.
+                Ok(pack) => {
+                    if let Err(e) = self.apply(profile, &pack, &mut state, &mut report).await {
+                        report.warnings.push(format!("{}: {e}", pack.name));
+                    }
+                }
                 Err(_) => {
                     state.enabled.remove(&id);
                     state.applied.remove(&id);
@@ -558,8 +583,9 @@ impl SyncManager {
                 None
             };
             let ours = applied.files.get(path);
-            // Schreiben, wenn die Datei fehlt oder noch unserem letzten Stand entspricht.
-            if current.is_none() || current.as_ref() == ours {
+            // Schreiben beim ersten Einspielen, wenn die Datei fehlt oder noch unserem letzten
+            // Stand entspricht. Eine Config, die die Mod schon angelegt hat, wird also ersetzt.
+            if ours.is_none() || current.is_none() || current.as_ref() == ours {
                 if current.as_ref() != Some(sha1) {
                     if let Some(parent) = target.parent() {
                         std::fs::create_dir_all(parent).map_err(Error::io(parent))?;
@@ -681,8 +707,25 @@ fn merge(into: &mut SyncReport, r: SyncReport) {
     into.warnings.extend(r.warnings);
 }
 
-/// Setzt Optionen in `options.txt`, aber nur dort, wo der Nutzer nichts anderes eingestellt hat
-/// (Wert fehlt oder entspricht dem zuletzt von uns gesetzten).
+/// Datenversion für eine `options.txt` ohne `version:`-Zeile. Fehlt sie, hält Minecraft die Datei
+/// für uralt und schickt sie durch alle Umwandlungen; die für Tasten erwartet Zahlen und bricht bei
+/// `key.keyboard.c` ab, worauf das Spiel *alle* Optionen verwirft. Eine Version über der des Spiels
+/// überspringt die Umwandlungen; beim nächsten Speichern schreibt Minecraft seine eigene.
+const OPTIONS_VERSION: &str = "version:2147483647";
+
+/// Optionen aus der `options.txt` eines Spielordners (ohne `version`).
+pub fn read_options(game_dir: &Path) -> BTreeMap<String, String> {
+    std::fs::read_to_string(game_dir.join("options.txt"))
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| l.split_once(':'))
+        .filter(|(k, _)| !k.is_empty() && *k != "version")
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect()
+}
+
+/// Setzt Optionen in `options.txt`: beim ersten Einspielen immer, danach nur dort, wo der Nutzer
+/// nichts anderes eingestellt hat (Wert fehlt oder entspricht dem zuletzt von uns gesetzten).
 fn apply_options(
     game_dir: &Path,
     wanted: &BTreeMap<String, String>,
@@ -702,7 +745,7 @@ fn apply_options(
             .position(|l| l.split_once(':').is_some_and(|(k, _)| k == key));
         let current = pos.and_then(|i| lines[i].split_once(':').map(|(_, v)| v.to_string()));
         let ours = applied.get(key);
-        if current.is_none() || current.as_ref() == ours {
+        if ours.is_none() || current.is_none() || current.as_ref() == ours {
             if current.as_ref() != Some(value) {
                 let line = format!("{key}:{value}");
                 match pos {
@@ -713,6 +756,11 @@ fn apply_options(
             }
             applied.insert(key.clone(), value.clone());
         }
+    }
+    // Auch nachrüsten, wenn eine frühere Fassung die Datei ohne Version angelegt hat.
+    if !lines.iter().any(|l| l.starts_with("version:")) {
+        lines.insert(0, OPTIONS_VERSION.to_string());
+        changed = true;
     }
     if changed {
         let mut out = lines.join("\n");
@@ -752,20 +800,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn options_respect_user_changes() {
+    fn options_first_apply_then_respect_user_changes() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("options.txt");
-        std::fs::write(&file, "fov:0.0\nguiScale:2\n").unwrap();
+        std::fs::write(&file, "version:3955\nfov:0.0\nguiScale:2\n").unwrap();
         let wanted = BTreeMap::from([
             ("fov".to_string(), "0.25".to_string()),
             ("key_key.zoom".to_string(), "key.keyboard.c".to_string()),
         ]);
         let mut applied = BTreeMap::new();
-        // Erstes Einspielen: fov hat einen Nutzerwert (nicht von uns) → bleibt; Taste kommt dazu.
+        // Erstes Einspielen: setzt auch Werte, die Minecraft schon geschrieben hat.
         apply_options(dir.path(), &wanted, &mut applied).unwrap();
         let text = std::fs::read_to_string(&file).unwrap();
-        assert_eq!(text, "fov:0.0\nguiScale:2\nkey_key.zoom:key.keyboard.c\n");
-        assert_eq!(applied.len(), 1);
+        assert_eq!(
+            text,
+            "version:3955\nfov:0.25\nguiScale:2\nkey_key.zoom:key.keyboard.c\n"
+        );
+        assert_eq!(applied, wanted);
 
         // Neuer Wert im Sync-Pack ersetzt unseren alten, solange der Nutzer ihn nicht geändert hat.
         let wanted2 = BTreeMap::from([("key_key.zoom".to_string(), "key.keyboard.v".to_string())]);
@@ -776,13 +827,26 @@ mod tests {
                 .contains("key_key.zoom:key.keyboard.v")
         );
 
-        // Nutzer ändert die Taste → bleibt bei seiner Wahl.
-        std::fs::write(&file, "key_key.zoom:key.keyboard.b\n").unwrap();
+        // Nutzer ändert die Taste im Spiel → bleibt bei seiner Wahl.
+        std::fs::write(&file, "version:3955\nkey_key.zoom:key.keyboard.b\n").unwrap();
         apply_options(dir.path(), &wanted2, &mut applied).unwrap();
         assert_eq!(
             std::fs::read_to_string(&file).unwrap(),
-            "key_key.zoom:key.keyboard.b\n"
+            "version:3955\nkey_key.zoom:key.keyboard.b\n"
         );
+    }
+
+    #[test]
+    fn new_options_file_gets_a_version() {
+        // Ohne `version:` würde Minecraft die Tastennamen als Zahlen lesen und alles verwerfen.
+        let dir = tempfile::tempdir().unwrap();
+        let wanted = BTreeMap::from([("key_key.zoom".to_string(), "key.keyboard.c".to_string())]);
+        apply_options(dir.path(), &wanted, &mut BTreeMap::new()).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("options.txt")).unwrap(),
+            format!("{OPTIONS_VERSION}\nkey_key.zoom:key.keyboard.c\n")
+        );
+        assert_eq!(read_options(dir.path()), wanted);
     }
 
     #[test]

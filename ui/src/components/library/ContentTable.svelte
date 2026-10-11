@@ -6,6 +6,7 @@
   import { menu, type MenuEntry } from "../../lib/contextmenu.svelte";
   import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
+  import { syncReportText } from "../../lib/sync";
   import { isTwogg } from "../../lib/profiles";
   import type { ContentKind, InstalledContent, Profile, ProfileSyncPack, UpdateInfo } from "../../lib/types";
   import ConfirmDialog from "../ConfirmDialog.svelte";
@@ -175,7 +176,8 @@
     error = message = null;
     syncBusy = s.pack.id;
     try {
-      await api.syncpackSetEnabled(profile.id, s.pack.id, !s.enabled);
+      const r = await api.syncpackSetEnabled(profile.id, s.pack.id, s.pack.mode === "template" || !s.enabled);
+      message = `${s.pack.name}: ${syncReportText(r)}`;
       syncPacks = await api.syncpackForProfile(profile.id);
       await load();
     } catch (e) {
@@ -240,7 +242,11 @@
       <span class="section-label">{t("library.groupSync")}</span>
       {#each syncPacks as s (s.pack.id)}
         <span class="sync-item">
-          <Switch checked={s.enabled} label={s.pack.name} disabled={locked || syncBusy !== null} onchange={() => toggleSync(s)} />
+          {#if s.pack.mode === "template"}
+            <button class="small" disabled={locked || syncBusy !== null} title={t("sync.templateApply")} onclick={() => toggleSync(s)}>{t("sync.applyOnce")}</button>
+          {:else}
+            <Switch checked={s.enabled} label={s.pack.name} disabled={locked || syncBusy !== null} onchange={() => toggleSync(s)} />
+          {/if}
           {s.pack.name}
         </span>
       {/each}

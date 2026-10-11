@@ -2,6 +2,16 @@
 
 ## 0.9.4
 
+- **Sync-Packs: Steuerung und Optionen.** Tastenbelegungen und Spieleinstellungen lassen sich aus
+  einer Instanz übernehmen („Aus Instanz übernehmen …“) und in andere Instanzen synchronisieren;
+  Tasten werden per Klick und Tastendruck gesetzt. Im Sync-Pack selbst schaltet man es jetzt für
+  jede Instanz direkt ein oder aus, Vorlagen spielt man dort ein.
+- **Sync-Packs: Abgleich repariert.** Optionen und eigene Dateien (z. B. Configs) kamen in schon
+  gespielten Instanzen nicht an, weil Minecraft und Mods ihre Standardwerte bereits geschrieben
+  hatten; beim ersten Einspielen werden sie jetzt gesetzt. Eine von Pinecone neu angelegte
+  `options.txt` bekommt eine Versionszeile, sonst verwarf Minecraft wegen der Tastennamen alle
+  Einstellungen. Ein fehlerhaftes Sync-Pack hält beim Start die anderen nicht mehr auf, und nach dem
+  Ein- und Ausschalten zeigt die Instanz, was installiert, entfernt oder nicht verfügbar ist.
 - **JVM-Optimierungen:** Fertige Flag-Sätze für Java unter Einstellungen → Java & Arbeitsspeicher:
   Aikar's Flags, MeowIce's Flags (ab Java 17) und Generational ZGC (ab Java 21). Einer gilt als
   Standard für alle Instanzen, jede Instanz kann im Instanz-Dialog einen anderen oder keinen wählen.

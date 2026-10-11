@@ -151,6 +151,8 @@ export const api = {
   syncpackSetEnabled: (profileId: string, id: string, enabled: boolean) =>
     invoke<SyncReport>("syncpack_set_enabled", { profileId, id, enabled }),
   syncpackSync: (profileId: string) => invoke<SyncReport>("syncpack_sync", { profileId }),
+  syncpackProfiles: (id: string) => invoke<string[]>("syncpack_profiles", { id }),
+  syncpackProfileOptions: (profileId: string) => invoke<Record<string, string>>("syncpack_profile_options", { profileId }),
   updateCheck: () => invoke<AppUpdate | null>("update_check"),
   updateInstall: (onEvent: (e: UpdateEvent) => void) => {
     const channel = new Channel<UpdateEvent>();

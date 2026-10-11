@@ -1,16 +1,19 @@
 <script lang="ts">
-  // Sync-Pack bzw. Vorlage bearbeiten: Inhalte (Modrinth, eigene Dateien, aus Instanz),
-  // automatische Zuordnung und Standard-Optionen.
-  import { untrack } from "svelte";
+  // Sync-Pack bzw. Vorlage bearbeiten: Instanzen, Inhalte (Modrinth, eigene Dateien, aus Instanz),
+  // automatische Zuordnung, Steuerung und Spieleinstellungen.
+  import { onMount, untrack } from "svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
+  import { controlName, isControl, syncReportText } from "../../lib/sync";
   import type { ContentKind, LoaderKind, Profile, SearchHit, SyncEntry, SyncMode, SyncPack } from "../../lib/types";
   import ConfirmDialog from "../ConfirmDialog.svelte";
   import FromProfileDialog from "../FromProfileDialog.svelte";
   import Icon from "../Icon.svelte";
   import Segmented from "../ui/Segmented.svelte";
   import Switch from "../ui/Switch.svelte";
+  import KeyCapture from "./KeyCapture.svelte";
+  import OptionsFromProfileDialog from "./OptionsFromProfileDialog.svelte";
 
   interface Props {
     pack: SyncPack;
@@ -32,6 +35,40 @@
   let pendingFile = $state<{ path: string; target: string } | null>(null);
   let optKey = $state("");
   let optValue = $state("");
+  let optionsFrom = $state(false);
+  /** Instanzen, in denen das Sync-Pack eingeschaltet ist. */
+  let enabledIn = $state<Set<string>>(new Set());
+  let profileBusy = $state<string | null>(null);
+  let report = $state<string | null>(null);
+
+  const controls = $derived(Object.entries(draft.options).filter(([k]) => isControl(k)));
+  const general = $derived(Object.entries(draft.options).filter(([k]) => !isControl(k)));
+
+  onMount(loadEnabled);
+
+  async function loadEnabled() {
+    enabledIn = new Set(await api.syncpackProfiles(draft.id).catch(() => []));
+  }
+
+  /** Ein-/Ausschalten (Sync-Pack) bzw. einmal einspielen (Vorlage); speichert vorher. */
+  async function setEnabled(p: Profile, on: boolean) {
+    profileBusy = p.id;
+    error = report = null;
+    try {
+      if (dirty) {
+        const updated = await api.syncpackSave($state.snapshot(draft) as SyncPack);
+        dirty = false;
+        onChanged(updated);
+      }
+      const r = await api.syncpackSetEnabled(p.id, draft.id, on);
+      report = `${p.name}: ${syncReportText(r)}`;
+      await loadEnabled();
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      profileBusy = null;
+    }
+  }
 
   function change(fn: (d: SyncPack) => void) {
     fn(draft);
@@ -106,10 +143,12 @@
       return p;
     });
 
+  const validKey = (key: string) => !!key && key !== "version" && !key.includes(":");
+
   function addOption(e: SubmitEvent) {
     e.preventDefault();
     const key = optKey.trim();
-    if (!key || key.includes(":")) return;
+    if (!validKey(key)) return;
     change((d) => (d.options[key] = optValue));
     optKey = optValue = "";
   }
@@ -184,6 +223,32 @@
   </section>
 
   <section>
+    <h3 class="section-label">{t("sync.instances")}</h3>
+    <p class="hint">{draft.mode === "sync" ? t("sync.instancesHint") : t("sync.instancesTemplateHint")}</p>
+    {#if report}<p class="report">{report}</p>{/if}
+    {#if profiles.length === 0}
+      <p class="hint">{t("sync.noInstances")}</p>
+    {:else}
+      <div class="instances">
+        {#each profiles as p (p.id)}
+          <div class="entry">
+            <span class="grow">
+              <span class="row-title">{p.name}</span>
+              <span class="hint mono">{p.minecraft}{p.loader ? ` · ${p.loader.kind}` : ""}</span>
+            </span>
+            {#if profileBusy === p.id}<span class="hint">{t("common.loading")}</span>{/if}
+            {#if draft.mode === "sync"}
+              <Switch checked={enabledIn.has(p.id)} label={p.name} disabled={profileBusy !== null || !draft.name.trim()} onchange={(on) => setEnabled(p, on)} />
+            {:else}
+              <button class="small" disabled={profileBusy !== null || !draft.name.trim()} onclick={() => setEnabled(p, true)}>{t("sync.applyOnce")}</button>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </section>
+
+  <section>
     <h3 class="section-label">{t("sync.contents")} · {draft.entries.length}</h3>
     {#if draft.entries.length === 0}<p class="hint">{t("sync.empty")}</p>{/if}
     <div class="entries">
@@ -236,12 +301,29 @@
   </section>
 
   <section>
-    <h3 class="section-label">{t("sync.options")}</h3>
+    <div class="section-head">
+      <h3 class="section-label">{t("sync.options")}</h3>
+      <button class="ghost small" onclick={() => (optionsFrom = true)} disabled={busy || profiles.length === 0}>{t("sync.fromProfile")}</button>
+    </div>
     <p class="hint">{t("sync.optionsHint")}</p>
+
+    <h4 class="sub">{t("sync.controls")} · {controls.length}</h4>
+    {#if controls.length === 0}<p class="hint">{t("sync.controlsEmpty")}</p>{/if}
     <div class="options">
-      {#each Object.entries(draft.options) as [k, v] (k)}
+      {#each controls as [k, v] (k)}
         <div class="option">
-          <code class="mono">{k}</code>
+          <code class="mono" title={k}>{controlName(k)}</code>
+          <KeyCapture value={v} label={controlName(k)} onchange={(key) => change((d) => (d.options[k] = key))} />
+          <button class="ghost tiny" aria-label={t("sync.remove")} onclick={() => change((d) => delete d.options[k])}><Icon name="close" size={15} /></button>
+        </div>
+      {/each}
+    </div>
+
+    <h4 class="sub">{t("sync.generalOptions")} · {general.length}</h4>
+    <div class="options">
+      {#each general as [k, v] (k)}
+        <div class="option">
+          <code class="mono" title={k}>{k}</code>
           <input class="mono" value={v} oninput={(e) => change((d) => (d.options[k] = e.currentTarget.value))} aria-label={k} />
           <button class="ghost tiny" aria-label={t("sync.remove")} onclick={() => change((d) => delete d.options[k])}><Icon name="close" size={15} /></button>
         </div>
@@ -249,7 +331,7 @@
       <form class="option" onsubmit={addOption}>
         <input class="mono" bind:value={optKey} placeholder="fov" aria-label={t("sync.optionKey")} spellcheck="false" />
         <input class="mono" bind:value={optValue} placeholder="0.25" aria-label={t("sync.optionValue")} spellcheck="false" />
-        <button class="small" disabled={!optKey.trim() || optKey.includes(":")}><Icon name="plus" size={14} />{t("sync.addOption")}</button>
+        <button class="small" disabled={!validKey(optKey.trim())}><Icon name="plus" size={14} />{t("sync.addOption")}</button>
       </form>
     </div>
   </section>
@@ -272,6 +354,17 @@
     onPick={(profileId, keys) => {
       fromProfile = false;
       run(async () => api.syncpackAddFromProfile(await saved(), profileId, keys));
+    }}
+  />
+{/if}
+
+{#if optionsFrom}
+  <OptionsFromProfileDialog
+    {profiles}
+    onClose={() => (optionsFrom = false)}
+    onPick={(picked) => {
+      optionsFrom = false;
+      change((d) => Object.assign(d.options, picked));
     }}
   />
 {/if}
@@ -494,6 +587,32 @@
     min-width: 180px;
   }
 
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .sub {
+    margin: 6px 0 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-soft);
+  }
+
+  .report {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+
+  .instances {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
   .options {
     display: flex;
     flex-direction: column;
@@ -510,5 +629,8 @@
   code {
     font-size: 13px;
     color: var(--text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

@@ -266,6 +266,8 @@ fn main() {
             syncpacks::syncpack_for_profile,
             syncpacks::syncpack_set_enabled,
             syncpacks::syncpack_sync,
+            syncpacks::syncpack_profiles,
+            syncpacks::syncpack_profile_options,
             update::update_check,
             update::update_install,
             commands::diagnostics_export,
