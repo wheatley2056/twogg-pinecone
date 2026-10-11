@@ -285,7 +285,7 @@
       {#key discoverTarget}
         <DiscoverPage
           {profiles}
-          initialProfileId={discoverTarget.profileId}
+          initialProfileId={discoverTarget.profileId ?? selectedId}
           initialType={discoverTarget.type}
           curseforge={info?.curseforgeConfigured ?? false}
           onPackInstalled={onImported}

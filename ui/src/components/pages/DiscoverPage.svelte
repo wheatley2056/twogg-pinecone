@@ -19,6 +19,7 @@
     SortIndex,
     TwoggPack,
     VersionInfo,
+    World,
   } from "../../lib/types";
   import Icon from "../Icon.svelte";
   import ProfileIcon from "../ProfileIcon.svelte";
@@ -49,7 +50,7 @@
     twogg?: TwoggPack;
   }
 
-  const CF_PATHS: Record<ProjectType, string> = { mod: "mc-mods", resourcepack: "texture-packs", shader: "shaders", modpack: "modpacks" };
+  const CF_PATHS: Record<ProjectType, string> = { mod: "mc-mods", resourcepack: "texture-packs", shader: "shaders", modpack: "modpacks", datapack: "data-packs" };
   const PAGE = 18;
 
   const start = untrack(() => ({ profileId: initialProfileId, type: initialType }));
@@ -73,10 +74,12 @@
   let installed = $state<Set<string>>(new Set());
   let installing = $state<Set<string>>(new Set());
   let versionMenu = $state<{ card: Card; versions: { id: string; label: string }[] | null } | null>(null);
+  // Datenpakete: erst die Welt wählen.
+  let worldMenu = $state<{ card: Card; version: string | null; worlds: World[] | null } | null>(null);
   let offsets = { modrinth: 0, curseforge: 0 };
 
   const target = $derived(profiles.find((p) => p.id === targetId) ?? null);
-  const contentKind = $derived(type === "modpack" ? null : (type as ContentKind));
+  const contentKind = $derived(type === "modpack" || type === "datapack" ? null : (type as ContentKind));
   const vanillaBlocked = $derived(type === "mod" && !!target && !target.loader);
   const featured = $derived(twoggPacks.filter((p) => p.featured).slice(0, 3));
 
@@ -171,7 +174,7 @@
     if (!append) offsets = { modrinth: 0, curseforge: 0 };
     try {
       const wantModrinth = source === "all" || source === "modrinth";
-      const wantCf = (source === "all" || source === "curseforge") && curseforge;
+      const wantCf = (source === "all" || source === "curseforge") && curseforge && type !== "datapack";
       const [m, c] = await Promise.all([
         wantModrinth ? api.modrinthSearch(args(offsets.modrinth)) : null,
         wantCf ? api.curseforgeSearch(args(offsets.curseforge)).catch((e) => (source === "curseforge" ? Promise.reject(e) : null)) : null,
@@ -196,7 +199,29 @@
     }
   }
 
+  async function pickWorld(card: Card, version: string | null = null) {
+    versionMenu = null;
+    worldMenu = { card, version, worlds: null };
+    const worlds = await api.worlds(targetId).catch(() => []);
+    if (worldMenu?.card === card) worldMenu = { card, version, worlds };
+  }
+
+  async function installDatapack(card: Card, world: World, version: string | null) {
+    worldMenu = null;
+    error = message = null;
+    installing = new Set([...installing, card.key]);
+    try {
+      const file = await api.datapackInstall(targetId, world.folder, card.projectId, version);
+      message = t("discover.datapackInstalled", { file, world: world.name });
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      installing = new Set([...installing].filter((k) => k !== card.key));
+    }
+  }
+
   async function install(card: Card, version: string | null = null) {
+    if (type === "datapack") return pickWorld(card, version);
     versionMenu = null;
     error = message = null;
     installing = new Set([...installing, card.key]);
@@ -267,6 +292,7 @@
     { id: "mod", label: t("discover.mods") },
     { id: "resourcepack", label: t("discover.resourcepacks") },
     { id: "shader", label: t("discover.shaders") },
+    { id: "datapack", label: t("discover.datapacks") },
   ]);
   const categoryOptions = $derived([
     { value: "", label: t("discover.all") },
@@ -291,7 +317,7 @@
 
 <svelte:window
   onkeydown={(e) => e.key === "Escape" && (versionMenu = null)}
-  onclick={(e) => versionMenu && !(e.target as HTMLElement).closest(".get") && (versionMenu = null)}
+  onclick={(e) => (versionMenu || worldMenu) && !(e.target as HTMLElement).closest(".get") && ((versionMenu = null), (worldMenu = null))}
 />
 
 <div class="page">
@@ -360,7 +386,7 @@
     <div class="grid">
       {#each cards as card (card.key)}
         {@const busy = installing.has(card.key)}
-        {@const done = installed.has(card.key)}
+        {@const done = type !== "datapack" && installed.has(card.key)}
         <article class="card">
           <div class="head">
             {#if card.iconUrl}
@@ -389,6 +415,21 @@
                 <button class="primary get-more" aria-label={t("discover.chooseVersion")} title={t("discover.chooseVersion")} disabled={(type !== "modpack" && card.source !== "twogg" && !targetId) || vanillaBlocked} onclick={() => chooseVersion(card)}>
                   <Icon name="chevron" size={14} stroke={2.2} />
                 </button>
+                {#if worldMenu?.card === card}
+                  {@const menu = worldMenu}
+                  <div class="versions" role="listbox" aria-label={t("discover.chooseWorld")}>
+                    <span class="menu-title">{t("discover.chooseWorld")}</span>
+                    {#if menu.worlds === null}
+                      <span class="hint">{t("common.loading")}</span>
+                    {:else if menu.worlds.length === 0}
+                      <span class="hint">{t("discover.noWorlds")}</span>
+                    {:else}
+                      {#each menu.worlds as w (w.folder)}
+                        <button role="option" aria-selected="false" onclick={() => installDatapack(card, w, menu.version)}>{w.name}</button>
+                      {/each}
+                    {/if}
+                  </div>
+                {/if}
                 {#if versionMenu?.card === card}
                   <div class="versions" role="listbox">
                     {#if versionMenu.versions === null}
@@ -547,13 +588,27 @@
     gap: 14px;
   }
 
+  /* Der Schnitt liegt auf einer eigenen Fläche, damit Auswahllisten nicht abgeschnitten werden. */
   .card {
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     gap: 10px;
     padding: 14px;
+  }
+
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
     background: var(--surface);
     clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+  }
+
+  .card:has(.versions) {
+    z-index: 5;
   }
 
   .head {
@@ -676,6 +731,15 @@
     font-size: 12px;
     font-weight: 500;
     font-family: var(--font-mono);
+  }
+
+  .menu-title {
+    padding: 4px 8px 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
   }
 
   .versions button:hover:not(:disabled) {

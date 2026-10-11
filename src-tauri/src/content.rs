@@ -196,9 +196,13 @@ pub async fn modrinth_versions(
     let (loaders, versions) = match profile_id {
         Some(id) => {
             let (profile, _) = profile_and_dir(&state, &id)?;
-            let loaders = ContentKind::from_project_type(project_type)
-                .and_then(|k| loaders_for(&profile, k))
-                .unwrap_or_default();
+            let loaders = if project_type == ProjectType::Datapack {
+                vec!["datapack".to_string()]
+            } else {
+                ContentKind::from_project_type(project_type)
+                    .and_then(|k| loaders_for(&profile, k))
+                    .unwrap_or_default()
+            };
             (loaders, vec![profile.minecraft])
         }
         None => (Vec::new(), Vec::new()),
@@ -229,13 +233,15 @@ fn cf(state: &AppState) -> CmdResult<&CurseForge> {
     })
 }
 
-fn class_of(t: ProjectType) -> ClassKind {
-    match t {
+/// CurseForge-Klasse; Datenpakete führt Pinecone nur über Modrinth.
+fn class_of(t: ProjectType) -> Option<ClassKind> {
+    Some(match t {
         ProjectType::Mod => ClassKind::Mod,
         ProjectType::Resourcepack => ClassKind::Resourcepack,
         ProjectType::Shader => ClassKind::Shader,
         ProjectType::Modpack => ClassKind::Modpack,
-    }
+        ProjectType::Datapack => return None,
+    })
 }
 
 /// CurseForge-Suche, als Modrinth-artiges Ergebnis (gleiche Darstellung in der Oberfläche).
@@ -245,9 +251,17 @@ pub async fn curseforge_search(
     args: SearchArgs,
 ) -> CmdResult<SearchResult> {
     let cf = cf(&state)?;
+    let Some(class) = class_of(args.project_type) else {
+        return Ok(SearchResult {
+            offset: args.offset,
+            limit: args.limit.unwrap_or(20),
+            total_hits: 0,
+            hits: Vec::new(),
+        });
+    };
     let mut q = CfSearch {
         query: args.query,
-        class: Some(class_of(args.project_type)),
+        class: Some(class),
         game_version: args.game_version,
         loader: args.loaders.first().and_then(|l| l.parse().ok()),
         sort_field: match args.sort {
@@ -367,6 +381,30 @@ pub async fn content_install_curseforge(
         .launcher
         .content()
         .install_curseforge(&profile, &dir, kind, project, file)
+        .await
+        .map_err(err)
+}
+
+/// Datenpaket in eine Welt der Instanz installieren.
+#[tauri::command]
+pub async fn datapack_install(
+    state: State<'_, AppState>,
+    id: String,
+    world: String,
+    project: String,
+    version: Option<String>,
+) -> CmdResult<String> {
+    let (profile, dir) = profile_and_dir(&state, &id)?;
+    state
+        .launcher
+        .content()
+        .install_datapack(
+            &dir,
+            &world,
+            &project,
+            version.as_deref(),
+            &profile.minecraft,
+        )
         .await
         .map_err(err)
 }

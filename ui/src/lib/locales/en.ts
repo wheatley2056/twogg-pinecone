@@ -765,6 +765,11 @@ const en: Record<MessageKey, string> = {
   "events.closed": "Sign-up is closed.",
   "events.registerHint": "Sign up on twogg.app; Pinecone then shows your status.",
   "skins.selected": "Selected",
+  "discover.datapacks": "Data packs",
+  "discover.searchIn.datapack": "Search data packs …",
+  "discover.datapackInstalled": "{file} is now in the world “{world}”.",
+  "discover.chooseWorld": "Which world?",
+  "discover.noWorlds": "This instance has no world yet. Start it once and create one.",
 };
 
 export default en;

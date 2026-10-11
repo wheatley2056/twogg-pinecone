@@ -191,6 +191,7 @@ fn main() {
             dashboard::get_settings,
             dashboard::save_settings,
             dashboard::export_theme,
+            content::datapack_install,
             instance::worlds_list,
             instance::world_backup,
             instance::world_delete,

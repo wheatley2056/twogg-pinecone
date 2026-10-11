@@ -134,7 +134,7 @@ export interface Settings {
 }
 
 export type ContentKind = "mod" | "resourcepack" | "shader";
-export type ProjectType = ContentKind | "modpack";
+export type ProjectType = ContentKind | "modpack" | "datapack";
 export type SortIndex = "relevance" | "downloads" | "follows" | "newest" | "updated";
 
 export type ContentSource =

@@ -166,6 +166,7 @@ Object.assign(api, {
           { folder: "Bauplatz", name: "Bauplatz", gameMode: "creative", hardcore: false, lastPlayed: Date.now() - 5 * 86400_000, version: "1.21.11", size: 38_000_000, icon: null },
         ]
       : [],
+  datapackInstall: async (_id: string, _world: string, project: string) => (await wait(600), `${project}.zip`),
   worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
   worldDelete: async () => {},
   worldOpenFolder: async () => {},

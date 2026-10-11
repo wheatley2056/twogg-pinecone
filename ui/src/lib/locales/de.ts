@@ -763,6 +763,11 @@ const de = {
   "events.closed": "Die Anmeldung ist geschlossen.",
   "events.registerHint": "Melde dich auf twogg.app an; Pinecone zeigt danach deinen Stand.",
   "skins.selected": "Ausgewählt",
+  "discover.datapacks": "Datenpakete",
+  "discover.searchIn.datapack": "Datenpakete durchsuchen …",
+  "discover.datapackInstalled": "{file} ist jetzt in der Welt „{world}“.",
+  "discover.chooseWorld": "In welche Welt?",
+  "discover.noWorlds": "Diese Instanz hat noch keine Welt. Starte sie einmal und lege eine an.",
 };
 
 export default de;

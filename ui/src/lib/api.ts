@@ -184,6 +184,8 @@ export const api = {
   importTheme: (path: string) => invoke<Settings>("import_theme", { path }),
   stopGame: (id: string) => invoke<void>("stop_game", { id }),
 
+  datapackInstall: (id: string, world: string, project: string, version: string | null = null) =>
+    invoke<string>("datapack_install", { id, world, project, version }),
   worlds: (id: string) => invoke<World[]>("worlds_list", { id }),
   worldBackup: (id: string, folder: string) => invoke<string>("world_backup", { id, folder }),
   worldDelete: (id: string, folder: string) => invoke<void>("world_delete", { id, folder }),
