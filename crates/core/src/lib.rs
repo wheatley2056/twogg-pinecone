@@ -4,6 +4,7 @@ pub mod accounts;
 pub mod auth;
 pub mod content;
 pub mod curseforge;
+pub mod diagnostics;
 pub mod download;
 pub mod error;
 pub mod install;
@@ -12,6 +13,7 @@ pub mod launch;
 pub mod launcher;
 pub mod loader;
 pub mod manifest;
+pub mod migrate;
 pub mod modpack;
 pub mod modrinth;
 pub mod msa;
@@ -23,7 +25,10 @@ pub mod screenshots;
 pub mod servers;
 pub mod settings;
 pub mod share;
+pub mod skins;
 pub mod stats;
+pub mod syncpacks;
+pub mod twogg;
 
 pub use error::{Error, Result};
 

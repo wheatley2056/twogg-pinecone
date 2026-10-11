@@ -3,7 +3,7 @@
   import { open } from "@tauri-apps/plugin-dialog";
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
-  import type { ContentKind, InstalledContent, InstallReport, Profile, UpdateInfo } from "../lib/types";
+  import type { ContentKind, InstalledContent, InstallReport, Profile, ProfileSyncPack, SyncReport, UpdateInfo } from "../lib/types";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import Icon from "./Icon.svelte";
 
@@ -50,7 +50,44 @@
     }
   }
 
-  onMount(load);
+  // Sync-Packs: Schalter je Profil; Namen auch für die Herkunfts-Markierung.
+  let syncPacks = $state<ProfileSyncPack[]>([]);
+  let syncBusy = $state<string | null>(null);
+  const syncNames = $derived(Object.fromEntries(syncPacks.map((s) => [s.pack.id, s.pack.name])));
+
+  async function loadSync() {
+    syncPacks = await api.syncpackForProfile(profile.id).catch(() => []);
+  }
+
+  async function toggleSync(s: ProfileSyncPack) {
+    error = message = null;
+    syncBusy = s.pack.id;
+    try {
+      const r = await api.syncpackSetEnabled(profile.id, s.pack.id, !s.enabled);
+      message = syncSummary(r);
+      await Promise.all([loadSync(), load()]);
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      syncBusy = null;
+    }
+  }
+
+  function syncSummary(r: SyncReport) {
+    const parts = [
+      r.installed.length && t("sync.reportInstalled", { list: r.installed.join(", ") }),
+      r.removed.length && t("sync.reportRemoved", { list: r.removed.join(", ") }),
+      r.present.length && t("sync.reportPresent", { list: r.present.join(", ") }),
+      r.unavailable.length && t("sync.reportUnavailable", { list: r.unavailable.join(", ") }),
+      ...r.warnings,
+    ].filter(Boolean);
+    return parts.length ? parts.join(" · ") : t("sync.reportNothing");
+  }
+
+  onMount(() => {
+    load();
+    loadSync();
+  });
 
   async function act(key: string, action: () => Promise<unknown>) {
     error = message = null;
@@ -109,11 +146,29 @@
 
   function sourceLabel(i: InstalledContent) {
     if (i.fromPack) return t("content.fromPack");
+    if (i.sync) return t("content.fromSync", { name: syncNames[i.sync] ?? i.sync });
     return i.source.type === "modrinth" ? "Modrinth" : i.source.type === "curseforge" ? "CurseForge" : t("content.local");
   }
 </script>
 
 <div class="content-tab">
+  {#if syncPacks.length > 0}
+    <div class="sync-strip">
+      <span class="muted small"><Icon name="layers" size={15} />{t("sync.strip")}</span>
+      {#each syncPacks as s (s.pack.id)}
+        <label class="sync-toggle" class:on={s.enabled} title={s.pack.mode === "template" ? t("sync.templateApply") : undefined}>
+          <input
+            type="checkbox"
+            checked={s.enabled}
+            disabled={locked || syncBusy !== null}
+            onchange={(e) => (e.currentTarget.checked = s.enabled, toggleSync(s))}
+          />
+          {s.pack.name}{#if s.pack.mode === "template"}<span class="badge">{t("sync.modeTemplate")}</span>{/if}
+          {#if syncBusy === s.pack.id}<span class="muted small">…</span>{/if}
+        </label>
+      {/each}
+    </div>
+  {/if}
   <div class="toolbar">
     <div class="kinds" role="tablist">
       {#each KINDS as k (k)}
@@ -379,6 +434,40 @@
     font-size: 12px;
     color: var(--accent);
     border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  }
+
+  .sync-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+  }
+
+  .sync-strip > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .sync-toggle {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .sync-toggle.on {
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .sync-toggle input {
+    width: auto;
   }
 
   .icon-btn {

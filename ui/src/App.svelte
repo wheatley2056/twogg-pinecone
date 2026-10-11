@@ -4,6 +4,7 @@
   import { t } from "./lib/i18n.svelte";
   import { runOf, startGame } from "./lib/runs.svelte";
   import { loadSettings } from "./lib/settings.svelte";
+  import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
   import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType } from "./lib/types";
   import AccountMenu from "./components/AccountMenu.svelte";
   import Discover from "./components/Discover.svelte";
@@ -16,8 +17,11 @@
   import ProfileIcon from "./components/ProfileIcon.svelte";
   import ProfileView from "./components/ProfileView.svelte";
   import Settings from "./components/Settings.svelte";
+  import SyncPacks from "./components/SyncPacks.svelte";
+  import Skins from "./components/Skins.svelte";
+  import Screenshots from "./components/Screenshots.svelte";
 
-  type View = "home" | "library" | "discover" | "profile" | "settings";
+  type View = "home" | "library" | "discover" | "syncpacks" | "skins" | "screenshots" | "profile" | "settings";
 
   let info = $state<AppInfo | null>(null);
   let profiles = $state<Profile[]>([]);
@@ -86,6 +90,7 @@
     await Promise.all([reloadProfiles(), reloadAccounts()]);
     await api.onOpenPack(openExternal).catch(() => {});
     for (const r of await api.takeOpenRequests().catch(() => [])) openExternal(r);
+    if (info?.updatesConfigured) checkUpdates(true);
   });
 
   function openProfile(id: string, tab: "content" | "log" = "content") {
@@ -114,6 +119,9 @@
     ["home", "home", () => t("nav.home")],
     ["library", "library", () => t("nav.library")],
     ["discover", "discover", () => t("nav.discover")],
+    ["syncpacks", "layers", () => t("nav.syncpacks")],
+    ["skins", "shirt", () => t("nav.skins")],
+    ["screenshots", "image", () => t("nav.screenshots")],
   ];
 </script>
 
@@ -149,6 +157,20 @@
     {#if loadError}
       <p class="error">{loadError}</p>
     {/if}
+    {#if updates.info && !updates.dismissed && view !== "settings"}
+      <div class="update-banner">
+        <span>{t("appUpdate.available", { version: updates.info.version })}</span>
+        {#if updates.progress !== null}
+          <progress max="1" value={updates.progress}></progress>
+          <span class="muted">{updates.installing ? t("appUpdate.installing") : t("appUpdate.downloading")}</span>
+        {:else}
+          <button class="primary" onclick={installUpdate}>{t("appUpdate.install")}</button>
+          <button class="ghost" onclick={() => (view = "settings")}>{t("appUpdate.details")}</button>
+          <button class="ghost" onclick={() => (updates.dismissed = true)}>{t("appUpdate.later")}</button>
+        {/if}
+        {#if updates.error}<span class="error-text">{updates.error}</span>{/if}
+      </div>
+    {/if}
     {#if view === "home"}
       {#if profiles.length === 0}
         <div class="welcome">
@@ -181,6 +203,12 @@
           onPackInstalled={onImported}
         />
       {/key}
+    {:else if view === "screenshots"}
+      <Screenshots {profiles} />
+    {:else if view === "skins"}
+      <Skins {accounts} />
+    {:else if view === "syncpacks"}
+      <SyncPacks {profiles} />
     {:else if view === "profile" && selected}
       {#key selected.id}
         <ProfileView
@@ -191,6 +219,7 @@
           onChanged={onGameExit}
           onDeleted={reloadProfiles}
           onAddContent={(kind) => discover(selected.id, kind)}
+          onCreated={onImported}
         />
       {/key}
     {:else if view === "settings"}
@@ -316,6 +345,26 @@
     flex-direction: column;
     gap: 12px;
     overflow: hidden;
+  }
+
+  .update-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    font-size: 13px;
+  }
+
+  .update-banner progress {
+    width: 160px;
+  }
+
+  .error-text {
+    color: var(--danger);
   }
 
   .welcome {

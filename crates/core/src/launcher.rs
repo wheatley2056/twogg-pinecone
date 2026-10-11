@@ -18,12 +18,16 @@ use crate::paths::Paths;
 use crate::profiles::{Profile, ProfileStore};
 use crate::servers::{ServerAddress, last_server_in_log};
 use crate::settings::SettingsStore;
+use crate::skins::SkinLibrary;
 use crate::stats::{ProfileStats, StatsStore, now_secs};
+use crate::syncpacks::SyncManager;
 
 pub const DEFAULT_MEMORY_MB: u32 = 4096;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Stage {
+    /// Eingeschaltete Sync-Packs abgleichen.
+    Sync,
     Loader,
     Version,
     Java,
@@ -51,15 +55,26 @@ pub struct Launcher {
     settings: SettingsStore,
     content: ContentManager,
     packs: PackManager,
+    sync: SyncManager,
+    skins: SkinLibrary,
 }
 
 impl Launcher {
     pub fn new(paths: Paths, downloader: Downloader) -> Result<Self> {
-        let installer = Installer::new(paths.clone(), downloader.clone());
-        let modrinth = Modrinth::new()?;
         let curseforge = curseforge::api_key_from_env()
             .map(CurseForge::new)
             .transpose()?;
+        Self::with_services(paths, downloader, Modrinth::new()?, curseforge)
+    }
+
+    /// Mit eigenen API-Clients (z. B. gegen einen Mock-Server in Tests).
+    pub fn with_services(
+        paths: Paths,
+        downloader: Downloader,
+        modrinth: Modrinth,
+        curseforge: Option<CurseForge>,
+    ) -> Result<Self> {
+        let installer = Installer::new(paths.clone(), downloader.clone());
         let content = ContentManager::new(paths.clone(), downloader.clone(), modrinth.clone())
             .with_curseforge(curseforge.clone());
         let packs = PackManager::new(
@@ -69,13 +84,20 @@ impl Launcher {
             modrinth,
             ProfileStore::new(paths.clone()),
         )
-        .with_curseforge(curseforge);
+        .with_curseforge(curseforge)
+        .with_twogg(crate::twogg::TwoggClient::new().ok());
         let java = JavaManager::new(
             paths.clone(),
             downloader.clone(),
             installer.environment().clone(),
         );
         Ok(Self {
+            skins: SkinLibrary::new(&paths)?,
+            sync: SyncManager::new(
+                paths.clone(),
+                content.clone(),
+                ProfileStore::new(paths.clone()),
+            ),
             content,
             packs,
             loaders: LoaderInstaller::new(paths.clone(), downloader),
@@ -94,6 +116,14 @@ impl Launcher {
 
     pub fn packs(&self) -> &PackManager {
         &self.packs
+    }
+
+    pub fn syncpacks(&self) -> &SyncManager {
+        &self.sync
+    }
+
+    pub fn skins(&self) -> &SkinLibrary {
+        &self.skins
     }
 
     pub fn paths(&self) -> &Paths {
@@ -165,6 +195,18 @@ impl Launcher {
         quick_play: Option<ServerAddress>,
         on_event: &mut (dyn FnMut(PrepareEvent) + Send),
     ) -> Result<LaunchCommand> {
+        // Sync-Packs abgleichen; ohne Netz oder bei Fehlern mit dem bisherigen Stand starten.
+        if !offline && !profile.id.is_empty() {
+            on_event(PrepareEvent::Stage(Stage::Sync));
+            match self.sync.sync(profile).await {
+                Ok(r) => {
+                    for w in r.warnings {
+                        tracing::warn!("Sync-Pack: {w}");
+                    }
+                }
+                Err(e) => tracing::warn!("Sync-Packs nicht abgeglichen: {e}"),
+            }
+        }
         let id = match (&profile.loader, offline) {
             (Some(spec), false) => {
                 on_event(PrepareEvent::Stage(Stage::Loader));

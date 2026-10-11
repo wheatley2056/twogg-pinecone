@@ -53,11 +53,63 @@ pub async fn pack_install_modrinth(
         .download_modrinth(&project, version.as_deref())
         .await
         .map_err(err)?;
-    Ok(packs
-        .import(&archive, source, None)
+    let result = packs.import(&archive, source, None).await.map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &result.profile).await;
+    Ok(result.into())
+}
+
+#[tauri::command]
+pub async fn pack_install_twogg(
+    state: State<'_, AppState>,
+    pack: String,
+    version: Option<String>,
+) -> CmdResult<ImportDto> {
+    let packs = state.launcher.packs();
+    let (archive, source) = packs
+        .download_twogg(&pack, version.as_deref())
         .await
-        .map_err(err)?
-        .into())
+        .map_err(err)?;
+    let result = packs.import(&archive, source, None).await.map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &result.profile).await;
+    Ok(result.into())
+}
+
+/// TwoGG-Modpacks vom Pinecone-Server (öffentliche Liste).
+#[tauri::command]
+pub async fn twogg_packs(state: State<'_, AppState>) -> CmdResult<Vec<pinecone_core::twogg::Pack>> {
+    let client = state
+        .launcher
+        .packs()
+        .twogg()
+        .ok_or("TwoGG-Server ist nicht eingerichtet")?;
+    client.packs().await.map_err(err)
+}
+
+#[tauri::command]
+pub async fn twogg_pack(
+    state: State<'_, AppState>,
+    id: String,
+) -> CmdResult<pinecone_core::twogg::Pack> {
+    let client = state
+        .launcher
+        .packs()
+        .twogg()
+        .ok_or("TwoGG-Server ist nicht eingerichtet")?;
+    client.pack(&id).await.map_err(err)
+}
+
+/// Neuigkeiten der TwoGG-Community für die Startseite.
+#[tauri::command]
+pub async fn twogg_news(
+    state: State<'_, AppState>,
+    limit: Option<u32>,
+) -> CmdResult<Vec<pinecone_core::twogg::NewsItem>> {
+    let client = state
+        .launcher
+        .packs()
+        .twogg()
+        .ok_or("TwoGG-Server ist nicht eingerichtet")?;
+    client.news(limit.unwrap_or(5)).await.map_err(err)
 }
 
 #[tauri::command]
@@ -71,11 +123,9 @@ pub async fn pack_install_curseforge(
         .download_curseforge(project, file, None)
         .await
         .map_err(err)?;
-    Ok(packs
-        .import(&archive, source, None)
-        .await
-        .map_err(err)?
-        .into())
+    let result = packs.import(&archive, source, None).await.map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &result.profile).await;
+    Ok(result.into())
 }
 
 #[tauri::command]
@@ -96,6 +146,7 @@ fn source_name(source: &PackSource) -> &'static str {
     match source {
         PackSource::Modrinth { .. } => "modrinth",
         PackSource::Curseforge { .. } => "curseforge",
+        PackSource::Twogg { .. } => "twogg",
         PackSource::File => "file",
     }
 }
@@ -150,6 +201,10 @@ pub async fn pack_preview_link(state: State<'_, AppState>, link: String) -> CmdR
             .download_curseforge(project, file, None)
             .await
             .map_err(err)?,
+        ShareLink::Twogg { pack, version } => packs
+            .download_twogg(&pack, version.as_deref())
+            .await
+            .map_err(err)?,
         ShareLink::Code(_) => {
             return Err("Share-Codes funktionieren erst mit dem Share-Dienst. Bitte das Pack als Datei schicken lassen.".into());
         }
@@ -170,13 +225,14 @@ pub async fn pack_import_pending(
         .remove(&token)
         .ok_or("Keine Vorschau zu diesem Modpack. Bitte erneut öffnen.")?;
     let name = name.map(|n| n.trim().to_string()).filter(|n| !n.is_empty());
-    Ok(state
+    let result = state
         .launcher
         .packs()
         .import(&archive, source, name)
         .await
-        .map_err(err)?
-        .into())
+        .map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &result.profile).await;
+    Ok(result.into())
 }
 
 /// Vorschau geschlossen, ohne zu installieren.
@@ -282,6 +338,23 @@ pub async fn pack_plan_update(
             };
             packs
                 .download_curseforge(*project_id, Some(target), None)
+                .await
+                .map_err(err)?
+        }
+        (None, PackSource::Twogg { pack_id, .. }) => {
+            let target = match version {
+                Some(v) => v,
+                None => {
+                    packs
+                        .check_update(&profile)
+                        .await
+                        .map_err(err)?
+                        .ok_or("Das Modpack ist aktuell")?
+                        .version_id
+                }
+            };
+            packs
+                .download_twogg(pack_id, Some(&target))
                 .await
                 .map_err(err)?
         }

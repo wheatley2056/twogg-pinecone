@@ -7,6 +7,7 @@ export interface AppInfo {
   version: string;
   dataDir: string;
   msaConfigured: boolean;
+  updatesConfigured: boolean;
   curseforgeConfigured: boolean;
 }
 
@@ -70,7 +71,7 @@ export interface JavaInstallation {
   managed: boolean;
 }
 
-export type Stage = "loader" | "version" | "java" | "assets";
+export type Stage = "sync" | "loader" | "version" | "java" | "assets";
 
 export type LaunchEvent =
   | { type: "stage"; stage: Stage }
@@ -120,7 +121,7 @@ export interface ServerStatus {
 }
 
 export type ThemeMode = "system" | "light" | "dark";
-export type WidgetId = "recent" | "packs" | "servers" | "screenshots" | "playtime";
+export type WidgetId = "recent" | "news" | "packs" | "servers" | "screenshots" | "playtime";
 
 export interface Settings {
   theme: { mode: ThemeMode; accent: string; backgroundDim: number };
@@ -149,6 +150,8 @@ export interface InstalledContent {
   source: ContentSource;
   iconUrl: string | null;
   fromPack: boolean;
+  /** ID des Sync-Packs, aus dem der Inhalt stammt. */
+  sync: string | null;
   size: number;
   unidentified: boolean;
 }
@@ -223,7 +226,7 @@ export interface SearchArgs {
 export interface PackInfo {
   name: string;
   version: string;
-  source: "modrinth" | "curseforge" | "file";
+  source: "modrinth" | "curseforge" | "twogg" | "file";
 }
 
 export interface PackUpdate {
@@ -271,7 +274,7 @@ export interface ImportResult {
   missing: ManualDownload[];
 }
 
-export type Platform = "modrinth" | "curseforge";
+export type Platform = "modrinth" | "curseforge" | "twogg";
 
 /** Was beim Export als Datei mitkommt (Mods immer; Welten, Serverliste und Accounts nie). */
 export interface ExportOptions {
@@ -282,6 +285,8 @@ export interface ExportOptions {
   config: boolean;
   /** options.txt und Shader-/OptiFine-Einstellungen. */
   options: boolean;
+  /** Inhalte aus eingeschalteten Sync-Packs. */
+  syncContent: boolean;
 }
 
 export interface PackPreview {
@@ -304,8 +309,148 @@ export interface PackPreview {
 export interface PreviewResult {
   token: string;
   preview: PackPreview;
-  source: "modrinth" | "curseforge" | "file";
+  source: "modrinth" | "curseforge" | "twogg" | "file";
 }
 
 /** Von außen geöffnet (Link, Datei) oder in der Bibliothek gewählt; leerer Link = Eingabefeld. */
 export type OpenRequest = { kind: "file"; path: string } | { kind: "link"; link: string };
+
+export interface MigrationTarget {
+  minecraft: string;
+  /** null = Vanilla. */
+  loader: LoaderKind | null;
+}
+
+export type ItemStatus = "compatible" | "update" | "substitute" | "kept" | "missing";
+export type MissingChoice = "disable" | "drop";
+
+export interface MigrationItem {
+  key: string;
+  name: string;
+  kind: ContentKind;
+  status: ItemStatus;
+  fromVersion: string | null;
+  toVersion: string | null;
+  substitute: string | null;
+}
+
+export interface MigrationPlan {
+  fromMinecraft: string;
+  fromLoader: LoaderSpec | null;
+  minecraft: string;
+  loader: LoaderSpec | null;
+  items: MigrationItem[];
+  packOffer: { name: string; platform: Platform; projectId: string; versionId: string; version: string } | null;
+  worlds: number;
+  downgrade: boolean;
+}
+
+export interface MigrateOptions {
+  target: MigrationTarget;
+  name: string | null;
+  includeWorlds: boolean;
+  missing: Record<string, MissingChoice>;
+}
+
+export type SyncMode = "sync" | "template";
+
+export type SyncEntry =
+  | { type: "modrinth"; projectId: string; kind: ContentKind; name: string }
+  | { type: "curseforge"; projectId: number; kind: ContentKind; name: string }
+  | { type: "file"; path: string; sha1: string };
+
+export interface SyncPack {
+  id: string;
+  name: string;
+  mode: SyncMode;
+  entries: SyncEntry[];
+  /** Standardwerte für options.txt. */
+  options: Record<string, string>;
+  /** loaders: null = Vanilla; leer = alle. */
+  auto: { enabled: boolean; loaders: (LoaderKind | null)[] };
+}
+
+export interface ProfileSyncPack {
+  pack: SyncPack;
+  enabled: boolean;
+}
+
+export interface SyncReport {
+  installed: string[];
+  removed: string[];
+  present: string[];
+  unavailable: string[];
+  warnings: string[];
+}
+
+export type SkinModel = "classic" | "slim";
+
+export interface SavedSkin {
+  id: string;
+  name: string;
+  model: SkinModel;
+  created: number;
+  updated: number;
+}
+
+export interface AccountSkin {
+  name: string;
+  skinUrl: string | null;
+  skinDataUrl: string | null;
+  model: SkinModel;
+  capes: { id: string; alias: string | null; active: boolean; dataUrl: string | null }[];
+}
+
+export interface ScreenshotItem {
+  profileId: string;
+  profileName: string;
+  path: string;
+  modified: number;
+  size: number;
+}
+
+export interface AppUpdate {
+  version: string;
+  currentVersion: string;
+  date: number | null;
+  notes: string | null;
+}
+
+export type UpdateEvent = { type: "progress"; done: number; total: number | null } | { type: "installing" };
+
+export interface TwoggVersion {
+  id: string;
+  version: string;
+  minecraft: string;
+  loader: string | null;
+  loaderVersion: string | null;
+  channel: string;
+  changelogHtml: string;
+  size: number;
+  sha1: string;
+  publishedAt: number;
+}
+
+export interface TwoggPack {
+  id: string;
+  title: string;
+  summary: string;
+  iconUrl: string | null;
+  featured: boolean;
+  updatedAt: number;
+  downloads: number;
+  latest: TwoggVersion | null;
+  descriptionHtml?: string | null;
+  versions?: TwoggVersion[] | null;
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  /** Vom Server aus Markdown erzeugt (ohne rohes HTML). */
+  bodyHtml: string;
+  imageUrl: string | null;
+  link: string | null;
+  pinned: boolean;
+  publishedAt: number;
+}

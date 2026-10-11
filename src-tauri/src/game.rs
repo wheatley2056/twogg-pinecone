@@ -43,6 +43,7 @@ impl Drop for RunningGuard {
 
 fn stage_name(stage: Stage) -> &'static str {
     match stage {
+        Stage::Sync => "sync",
         Stage::Loader => "loader",
         Stage::Version => "version",
         Stage::Java => "java",

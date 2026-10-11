@@ -6,6 +6,7 @@
   import type { Category, ContentKind, ImportResult, ModrinthVersion, Platform, Profile, ProjectType, SearchHit, SortIndex, VersionInfo } from "../lib/types";
   import Icon from "./Icon.svelte";
   import ProfileIcon from "./ProfileIcon.svelte";
+  import TwoggPacks from "./TwoggPacks.svelte";
 
   interface Props {
     profiles: Profile[];
@@ -86,7 +87,8 @@
   let request = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
-    void source;
+    // TwoGG-Packs lädt die eigene Ansicht.
+    if (source === "twogg") return;
     const args = {
       query,
       projectType: type,
@@ -234,7 +236,7 @@
 <section class="discover">
   <header>
     <h1>{t("discover.title")}</h1>
-    {#if type === "modpack"}
+    {#if type === "modpack" || source === "twogg"}
       <span class="muted">{t("pack.newProfileHint")}</span>
     {:else}
     <label class="target">
@@ -253,6 +255,7 @@
   </header>
 
   <div class="tabs-row">
+  {#if source !== "twogg"}
   <div class="types" role="tablist">
     {#each TYPES as ty (ty)}
       <button role="tab" aria-selected={type === ty} class:active={type === ty} onclick={() => setType(ty)}>
@@ -260,7 +263,11 @@
       </button>
     {/each}
   </div>
+  {:else}
+    <div></div>
+  {/if}
   <div class="sources" role="radiogroup" aria-label={t("discover.source")}>
+    <button role="radio" aria-checked={source === "twogg"} class:selected={source === "twogg"} onclick={() => setSource("twogg")}>TwoGG</button>
     <button role="radio" aria-checked={source === "modrinth"} class:selected={source === "modrinth"} onclick={() => setSource("modrinth")}>Modrinth</button>
     <button
       role="radio"
@@ -273,6 +280,9 @@
   </div>
   </div>
 
+  {#if source === "twogg"}
+    <TwoggPacks onInstalled={onPackInstalled} />
+  {:else}
   <div class="layout">
     <aside class="filters">
       <label class="search">
@@ -409,6 +419,7 @@
       {/if}
     </div>
   </div>
+  {/if}
 </section>
 
 <style>

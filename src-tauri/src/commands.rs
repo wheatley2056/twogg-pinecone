@@ -26,6 +26,7 @@ pub fn app_info(state: State<'_, AppState>) -> AppInfo {
         data_dir: state.launcher.paths().root().display().to_string(),
         msa_configured: state.msa.is_some(),
         curseforge_configured: state.launcher.content().curseforge().is_some(),
+        updates_configured: crate::update::configured(),
     }
 }
 
@@ -149,6 +150,7 @@ pub async fn create_profile(
     let mut profile = Profile::new("", "");
     apply_input(&state, &mut profile, input).await?;
     let profile = state.launcher.profiles().create(profile).map_err(err)?;
+    crate::syncpacks::apply_auto(&state, &profile).await;
     Ok(ProfileDto::new(profile, false))
 }
 
@@ -313,4 +315,33 @@ pub fn kind_label(kind: AccountKind) -> &'static str {
         AccountKind::Microsoft => "Microsoft",
         AccountKind::Offline => "offline",
     }
+}
+
+/// Diagnose-ZIP (Logs, Crash-Reports, Konfiguration ohne Account-Daten) schreiben.
+#[tauri::command]
+pub async fn diagnostics_export(
+    state: State<'_, AppState>,
+    path: String,
+    profile_id: Option<String>,
+) -> CmdResult<pinecone_core::diagnostics::DiagnosticsReport> {
+    let logs = crate::logs_dir(state.launcher.paths());
+    let only = profile_id.map(|id| vec![id]);
+    pinecone_core::diagnostics::export(
+        &state.launcher,
+        std::path::Path::new(&path),
+        only.as_deref(),
+        Some(&logs),
+    )
+    .await
+    .map_err(err)
+}
+
+/// Ordner mit den Logdateien des Launchers öffnen.
+#[tauri::command]
+pub fn open_logs_folder(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
+    let dir = crate::logs_dir(state.launcher.paths());
+    std::fs::create_dir_all(&dir).map_err(err)?;
+    app.opener()
+        .open_path(dir.display().to_string(), None::<&str>)
+        .map_err(err)
 }

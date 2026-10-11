@@ -79,7 +79,14 @@ pub struct Widget {
     pub visible: bool,
 }
 
-pub const WIDGETS: [&str; 5] = ["recent", "packs", "servers", "screenshots", "playtime"];
+pub const WIDGETS: [&str; 6] = [
+    "recent",
+    "news",
+    "packs",
+    "servers",
+    "screenshots",
+    "playtime",
+];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -295,7 +302,14 @@ mod tests {
         let ids: Vec<&str> = s.widgets.iter().map(|w| w.id.as_str()).collect();
         assert_eq!(
             ids,
-            ["servers", "recent", "packs", "screenshots", "playtime"]
+            [
+                "servers",
+                "recent",
+                "news",
+                "packs",
+                "screenshots",
+                "playtime"
+            ]
         );
         assert!(!s.widgets[0].visible);
 

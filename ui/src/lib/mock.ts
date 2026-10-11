@@ -2,7 +2,7 @@
 // damit sich die Oberfläche ohne App-Fenster entwickeln und prüfen lässt.
 
 import { api } from "./api";
-import type { Account, InstalledContent, LaunchEvent, Profile, ProfileInput, SearchArgs, Settings, UpdateInfo } from "./types";
+import type { Account, InstalledContent, LaunchEvent, Profile, ProfileInput, SavedSkin, SearchArgs, Settings, SyncMode, SyncPack, UpdateInfo } from "./types";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -17,7 +17,7 @@ let settings: Settings = {
   theme: { mode: "system", accent: "#4caf50", backgroundDim: 60 },
   background: null,
   backgroundPath: null,
-  widgets: (["recent", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
+  widgets: (["recent", "news", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
   language: "de",
 };
 const hour = 3600;
@@ -29,19 +29,85 @@ const stats: Record<string, { playtimeSecs: number; sessions: number; lastPlayed
 const SODIUM_ICON = "https://cdn.modrinth.com/data/AANobbMI/295862f4724dc3f78df3447ad6072b2dcd3ef0c9_96.webp";
 let content: InstalledContent[] = [
   { key: "mods/fabric-api.jar", fileName: "fabric-api.jar", kind: "mod", enabled: true, name: "Fabric API", version: "0.162.0+26.3",
-    source: { type: "modrinth", project_id: "P7dR8mSH", version_id: "a" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+    source: { type: "modrinth", project_id: "P7dR8mSH", version_id: "a" }, iconUrl: null, fromPack: false, sync: null, size: 1, unidentified: false },
   { key: "mods/sodium.jar", fileName: "sodium.jar", kind: "mod", enabled: true, name: "Sodium", version: "mc26.3-0.9.2-fabric",
-    source: { type: "modrinth", project_id: "AANobbMI", version_id: "b" }, iconUrl: SODIUM_ICON, fromPack: false, size: 1, unidentified: false },
+    source: { type: "modrinth", project_id: "AANobbMI", version_id: "b" }, iconUrl: SODIUM_ICON, fromPack: false, sync: "basics", size: 1, unidentified: false },
   { key: "mods/eigene-mod.jar", fileName: "eigene-mod.jar.disabled", kind: "mod", enabled: false, name: "eigene-mod", version: null,
-    source: { type: "local" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+    source: { type: "local" }, iconUrl: null, fromPack: false, sync: null, size: 1, unidentified: false },
   { key: "shaderpacks/complementary.zip", fileName: "complementary.zip", kind: "shader", enabled: true, name: "Complementary Shaders - Reimagined",
-    version: "r5.9.3", source: { type: "modrinth", project_id: "HVnmMxH1", version_id: "c" }, iconUrl: null, fromPack: false, size: 1, unidentified: false },
+    version: "r5.9.3", source: { type: "modrinth", project_id: "HVnmMxH1", version_id: "c" }, iconUrl: null, fromPack: false, sync: null, size: 1, unidentified: false },
 ];
 const update: UpdateInfo = { key: "mods/sodium.jar", name: "Sodium", current: "mc26.3-0.9.2-fabric", latest: "mc26.3-0.9.4-fabric",
   projectId: "AANobbMI", versionId: "d", kind: "mod" };
 
 // Kleines grünes Quadrat als Server-Icon (PNG, 2×2).
 const ICON = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGPwWR/gsz6AAUIBACQyBS0TyzOPAAAAAElFTkSuQmCC";
+
+let syncPacks: SyncPack[] = [
+  {
+    id: "basics", name: "Basics", mode: "sync",
+    entries: [
+      { type: "modrinth", projectId: "w7ThoJFB", kind: "mod", name: "Zoomify" },
+      { type: "modrinth", projectId: "AANobbMI", kind: "mod", name: "Sodium" },
+      { type: "modrinth", projectId: "50dA9Sha", kind: "resourcepack", name: "Fresh Animations" },
+      { type: "file", path: "config/zoomify.json", sha1: "0" },
+    ],
+    options: { fov: "0.25" }, auto: { enabled: true, loaders: ["fabric", "quilt"] },
+  },
+  { id: "shader-setup", name: "Shader-Setup", mode: "template", entries: [{ type: "modrinth", projectId: "HVnmMxH1", kind: "shader", name: "Complementary Shaders" }], options: {}, auto: { enabled: false, loaders: [] } },
+];
+const syncEnabled = new Set(["fabric-test/basics"]);
+
+// Einfarbiger 64×32-Platzhalter-Skin (Kopf blau, Gesicht hautfarben), als PNG erzeugt.
+const STEVE = (() => {
+  const c = document.createElement("canvas");
+  c.width = 64;
+  c.height = 32;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#3b6fb6"; g.fillRect(0, 16, 64, 16);
+  g.fillStyle = "#c69c7a"; g.fillRect(0, 0, 32, 16);
+  g.fillStyle = "#4a3222"; g.fillRect(8, 8, 8, 2); g.fillRect(0, 0, 32, 8);
+  g.fillStyle = "#ffffff"; g.fillRect(9, 12, 2, 1); g.fillRect(13, 12, 2, 1);
+  return c.toDataURL("image/png");
+})();
+// Beispiel-Screenshots: farbige Verläufe als data:-URL (im Browser ohne Tauri).
+function shotImage(hue: number) {
+  const c = document.createElement("canvas");
+  c.width = 480;
+  c.height = 270;
+  const g = c.getContext("2d")!;
+  const grad = g.createLinearGradient(0, 0, 0, 270);
+  grad.addColorStop(0, `hsl(${hue} 70% 70%)`);
+  grad.addColorStop(0.6, `hsl(${hue + 20} 50% 45%)`);
+  grad.addColorStop(1, "hsl(110 40% 30%)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 480, 270);
+  g.fillStyle = "hsl(110 45% 28%)";
+  for (let x = 0; x < 480; x += 24) g.fillRect(x, 190 + ((x * 7) % 30), 24, 90);
+  return c.toDataURL("image/png");
+}
+let mockShots = [200, 30, 260, 180, 320, 90].map((hue, i) => ({
+  profileId: i % 2 ? "retro" : "fabric-test",
+  profileName: i % 2 ? "Retro" : "Fabric Test",
+  path: shotImage(hue),
+  modified: now - i * 7000 - (i > 3 ? 86400 : 0),
+  size: 1000,
+}));
+const TWOGG_PACK = {
+  id: "horizons-unbound", title: "Horizons Unbound", summary: "Das Modpack für unseren Survival-Server", iconUrl: null, featured: true,
+  updatedAt: now - 86400, downloads: 128,
+  latest: { id: "v2", version: "2.0.0", minecraft: "1.20.1", loader: "fabric", loaderVersion: "0.19.5", channel: "release",
+    changelogHtml: "<ul><li>Neue Farmwelt</li><li>Create 6</li></ul>", size: 2_400_000, sha1: "0", publishedAt: now - 86400 },
+};
+let mockSkins: SavedSkin[] = [
+  { id: "1", name: "Tobi", model: "classic", created: now, updated: now },
+  { id: "2", name: "Winter", model: "slim", created: now - 100, updated: now - 100 },
+];
+function addMockSkin(name: string, model: "classic" | "slim" = "classic") {
+  const s = { id: String(Date.now()), name, model, created: now, updated: now };
+  mockSkins = [s, ...mockSkins];
+  return s;
+}
 
 function preview(token: string, source: "modrinth" | "curseforge" | "file") {
   return {
@@ -60,7 +126,7 @@ function toProfile(id: string, input: ProfileInput): Profile {
 }
 
 Object.assign(api, {
-  appInfo: async () => ({ version: "0.1.0", dataDir: "/home/beispiel/.local/share/twogg-pinecone", msaConfigured: false, curseforgeConfigured: true }),
+  appInfo: async () => ({ version: "0.1.0", dataDir: "/home/beispiel/.local/share/twogg-pinecone", msaConfigured: false, curseforgeConfigured: true, updatesConfigured: true }),
   versions: async (snapshots: boolean) => [
     ...(snapshots ? [{ id: "26.4-snapshot-3", kind: "snapshot", releaseTime: "2026-10-08" }] : []),
     ...["26.3", "26.2", "26.1.2", "1.21.1", "1.20.1", "1.12.2", "1.8.9"].map((id) => ({ id, kind: "release", releaseTime: "" })),
@@ -194,6 +260,98 @@ Object.assign(api, {
   packPreviewCancel: async () => {},
   packImportPending: async () => (await wait(800), { profile: profiles[0], missing: [] }),
   packShareLink: async (id: string) => (id === "fabric-test" ? "pinecone://modrinth/1KVo5zza/ssWn7YI0" : null),
+  migratePlan: async (id: string, target: { minecraft: string; loader: "fabric" | "quilt" | null }) => {
+    await wait(700);
+    const p = profiles.find((x) => x.id === id)!;
+    if (p.minecraft === target.minecraft && (p.loader?.kind ?? null) === target.loader) throw "Das Profil hat schon diese Version und diesen Loader";
+    const mods = target.loader !== null;
+    return {
+      fromMinecraft: p.minecraft, fromLoader: p.loader, minecraft: target.minecraft,
+      loader: target.loader ? { kind: target.loader, version: target.loader === "fabric" ? "0.19.5" : "0.30.1" } : null,
+      items: [
+        { key: "mods/fabric-api.jar", name: "Fabric API", kind: "mod", status: mods ? "update" : "missing", fromVersion: "0.162.0+26.3", toVersion: mods ? "0.116.17+1.21.1" : null, substitute: null },
+        { key: "mods/sodium.jar", name: "Sodium", kind: "mod", status: mods ? "update" : "missing", fromVersion: "mc26.3-0.9.2-fabric", toVersion: mods ? "mc1.21.1-0.8.13-fabric" : null, substitute: null },
+        { key: "mods/eigene-mod.jar", name: "eigene-mod", kind: "mod", status: "missing", fromVersion: null, toVersion: null, substitute: null },
+        { key: "mods/qfapi.jar", name: "Quilted Fabric API", kind: "mod", status: mods ? "substitute" : "missing", fromVersion: "11.0.0", toVersion: null, substitute: "Fabric API" },
+        { key: "shaderpacks/complementary.zip", name: "Complementary Shaders - Reimagined", kind: "shader", status: "compatible", fromVersion: "r5.9.3", toVersion: null, substitute: null },
+        { key: "resourcepacks/eigenes.zip", name: "eigenes", kind: "resourcepack", status: "kept", fromVersion: null, toVersion: null, substitute: null },
+      ],
+      packOffer: id === "fabric-test" ? { name: "Fabulously Optimized", platform: "modrinth", projectId: "1KVo5zza", versionId: "N276l2ON", version: "6.5.0" } : null,
+      worlds: 2,
+      downgrade: target.minecraft < p.minecraft,
+    };
+  },
+  migrateApply: async (id: string, options: { target: { minecraft: string } }) => {
+    await wait(1200);
+    const p = profiles.find((x) => x.id === id)!;
+    const copy = { ...p, id: `${id}-neu`, name: `${p.name} (${options.target.minecraft})`, minecraft: options.target.minecraft };
+    profiles = [...profiles, copy];
+    return { profile: copy, warnings: [] };
+  },
+  syncpackList: async () => syncPacks,
+  syncpackCreate: async (name: string, mode: SyncMode) => {
+    const pack: SyncPack = { id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), name, mode, entries: [], options: {}, auto: { enabled: false, loaders: [] } };
+    syncPacks = [...syncPacks, pack];
+    return pack;
+  },
+  syncpackSave: async (pack: SyncPack) => ((syncPacks = syncPacks.map((p) => (p.id === pack.id ? pack : p))), pack),
+  syncpackDelete: async (id: string) => void (syncPacks = syncPacks.filter((p) => p.id !== id)),
+  syncpackAddFile: async (id: string, _path: string, target: string) => {
+    const pack = syncPacks.find((p) => p.id === id)!;
+    pack.entries = [...pack.entries, { type: "file", path: target, sha1: "0" }];
+    return pack;
+  },
+  syncpackAddFromProfile: async (id: string) => syncPacks.find((p) => p.id === id)!,
+  syncpackForProfile: async (profileId: string) => syncPacks.map((pack) => ({ pack, enabled: syncEnabled.has(`${profileId}/${pack.id}`) })),
+  syncpackSetEnabled: async (profileId: string, id: string, enabled: boolean) => {
+    await wait(500);
+    const template = syncPacks.find((p) => p.id === id)?.mode === "template";
+    if (enabled && !template) syncEnabled.add(`${profileId}/${id}`);
+    else syncEnabled.delete(`${profileId}/${id}`);
+    return enabled
+      ? { installed: ["Zoomify", "Fresh Animations"], removed: [], present: ["Sodium"], unavailable: [], warnings: [] }
+      : { installed: [], removed: ["Zoomify", "Fresh Animations"], present: [], unavailable: [], warnings: [] };
+  },
+  syncpackSync: async () => ({ installed: [], removed: [], present: [], unavailable: [], warnings: [] }),
+  updateCheck: async () => (await wait(500), { version: "0.2.0", currentVersion: "0.1.0", date: now - 3600, notes: "- Skins und Screenshots\n- Sync-Packs\n- Versionswechsel" }),
+  updateInstall: async (onEvent: (e: { type: "progress"; done: number; total: number | null } | { type: "installing" }) => void) => {
+    for (let done = 0; done <= 25_000_000; done += 2_500_000) {
+      onEvent({ type: "progress", done, total: 25_000_000 });
+      await wait(120);
+    }
+    onEvent({ type: "installing" });
+    await wait(800);
+    throw "Mock-Modus: kein echtes Update";
+  },
+  diagnosticsExport: async (path: string) => (await wait(600), { path, files: 12, bytes: 48_000 }),
+  openLogsFolder: async () => {},
+  screenshotsList: async () => mockShots,
+  screenshotThumb: async (path: string) => path,
+  screenshotDelete: async (path: string) => void (mockShots = mockShots.filter((s) => s.path !== path)),
+  screenshotReveal: async () => {},
+  screenshotSaveAs: async () => {},
+  onScreenshotsChanged: async () => () => {},
+  twoggPacks: async () => (await wait(300), [TWOGG_PACK]),
+  twoggPack: async () => (await wait(300), { ...TWOGG_PACK, descriptionHtml: "<h2>Willkommen</h2><p>Alles für <strong>Horizons Unbound</strong>: Create, Farmwelt und mehr.</p>", versions: [TWOGG_PACK.latest, { ...TWOGG_PACK.latest, id: "v1", version: "1.9.0", channel: "release", publishedAt: now - 30 * 86400 }] }),
+  twoggNews: async () => (await wait(300), [
+    { id: "n1", title: "Pinecone ist da!", bodyHtml: "<p>Der neue <strong>TwoGG-Launcher</strong> ist da. Modpacks, Skins und mehr an einem Ort.</p>", imageUrl: null, link: "https://twogg.de", pinned: true, publishedAt: now - 3600 },
+    { id: "n2", title: "Farmwelt-Reset am Sonntag", bodyHtml: "<p>Wie jede Woche um 4 Uhr.</p>", imageUrl: null, link: null, pinned: false, publishedAt: now - 3 * 86400 },
+  ]),
+  packInstallTwogg: async () => (await wait(800), { profile: profiles[0], missing: [] }),
+  skinsList: async () => mockSkins,
+  skinData: async () => STEVE,
+  skinImportFile: async () => addMockSkin("Datei-Skin"),
+  skinImportPlayer: async (player: string) => (await wait(500), addMockSkin(player)),
+  skinSave: async (id: string | null, name: string, model: "classic" | "slim") =>
+    id ? Object.assign(mockSkins.find((s) => s.id === id)!, { name, model }) : addMockSkin(name, model),
+  skinRename: async (id: string, name: string) => Object.assign(mockSkins.find((s) => s.id === id)!, { name }),
+  skinSetModel: async (id: string, model: "classic" | "slim") => Object.assign(mockSkins.find((s) => s.id === id)!, { model }),
+  skinDelete: async (id: string) => void (mockSkins = mockSkins.filter((s) => s.id !== id)),
+  skinExport: async () => {},
+  skinAccount: async () => { throw "Skins und Capes lassen sich nur mit einem Microsoft-Account ändern."; },
+  skinApply: async () => { throw "Microsoft-Login ist nicht eingerichtet"; },
+  skinSetCape: async () => { throw "Microsoft-Login ist nicht eingerichtet"; },
+  skinImportAccount: async () => addMockSkin("Account"),
   takeOpenRequests: async () => [],
   onOpenPack: async () => () => {},
   packInstallModrinth: async () => (await wait(800), { profile: profiles[0], missing: [] }),

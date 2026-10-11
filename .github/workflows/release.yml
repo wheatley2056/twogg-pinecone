@@ -1,0 +1,70 @@
+name: Release
+
+# Ein Tag wie v0.2.0 baut Installer für Windows (NSIS, MSI) und Linux (AppImage, deb, rpm),
+# signiert die Update-Pakete und legt ein Release als Entwurf an, inklusive latest.json für
+# den eingebauten Updater. Den Entwurf prüfen und dann veröffentlichen.
+#
+# Benötigte Secrets:  TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+# Optionale Secrets:  PINECONE_MSA_CLIENT_ID, PINECONE_CURSEFORGE_API_KEY
+# Variable:           PINECONE_UPDATE_PUBKEY (öffentlicher Schlüssel, Inhalt der .pub-Datei)
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Installer (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version des Tags prüfen
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          conf=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          pkg=$(node -p "require('./package.json').version")
+          cargo=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          echo "Tag $tag, tauri.conf $conf, package.json $pkg, Cargo $cargo"
+          [ "$tag" = "$conf" ] && [ "$tag" = "$pkg" ] && [ "$tag" = "$cargo" ] || {
+            echo "::error::Versionen passen nicht zum Tag (siehe RELEASING.md)"; exit 1; }
+
+      - name: Linux-Abhängigkeiten
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Werden beim Bauen einkompiliert (siehe README).
+          PINECONE_MSA_CLIENT_ID: ${{ secrets.PINECONE_MSA_CLIENT_ID }}
+          PINECONE_CURSEFORGE_API_KEY: ${{ secrets.PINECONE_CURSEFORGE_API_KEY }}
+          PINECONE_UPDATE_PUBKEY: ${{ vars.PINECONE_UPDATE_PUBKEY }}
+          PINECONE_UPDATE_URL: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: TwoGG Pinecone ${{ github.ref_name }}
+          releaseBody: Änderungen siehe Commits. Windows-Installer (.exe/.msi), Linux (AppImage, .deb, .rpm).
+          releaseDraft: true
+          includeUpdaterJson: true
+          args: --config src-tauri/tauri.release.conf.json

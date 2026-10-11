@@ -14,6 +14,7 @@ use pinecone_core::launch;
 use pinecone_core::launcher::{Launcher, PrepareEvent, Stage};
 use pinecone_core::loader::{LoaderKind, LoaderSpec};
 use pinecone_core::manifest::VersionJson;
+use pinecone_core::migrate::{ItemStatus, MigrateOptions, MigrationTarget, MissingChoice};
 use pinecone_core::modpack::{ExportOptions, PackSource, Resolution};
 use pinecone_core::modrinth::{ProjectType, SearchQuery};
 use pinecone_core::msa::{self, MsaClient};
@@ -21,7 +22,9 @@ use pinecone_core::paths::Paths;
 use pinecone_core::profiles::Profile;
 use pinecone_core::servers::{ServerAddress, ping as server_ping, read_servers_dat};
 use pinecone_core::share::ShareLink;
+use pinecone_core::skins::SkinModel;
 use pinecone_core::stats::now_secs;
+use pinecone_core::syncpacks::{SyncEntry, SyncMode, SyncPack, SyncReport};
 use std::collections::HashMap;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -106,6 +109,19 @@ enum Command {
     /// Profile (Instanzen) verwalten.
     #[command(subcommand)]
     Profile(ProfileCommand),
+    /// Sync-Packs und Vorlagen: Inhalte, die man Profilen zuschaltet.
+    #[command(subcommand)]
+    Sync(SyncCommand),
+    /// Skin-Bibliothek, Skin hochladen, Capes.
+    #[command(subcommand)]
+    Skin(SkinCommand),
+    /// Diagnose-ZIP für die Fehlersuche (Logs, Crash-Reports, Konfiguration; ohne Account-Daten).
+    Diag {
+        target: PathBuf,
+        /// Nur dieses Profil statt aller.
+        #[arg(long)]
+        profile: Option<String>,
+    },
     /// Mod-Loader abfragen.
     #[command(subcommand)]
     Loader(LoaderCommand),
@@ -165,6 +181,28 @@ enum ProfileCommand {
         /// Löschen bestätigen.
         #[arg(long)]
         yes: bool,
+    },
+    /// Auf andere Minecraft-Version/anderen Loader umziehen (als neues Profil).
+    /// Ohne --apply nur den Plan anzeigen.
+    Migrate {
+        name: String,
+        /// Ziel-Minecraft-Version.
+        #[arg(long)]
+        minecraft: String,
+        /// Ziel-Loader: fabric, quilt oder none (Standard: wie bisher).
+        #[arg(long)]
+        loader: Option<String>,
+        /// Name des neuen Profils.
+        #[arg(long = "as")]
+        new_name: Option<String>,
+        /// Welten nicht mitkopieren.
+        #[arg(long)]
+        no_worlds: bool,
+        /// Nicht verfügbare Mods weglassen statt deaktiviert mitnehmen.
+        #[arg(long)]
+        drop_missing: bool,
+        #[arg(long)]
+        apply: bool,
     },
 }
 
@@ -229,7 +267,8 @@ enum ContentCommand {
 
 #[derive(Subcommand)]
 enum PackCommand {
-    /// `.mrpack`-Datei oder Modrinth-Projekt (`modrinth:<slug>`) als neues Profil importieren.
+    /// Als neues Profil importieren: `.mrpack`-Datei, `modrinth:<slug>`, `curseforge:<id>`,
+    /// `twogg:<pack>` oder ein `pinecone://`-Link.
     Import {
         source: String,
         /// Bestimmte Modrinth-Versions-ID.
@@ -303,6 +342,70 @@ impl From<KindArg> for ContentKind {
             KindArg::Shader => ContentKind::Shader,
         }
     }
+}
+
+#[derive(Subcommand)]
+enum SkinCommand {
+    /// Skins der Bibliothek anzeigen.
+    List,
+    /// Skin aus PNG-Datei oder vom Spielernamen in die Bibliothek übernehmen.
+    Import {
+        /// Pfad zu einer PNG-Datei oder ein Spielername.
+        source: String,
+        #[arg(long)]
+        name: Option<String>,
+        /// Schmale Arme (Alex); nur für Dateien, bei Spielern kommt das Modell von Mojang.
+        #[arg(long)]
+        slim: bool,
+    },
+    /// Skin aus der Bibliothek löschen.
+    Delete { id: String },
+    /// Skin aus der Bibliothek als Skin des aktiven Microsoft-Accounts setzen.
+    Upload { id: String },
+    /// Capes des aktiven Microsoft-Accounts anzeigen bzw. eins aktivieren (`none` blendet aus).
+    Cape { id: Option<String> },
+}
+
+#[derive(Subcommand)]
+enum SyncCommand {
+    /// Sync-Packs anzeigen (mit --profile: an/aus für dieses Profil).
+    List {
+        #[arg(long)]
+        profile: Option<String>,
+    },
+    /// Neues Sync-Pack (oder mit --template eine Vorlage) anlegen.
+    Create {
+        name: String,
+        #[arg(long)]
+        template: bool,
+    },
+    /// Modrinth-Projekt hinzufügen (Slug oder ID).
+    Add {
+        pack: String,
+        project: String,
+        #[arg(long = "type", value_enum, default_value = "mod")]
+        kind: KindArg,
+    },
+    /// Eigene Datei hinzufügen; Ziel relativ zum Spielordner, z. B. config/x.json.
+    AddFile {
+        pack: String,
+        file: PathBuf,
+        target: String,
+    },
+    /// Option für options.txt setzen, z. B. fov 0.25.
+    Option {
+        pack: String,
+        key: String,
+        value: String,
+    },
+    /// Im Profil einschalten (Vorlagen: einmal einspielen).
+    Enable { profile: String, pack: String },
+    /// Im Profil ausschalten und eingespielte Inhalte entfernen.
+    Disable { profile: String, pack: String },
+    /// Eingeschaltete Sync-Packs eines Profils abgleichen.
+    Run { profile: String },
+    /// Sync-Pack löschen (eingespielte Inhalte bleiben).
+    Delete { pack: String },
 }
 
 #[derive(Subcommand)]
@@ -440,6 +543,7 @@ async fn main() -> Result<()> {
             let mut on_event = |e: PrepareEvent| match e {
                 PrepareEvent::Stage(stage) => {
                     bar.set_prefix(match stage {
+                        Stage::Sync => "Sync-Packs",
                         Stage::Loader => "Mod-Loader",
                         Stage::Version => "Spieldateien",
                         Stage::Java => "Java",
@@ -516,6 +620,23 @@ async fn main() -> Result<()> {
         }
         Command::Content(cmd) => content_command(cmd, &launcher).await,
         Command::Pack(cmd) => pack_command(cmd, &launcher).await,
+        Command::Sync(cmd) => sync_command(cmd, &launcher).await,
+        Command::Diag { target, profile } => {
+            let only = match profile {
+                Some(p) => Some(vec![launcher.profiles().get(&p)?.id]),
+                None => None,
+            };
+            let r = pinecone_core::diagnostics::export(&launcher, &target, only.as_deref(), None)
+                .await?;
+            println!(
+                "{} geschrieben: {} Dateien, {} KB",
+                r.path,
+                r.files,
+                r.bytes / 1024
+            );
+            Ok(())
+        }
+        Command::Skin(cmd) => skin_command(cmd, &launcher, &accounts, msa.as_ref()).await,
         Command::Stats => {
             let stats = launcher.stats().load()?;
             let profiles = launcher.profiles().list()?;
@@ -661,6 +782,8 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
                 resolve_link(packs, &source).await?
             } else if let Some(slug) = source.strip_prefix("modrinth:") {
                 packs.download_modrinth(slug, version.as_deref()).await?
+            } else if let Some(id) = source.strip_prefix("twogg:") {
+                packs.download_twogg(id, version.as_deref()).await?
             } else if let Some(id) = source.strip_prefix("curseforge:") {
                 let file = version
                     .as_deref()
@@ -674,6 +797,7 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
             };
             let result = packs.import(&archive, src, name).await?;
             let p = result.profile;
+            apply_auto_sync(launcher, &p).await;
             let count = launcher
                 .content()
                 .list(&p.id, &launcher.game_dir(&p))?
@@ -742,6 +866,19 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
                     packs
                         .download_curseforge(*project_id, Some(target), None)
                         .await?
+                }
+                (None, PackSource::Twogg { pack_id, .. }) => {
+                    let target = match version {
+                        Some(v) => v,
+                        None => match packs.check_update(&p).await? {
+                            Some(u) => u.version_id,
+                            None => {
+                                println!("{} ist aktuell", info.name);
+                                return Ok(());
+                            }
+                        },
+                    };
+                    packs.download_twogg(pack_id, Some(&target)).await?
                 }
                 (None, PackSource::File) => {
                     bail!("Pack ohne Online-Quelle: neue Version mit --file angeben")
@@ -882,8 +1019,214 @@ async fn resolve_link(
         ShareLink::Curseforge { project, file } => {
             packs.download_curseforge(project, file, None).await?
         }
+        ShareLink::Twogg { pack, version } => {
+            packs.download_twogg(&pack, version.as_deref()).await?
+        }
         ShareLink::Code(_) => bail!("Share-Codes gibt es erst mit dem Share-Dienst"),
     })
+}
+
+async fn skin_command(
+    cmd: SkinCommand,
+    launcher: &Launcher,
+    accounts: &AccountStore,
+    msa: Option<&MsaClient>,
+) -> Result<()> {
+    let lib = launcher.skins();
+    let model_label = |m: SkinModel| match m {
+        SkinModel::Classic => "classic",
+        SkinModel::Slim => "slim",
+    };
+    match cmd {
+        SkinCommand::List => {
+            let list = lib.list()?;
+            if list.is_empty() {
+                println!("Keine Skins. Übernehmen mit `pinecone skin import <spieler|datei.png>`.");
+            }
+            for s in list {
+                println!("  {:<20} {:<28} {}", s.id, s.name, model_label(s.model));
+            }
+        }
+        SkinCommand::Import { source, name, slim } => {
+            let path = PathBuf::from(&source);
+            let skin = if path.is_file() {
+                let model = if slim {
+                    SkinModel::Slim
+                } else {
+                    SkinModel::Classic
+                };
+                lib.import_file(&path, name.as_deref(), model)?
+            } else {
+                let mut s = lib.import_player(&source).await?;
+                if let Some(n) = name {
+                    s = lib.rename(&s.id, &n)?;
+                }
+                s
+            };
+            println!(
+                "Skin {:?} ({}) übernommen, ID {}",
+                skin.name,
+                model_label(skin.model),
+                skin.id
+            );
+        }
+        SkinCommand::Delete { id } => {
+            lib.delete(&id)?;
+            println!("Skin {id} gelöscht");
+        }
+        SkinCommand::Upload { id } => {
+            let msa =
+                msa.context("Microsoft-Login nicht konfiguriert (PINECONE_MSA_CLIENT_ID fehlt)")?;
+            let skin = lib
+                .list()?
+                .into_iter()
+                .find(|s| s.id == id)
+                .context("Kein Skin mit dieser ID")?;
+            let account = accounts.session(None, Some(msa)).await?;
+            let profile = msa
+                .upload_skin(&account.access_token, skin.model, lib.png(&id)?)
+                .await?;
+            println!("Skin {:?} für {} gesetzt", skin.name, profile.name);
+        }
+        SkinCommand::Cape { id } => {
+            let msa =
+                msa.context("Microsoft-Login nicht konfiguriert (PINECONE_MSA_CLIENT_ID fehlt)")?;
+            let account = accounts.session(None, Some(msa)).await?;
+            let profile = match id.as_deref() {
+                None => msa.profile(&account.access_token).await?,
+                Some("none") => msa.set_cape(&account.access_token, None).await?,
+                Some(cape) => msa.set_cape(&account.access_token, Some(cape)).await?,
+            };
+            if profile.capes.is_empty() {
+                println!("{} hat keine Capes.", profile.name);
+            }
+            for c in profile.capes {
+                let mark = if c.state == "ACTIVE" { "*" } else { " " };
+                println!("{mark} {:<38} {}", c.id, c.alias.unwrap_or_default());
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Neues Profil: Sync-Packs mit Auto-Regel einschalten (Fehler nur melden).
+async fn apply_auto_sync(launcher: &Launcher, profile: &Profile) {
+    match launcher.syncpacks().apply_auto(profile).await {
+        Ok(r) if !r.installed.is_empty() => {
+            println!("Sync-Packs eingespielt: {}", r.installed.join(", "))
+        }
+        Ok(_) => {}
+        Err(e) => eprintln!("Sync-Packs nicht eingespielt: {e}"),
+    }
+}
+
+async fn sync_command(cmd: SyncCommand, launcher: &Launcher) -> Result<()> {
+    let sync = launcher.syncpacks();
+    let print = |r: SyncReport| {
+        for (label, list) in [
+            ("installiert", &r.installed),
+            ("entfernt", &r.removed),
+            ("schon vorhanden", &r.present),
+            ("nicht verfügbar", &r.unavailable),
+        ] {
+            if !list.is_empty() {
+                println!("  {label}: {}", list.join(", "));
+            }
+        }
+        for w in &r.warnings {
+            println!("  Hinweis: {w}");
+        }
+    };
+    match cmd {
+        SyncCommand::List { profile } => {
+            let packs: Vec<(SyncPack, Option<bool>)> = match profile {
+                Some(p) => {
+                    let p = launcher.profiles().get(&p)?;
+                    sync.for_profile(&p.id)?
+                        .into_iter()
+                        .map(|x| (x.pack, Some(x.enabled)))
+                        .collect()
+                }
+                None => sync.list()?.into_iter().map(|p| (p, None)).collect(),
+            };
+            if packs.is_empty() {
+                println!("Keine Sync-Packs. Anlegen mit `pinecone sync create <name>`.");
+            }
+            for (p, on) in packs {
+                let mark = match on {
+                    Some(true) => "[x] ",
+                    Some(false) => "[ ] ",
+                    None => "",
+                };
+                let mode = match p.mode {
+                    SyncMode::Sync => "Sync-Pack",
+                    SyncMode::Template => "Vorlage",
+                };
+                println!(
+                    "{mark}{} ({}, {mode}): {} Einträge",
+                    p.name,
+                    p.id,
+                    p.entries.len()
+                );
+                for e in &p.entries {
+                    println!("    {}", e.label());
+                }
+                for (k, v) in &p.options {
+                    println!("    options.txt: {k}:{v}");
+                }
+            }
+        }
+        SyncCommand::Create { name, template } => {
+            let mode = if template {
+                SyncMode::Template
+            } else {
+                SyncMode::Sync
+            };
+            let p = sync.create(&name, mode)?;
+            println!("{:?} angelegt (ID {})", p.name, p.id);
+        }
+        SyncCommand::Add {
+            pack,
+            project,
+            kind,
+        } => {
+            let mut p = sync.get(&pack)?;
+            let info = launcher.content().modrinth().project(&project).await?;
+            p.entries.push(SyncEntry::Modrinth {
+                project_id: info.id,
+                kind: kind.into(),
+                name: info.title.clone(),
+            });
+            sync.save(&p)?;
+            println!("{} zu {:?} hinzugefügt", info.title, p.name);
+        }
+        SyncCommand::AddFile { pack, file, target } => {
+            let p = sync.add_file(&pack, &file, &target).await?;
+            println!("{target} zu {:?} hinzugefügt", p.name);
+        }
+        SyncCommand::Option { pack, key, value } => {
+            let mut p = sync.get(&pack)?;
+            p.options.insert(key, value);
+            sync.save(&p)?;
+        }
+        SyncCommand::Enable { profile, pack } => {
+            let p = launcher.profiles().get(&profile)?;
+            print(sync.set_enabled(&p, &pack, true).await?);
+        }
+        SyncCommand::Disable { profile, pack } => {
+            let p = launcher.profiles().get(&profile)?;
+            print(sync.set_enabled(&p, &pack, false).await?);
+        }
+        SyncCommand::Run { profile } => {
+            let p = launcher.profiles().get(&profile)?;
+            print(sync.sync(&p).await?);
+        }
+        SyncCommand::Delete { pack } => {
+            sync.delete(&pack)?;
+            println!("Sync-Pack {pack} gelöscht");
+        }
+    }
+    Ok(())
 }
 
 fn format_duration(secs: u64) -> String {
@@ -948,6 +1291,7 @@ async fn profile_command(cmd: ProfileCommand, launcher: &Launcher) -> Result<()>
             }
             profile.memory_mb = memory;
             let profile = profiles.create(profile)?;
+            apply_auto_sync(launcher, &profile).await;
             println!(
                 "Profil {:?} angelegt ({}): {}",
                 profile.name,
@@ -1028,6 +1372,114 @@ async fn profile_command(cmd: ProfileCommand, launcher: &Launcher) -> Result<()>
             }
             launcher.delete_profile(&profile.id)?;
             println!("Profil {:?} gelöscht", profile.name);
+        }
+        ProfileCommand::Migrate {
+            name,
+            minecraft,
+            loader,
+            new_name,
+            no_worlds,
+            drop_missing,
+            apply,
+        } => {
+            let profile = profiles.get(&name)?;
+            let loader = match loader.as_deref() {
+                None => profile.loader.as_ref().map(|l| l.kind),
+                Some("none" | "vanilla") => None,
+                Some(other) => Some(other.parse()?),
+            };
+            let target = MigrationTarget { minecraft, loader };
+            let plan = launcher.plan_migration(&profile, &target).await?;
+            let loader_label = |l: &Option<LoaderSpec>| match l {
+                Some(l) => format!("{} {}", l.kind.name(), l.version),
+                None => "Vanilla".into(),
+            };
+            println!(
+                "{} {} → {} {}",
+                plan.from_minecraft,
+                loader_label(&plan.from_loader),
+                plan.minecraft,
+                loader_label(&plan.loader)
+            );
+            if let Some(o) = &plan.pack_offer {
+                println!(
+                    "  Tipp: {} gibt es in Version {} für das Ziel: pinecone pack import {}:{} --version {}",
+                    o.name, o.version, o.platform, o.project_id, o.version_id
+                );
+            }
+            for item in &plan.items {
+                let (mark, detail) = match item.status {
+                    ItemStatus::Compatible => ("✓", "passt".to_string()),
+                    ItemStatus::Update => (
+                        "✓",
+                        format!(
+                            "{} → {}",
+                            item.from_version.as_deref().unwrap_or("?"),
+                            item.to_version.as_deref().unwrap_or("?")
+                        ),
+                    ),
+                    ItemStatus::Substitute => (
+                        "↺",
+                        format!(
+                            "ersetzt durch {}",
+                            item.substitute.as_deref().unwrap_or("?")
+                        ),
+                    ),
+                    ItemStatus::Kept => ("·", "bleibt unverändert".to_string()),
+                    ItemStatus::Missing => (
+                        "✗",
+                        if drop_missing {
+                            "nicht verfügbar, wird weggelassen"
+                        } else {
+                            "nicht verfügbar, wird deaktiviert"
+                        }
+                        .to_string(),
+                    ),
+                };
+                println!("  {mark} {} ({}): {detail}", item.name, item.key);
+            }
+            if plan.downgrade && plan.worlds > 0 && !no_worlds {
+                println!(
+                    "  Achtung: {} Welt(en) werden in eine ältere Version kopiert und können dort kaputtgehen (Original bleibt erhalten).",
+                    plan.worlds
+                );
+            }
+            if !apply {
+                println!("Mit --apply als neues Profil anlegen.");
+                return Ok(());
+            }
+            let missing = plan
+                .items
+                .iter()
+                .filter(|i| i.status == ItemStatus::Missing)
+                .map(|i| {
+                    let choice = if drop_missing {
+                        MissingChoice::Drop
+                    } else {
+                        MissingChoice::Disable
+                    };
+                    (i.key.clone(), choice)
+                })
+                .collect();
+            let result = launcher
+                .migrate(
+                    &profile,
+                    &MigrateOptions {
+                        target,
+                        name: new_name,
+                        include_worlds: !no_worlds,
+                        missing,
+                    },
+                )
+                .await?;
+            println!(
+                "Profil {:?} angelegt: {}",
+                result.profile.name,
+                describe(&result.profile)
+            );
+            for w in result.report.warnings {
+                println!("  Hinweis: {w}");
+            }
         }
     }
     Ok(())

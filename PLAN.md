@@ -42,9 +42,11 @@ Crates: tokio, reqwest (rustls), serde/serde_json, sha1, zip, thiserror/anyhow, 
 6. **Dashboard + Personalisierung**: Spielzeit-Tracking, `servers.dat`-Parser, Quick-Join, Server-Status, Themes, Widget-Layout.
 7. **Modpacks**: Modrinth-Import/-Suche, CurseForge-Import/-Suche, Pack erstellen/exportieren, Update mit Snapshot und Settings-Erhalt.
 7b. **Pack-Sharing**: Share-Code/Deep-Link, Datei-Export-Fallback, dann der Share-Dienst, danach abonnierte Packs mit Update-Hinweis.
+7c. **Versionswechsel + Sync-Packs**: Profil/Modpack auf andere Minecraft-Version oder anderen Loader umziehen (Mods automatisch passend suchen), dann Sync-Packs (Vorlagen und schaltbare Zusatz-Inhalte je Profil). Wechsel auf Forge/NeoForge erst mit deren Loader-Unterstützung (siehe 10, dafür vorziehen).
 8. **Screenshots + Skins**: Galerie mit Watcher, Skin-Upload/Bibliothek/Capes, dann Skin-Editor mit 3D-Vorschau.
 9. **Politur**: Logfile-Export, Self-Update, Installer/Bundles (MSI/NSIS, AppImage/deb).
 10. **Optional**: Forge/NeoForge, eigenes TwoGG-Server-Profil mit Auto-Update (z. B. Horizons Unbound).
+11. **Redesign**: Überarbeitung der gesamten Oberfläche, wenn der Funktionsumfang steht (siehe unten).
 
 ## Feature-Module (Erweiterung)
 Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
@@ -66,6 +68,24 @@ Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
 - **Abonnierte Packs**: Der Ersteller kann eine neue Version veröffentlichen, abonnierte Freunde sehen im Dashboard „Update verfügbar“ und nutzen den normalen Update-Ablauf (Snapshot, eigene Settings bleiben).
 - Sicherheit: Hash-Prüfung aller Downloads, Hinweis beim Import fremder Packs („Inhalte von Dritten“), keine automatische Ausführung, nur Dateien in die Profil-Sandbox schreiben (Path-Traversal-Schutz beim Entpacken von `overrides`).
 
+**Versionswechsel (`migrate`)**
+- Am Profil „Version wechseln …“: Ziel-Minecraft-Version und Loader (Vanilla, Fabric, Quilt, später Forge/NeoForge) wählen. Standard ist eine Kopie als neues Profil, auf Wunsch im selben Profil mit Snapshot (Rollback wie bei Pack-Updates).
+- Stammt das Profil aus einem Modpack, zuerst prüfen, ob das Pack selbst eine Version für das Ziel hat; die wird bevorzugt angeboten (Profil bleibt dann mit Pack-Updates verbunden).
+- Sonst Inhalt für Inhalt: Modrinth-Mods über `POST /v2/version_files/update` (Hash + Ziel-Loader + Ziel-Version) bzw. Projekt-Versionen, CurseForge über `files` mit Versions-/Loader-Filter. Gewählt wird die neueste stabile passende Version, Abhängigkeiten werden mit aufgelöst (wie bei `content install`).
+- Loader-Wechsel mit Ersatzliste bekannter Gegenstücke, z. B. Fabric API ↔ Quilted Fabric API, Sodium ↔ Embeddium/Sodium (NeoForge), Iris ↔ Oculus; Fabric-Mods laufen unter Quilt meist direkt (bevorzugt Quilt-Version, sonst Fabric-Version). Eigene Mods ohne Quelle per Hash suchen, sonst als „nicht übertragbar“ markieren.
+- Ressourcenpakete und Shader bleiben (Hinweis bei abweichendem `pack_format`), Configs werden übernommen, Welten nur mit Warnung (Upgrade ist einseitig, Downgrade kann Welten beschädigen; deshalb vorher gesichert).
+- Vor dem Umzug eine Vorschau wie beim Pack-Update: ✓ gefunden (alt → neu), ↺ Ersatz gefunden, ✗ nicht verfügbar. Bei ✗ entscheidet der Nutzer: ohne den Mod weitermachen, deaktiviert mitnehmen oder abbrechen. Optional „auf Updates warten“: Pinecone merkt sich fehlende Mods und meldet, sobald es sie für die Version gibt.
+- Abgeleitete Profile (Pack-Inhalte, aber eigene Version) zeigen das im Pack-Hinweis an und bekommen keine Pack-Updates mehr, außer das Pack bietet später die Zielversion an.
+
+**Sync-Packs und Vorlagen (`syncpacks`)**
+- Eigene, benannte Sammlungen von Inhalten: Mods, Ressourcenpakete, Shader, Config-Dateien und Standard-Einstellungen (z. B. Tastenbelegung, FOV in `options.txt`). Gespeichert unter `<data-dir>/syncpacks/<id>/syncpack.json`; Plattform-Inhalte als Projekt-ID ohne feste Version, eigene Dateien liegen im Sync-Pack-Ordner.
+- Zwei Arten: **Vorlage** wird einmal beim Anlegen eines Profils oder Modpack-Imports hineinkopiert und ist danach normaler Profil-Inhalt. **Sync-Pack** bleibt verbunden: Änderungen am Sync-Pack kommen in alle Profile, die es nutzen.
+- Pro Profil beliebig viele Sync-Packs per Schalter an/aus (Profilseite, Tab „Inhalte“ oder eigener Bereich). Optional global: „automatisch bei allen neuen Profilen“ oder nur bei bestimmten Loadern/Versionen (z. B. alle Fabric-Profile ab 1.21).
+- Beim Aktivieren und vor jedem Start wird für die Version und den Loader des Profils die passende Datei gesucht und installiert (Logik wie beim Versionswechsel). Nicht verfügbare Inhalte werden übersprungen und angezeigt, ohne den Start zu blockieren.
+- Herkunft steht im `pack.lock.json` (`sync:<id>`), damit Pinecone Sync-Inhalte von Pack- und eigenen Inhalten unterscheiden kann: Ausschalten entfernt nur diese Dateien, Pack-Updates fassen sie nicht an (zählen als Nutzer-Inhalt).
+- Konflikte: Bringt das Modpack denselben Mod schon mit, gewinnt das Modpack und der Sync-Eintrag ruht. Ressourcenpakete aus Sync-Packs werden in `options.txt` (`resourcePacks`) in der gewählten Reihenfolge aktiviert. Config-Dateien aus Sync-Packs überschreiben nur, solange der Nutzer sie im Profil nicht geändert hat (gleicher Hash-Vergleich wie bei Pack-Updates).
+- Teilen: Sync-Packs lassen sich als kleine Datei bzw. später über den Share-Dienst weitergeben; beim Export eines Profils wählbar, ob Sync-Inhalte mit ins `.mrpack` kommen.
+
 **Screenshots (`screenshots`)**
 - Dateiüberwachung (`notify`) auf `<profil>/screenshots`, Thumbnail-Cache, Galerie über alle Profile mit Filter nach Profil/Datum, Aktionen: kopieren, löschen, Ordner öffnen, Datei teilen.
 
@@ -77,17 +97,29 @@ Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
 **Personalisierung (`settings` + UI)**
 - Themes über CSS-Variablen (hell/dunkel/System, Akzentfarbe, Presets), Hintergrundbild, Anordnung der Dashboard-Widgets, Profil-Icons/Farben, Sprache (de/en), alles in `settings.json` und als Theme-Datei exportierbar.
 
+**Redesign (Phase 11)**
+- Zum Schluss, damit es alle Funktionen aus 1–10 umfasst und nicht mehrfach angepasst werden muss.
+- Eigene visuelle Identität für TwoGG Pinecone statt der bisherigen Anlehnung an Modrinth App/CurseForge: Farbwelt, Typografie, Icons, Pixel-Art-Elemente passend zum Tannenzapfen-Logo, Animationen beim Spielstart.
+- Navigation und Informationsarchitektur neu prüfen (Start, Bibliothek, Entdecken, Profil, Sync-Packs, Einstellungen), Wege für häufige Aufgaben kürzen (Spielen, Mod hinzufügen, Pack teilen).
+- Grundlage als Design-System: CSS-Variablen/Tokens, gemeinsame Komponenten (Dialoge, Listen, Karten, Schalter), damit Themes und Personalisierung weiter funktionieren.
+- Barrierefreiheit (Kontraste, Tastaturbedienung, Fokus), kleine Fenstergrößen, hell/dunkel.
+- Ablauf: Entwürfe zuerst als klickbarer Prototyp mit Beispieldaten (Mock-Modus), Feedback aus der TwoGG-Community, dann Umsetzung Seite für Seite.
+
 ## Risiken / offene Punkte
 - **Share-Dienst**: braucht einen kleinen Server (Hosting, Missbrauchsschutz, Limits). Offene Entscheidung: selbst hosten (z. B. bei TwoGG) oder zunächst nur Datei-Sharing. Empfehlung: Datei-Sharing und Deep-Links zuerst, Dienst danach.
 - **Azure-App-Registrierung**: Für Minecraft-Auth braucht es eine eigene Client-ID; neue Apps müssen bei Mojang freigeschaltet werden (Antragsformular). Bis dahin Phase 3 mit Offline-Modus testen.
 - Offline-Modus nur für Tests/LAN; echte Server verlangen Online-Accounts.
-- Forge/NeoForge-Installer sind der größte Einzelaufwand, deshalb nach hinten gestellt.
+- Forge/NeoForge-Installer sind der größte Einzelaufwand, deshalb nach hinten gestellt. Der Versionswechsel zwischen Loader-Familien (Fabric/Quilt ↔ Forge/NeoForge) hängt davon ab.
+- Versionswechsel: Viele Mods gibt es nicht für jede Version/jeden Loader; die Ersatzliste für Loader-Gegenstücke muss gepflegt werden. Welten nach einem Downgrade können kaputtgehen, deshalb immer Sicherung und klare Warnung.
+- Sync-Packs: Automatisches Installieren vor dem Start braucht Netzwerk; ohne Netz mit dem zuletzt installierten Stand starten.
 - Mojang-Marke/EULA: Launcher darf keine Mojang-Assets weiterverbreiten, nur von deren Servern laden; Name/Logo nicht wie offiziell gestalten.
 
 ## Verifikation
 - Unit-Tests: Rule-Auswertung, Argument-Substitution, Offline-UUID, `inheritsFrom`-Merge gegen echte JSONs (1.8, 1.12, 1.20.x, aktuelle Version).
 - Integration: CLI startet Vanilla 1.21.x und eine Legacy-Version (1.8.9) bis ins Hauptmenü, auf Windows und Linux (CI-Matrix / VM).
 - Fabric-Profil mit einem Modrinth-Mod startet und lädt den Mod (im Log sichtbar).
+- Versionswechsel: Fabulously Optimized von der aktuellen auf eine ältere Minecraft-Version und von Fabric auf Quilt umziehen, Vorschau mit gefundenen/fehlenden Mods prüfen, Profil startet.
+- Sync-Pack mit einem Ressourcenpaket und einem Mod an zwei Profilen unterschiedlicher Versionen aktivieren, jeweils passende Datei installiert; ausschalten entfernt nur diese Dateien, ein Pack-Update lässt sie unangetastet.
 - Login: Device-Code-Flow mit eigenem Account, Neustart ohne erneuten Login (Refresh).
 - GUI: `cargo tauri dev`, Spielstart per Klick, Fortschritt und Logs sichtbar; `cargo tauri build` erzeugt Installer.
 - `cargo clippy` und `cargo test` grün in CI.

@@ -11,7 +11,7 @@
   let dialog: HTMLDialogElement;
   let link = $state<string | null>(null);
   let copied = $state(false);
-  let options = $state<ExportOptions>({ version: "1.0.0", summary: "", resourcepacks: true, shaders: true, config: true, options: false });
+  let options = $state<ExportOptions>({ version: "1.0.0", summary: "", resourcepacks: true, shaders: true, config: true, options: false, syncContent: true });
   let busy = $state(false);
   let error = $state<string | null>(null);
   let result = $state<string | null>(null);
@@ -48,11 +48,12 @@
     }
   }
 
-  const folders: [keyof ExportOptions & ("resourcepacks" | "shaders" | "config" | "options"), () => string][] = [
+  const folders: [keyof ExportOptions & ("resourcepacks" | "shaders" | "config" | "options" | "syncContent"), () => string][] = [
     ["resourcepacks", () => t("share.resourcepacks")],
     ["shaders", () => t("share.shaders")],
     ["config", () => t("share.config")],
     ["options", () => t("share.options")],
+    ["syncContent", () => t("share.syncContent")],
   ];
 </script>
 

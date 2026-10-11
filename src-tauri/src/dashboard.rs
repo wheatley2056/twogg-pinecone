@@ -141,16 +141,9 @@ pub async fn ping_server(address: String) -> CmdResult<ServerStatus> {
 /// Öffnet einen Screenshot im Bildbetrachter – nur Dateien aus Profilordnern.
 #[tauri::command]
 pub fn open_screenshot(app: AppHandle, state: State<'_, AppState>, path: String) -> CmdResult<()> {
-    let path = PathBuf::from(path);
     let instances = state.launcher.paths().root().join("instances");
-    let ok = path
-        .extension()
-        .is_some_and(|e| e.eq_ignore_ascii_case("png"))
-        && std::fs::canonicalize(&path)
-            .is_ok_and(|p| std::fs::canonicalize(&instances).is_ok_and(|i| p.starts_with(i)));
-    if !ok {
-        return Err("Nur Screenshots aus Profilen können geöffnet werden".into());
-    }
+    let path =
+        pinecone_core::screenshots::checked(&PathBuf::from(path), &instances).map_err(err)?;
     app.opener()
         .open_path(path.display().to_string(), None::<&str>)
         .map_err(err)
@@ -162,6 +155,12 @@ pub fn allow_assets(app: &AppHandle) {
     let root = state.launcher.paths().root().to_path_buf();
     let scope = app.asset_protocol_scope();
     if let Err(e) = scope.allow_directory(root.join("instances"), true) {
+        tracing::warn!("Asset-Freigabe fehlgeschlagen: {e}");
+    }
+    // Vorschaubilder der Screenshot-Galerie.
+    let thumbs = crate::screenshots::thumbs_dir(&state);
+    let _ = std::fs::create_dir_all(&thumbs);
+    if let Err(e) = scope.allow_directory(thumbs, false) {
         tracing::warn!("Asset-Freigabe fehlgeschlagen: {e}");
     }
     if let Ok(settings) = state.launcher.settings().load()

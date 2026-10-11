@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-modrinth-modpack+zip">
+    <sub-class-of type="application/zip"/>
+    <comment>Modrinth modpack</comment>
+    <comment xml:lang="de">Modrinth-Modpack</comment>
+    <glob pattern="*.mrpack"/>
+  </mime-type>
+</mime-info>

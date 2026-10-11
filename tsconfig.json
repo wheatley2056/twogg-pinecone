@@ -9,5 +9,5 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["ui/src/**/*.ts", "ui/src/**/*.svelte"]
+  "include": ["ui/src/**/*.ts", "ui/src/**/*.svelte", "ui/skin-editor/**/*.ts", "ui/vendor/mc-skin-editor/src/vite-env.d.ts"]
 }

@@ -19,12 +19,37 @@ pub fn requests(args: &[String], cwd: &Path) -> Vec<String> {
             if arg.starts_with("pinecone://") {
                 return Some(arg.clone());
             }
-            let path = cwd.join(arg);
+            // Linux-Desktops übergeben Dateien bei `%U` als file://-URI.
+            let arg = match arg.strip_prefix("file://") {
+                Some(rest) => percent_decode(rest),
+                None => arg.clone(),
+            };
+            let path = cwd.join(&arg);
             let ext = path.extension()?.to_str()?.to_ascii_lowercase();
             (matches!(ext.as_str(), "mrpack" | "zip") && path.is_file())
                 .then(|| path.display().to_string())
         })
         .collect()
+}
+
+/// `%20` usw. in Pfaden aus file://-URIs auflösen.
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let Ok(b) = u8::from_str_radix(&s[i + 1..i + 3], 16)
+        {
+            out.push(b);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// Zweite Instanz gestartet: Fenster nach vorn holen und ihre Links/Dateien übernehmen.
@@ -71,6 +96,20 @@ mod tests {
                 dir.join("pack.MRPACK").display().to_string()
             ]
         );
+        let uri = format!("file://{}", dir.join("pack.MRPACK").display()).replace(' ', "%20");
+        assert_eq!(
+            requests(&["x".into(), uri], Path::new("/")),
+            [dir.join("pack.MRPACK").display().to_string()]
+        );
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn decodes_percent_escapes() {
+        assert_eq!(
+            percent_decode("/home/a%20b/%C3%A4.mrpack"),
+            "/home/a b/ä.mrpack"
+        );
+        assert_eq!(percent_decode("/x%2"), "/x%2");
     }
 }

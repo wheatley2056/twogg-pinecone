@@ -6,8 +6,13 @@ mod content;
 mod dashboard;
 mod dto;
 mod game;
+mod migrate;
 mod open;
 mod packs;
+mod screenshots;
+mod skins;
+mod syncpacks;
+mod update;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -37,6 +42,47 @@ pub struct AppState {
     pub open_requests: Mutex<Vec<String>>,
 }
 
+/// Logs in die Konsole (Warnungen) und nach `<data-dir>/logs/pinecone.log.<datum>` (Infos),
+/// eine Datei pro Tag, die letzten sieben bleiben. `RUST_LOG` überschreibt beide Stufen.
+fn init_logging(paths: &Paths) -> Option<tracing_appender::non_blocking::WorkerGuard> {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+    use tracing_subscriber::{EnvFilter, Layer, fmt};
+
+    let filter =
+        |default: &str| EnvFilter::try_from_default_env().unwrap_or_else(|_| default.into());
+    let console = fmt::layer().with_filter(filter("warn"));
+    let file = tracing_appender::rolling::Builder::new()
+        .rotation(tracing_appender::rolling::Rotation::DAILY)
+        .filename_prefix("pinecone")
+        .filename_suffix("log")
+        .max_log_files(7)
+        .build(logs_dir(paths))
+        .ok();
+    match file {
+        Some(appender) => {
+            let (writer, guard) = tracing_appender::non_blocking(appender);
+            let file_layer = fmt::layer()
+                .with_ansi(false)
+                .with_writer(writer)
+                .with_filter(filter("info,tao=warn,wry=warn"));
+            tracing_subscriber::registry()
+                .with(console)
+                .with(file_layer)
+                .init();
+            Some(guard)
+        }
+        None => {
+            tracing_subscriber::registry().with(console).init();
+            None
+        }
+    }
+}
+
+pub fn logs_dir(paths: &Paths) -> std::path::PathBuf {
+    paths.root().join("logs")
+}
+
 fn main() {
     // WebKitGTK stürzt mit NVIDIA unter Wayland ab („Error 71 (Protokollfehler) dispatching to
     // Wayland display“). Ohne DMA-BUF-Renderer läuft es stabil; eine eigene Einstellung gewinnt.
@@ -46,18 +92,14 @@ fn main() {
         unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
     }
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
-        )
-        .init();
-
     let root = std::env::var_os("PINECONE_HOME")
         .map(Into::into)
         .map(Ok)
         .unwrap_or_else(Paths::default_root)
         .expect("Kein Datenverzeichnis");
     let paths = Paths::new(root);
+    // Der Guard muss bis zum Programmende leben, sonst gehen die letzten Logzeilen verloren.
+    let _log_guard = init_logging(&paths);
     let downloader = Downloader::new().expect("HTTP-Client");
     let msa = msa::client_id_from_env()
         .map(MsaClient::new)
@@ -77,6 +119,8 @@ fn main() {
         )),
     };
 
+    tracing::info!("TwoGG Pinecone {} gestartet", env!("CARGO_PKG_VERSION"));
+
     tauri::Builder::default()
         // Muss als erstes Plugin kommen: Eine zweite Instanz (Link oder Datei geöffnet)
         // beendet sich sofort und übergibt ihre Argumente an die laufende.
@@ -84,11 +128,19 @@ fn main() {
             open::forward(app, args, cwd)
         }))
         .plugin(tauri_plugin_deep_link::init())
+        // Ohne eingebauten Schlüssel bleibt der Updater registriert, prüft aber nie (siehe update.rs).
+        .plugin(
+            tauri_plugin_updater::Builder::new()
+                .pubkey(update::pubkey().unwrap_or_default())
+                .build(),
+        )
+        .manage(update::PendingUpdate::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
         .setup(|app| {
             dashboard::allow_assets(app.handle());
+            screenshots::start_watcher(app.handle());
             // Installer tragen `pinecone://` selbst ein; beim Entwickeln und für AppImages
             // registriert sich die App hier (Windows: Registry des Nutzers, Linux: .desktop-Datei).
             #[cfg(any(windows, target_os = "linux"))]
@@ -143,6 +195,10 @@ fn main() {
             content::content_install_curseforge,
             packs::pack_install_modrinth,
             packs::pack_install_curseforge,
+            packs::pack_install_twogg,
+            packs::twogg_packs,
+            packs::twogg_pack,
+            packs::twogg_news,
             packs::pack_preview_file,
             packs::pack_preview_link,
             packs::pack_preview_cancel,
@@ -157,6 +213,39 @@ fn main() {
             packs::pack_rollback,
             packs::pack_export,
             open::take_open_requests,
+            migrate::migrate_plan,
+            migrate::migrate_apply,
+            syncpacks::syncpack_list,
+            syncpacks::syncpack_create,
+            syncpacks::syncpack_save,
+            syncpacks::syncpack_delete,
+            syncpacks::syncpack_add_file,
+            syncpacks::syncpack_add_from_profile,
+            syncpacks::syncpack_for_profile,
+            syncpacks::syncpack_set_enabled,
+            syncpacks::syncpack_sync,
+            update::update_check,
+            update::update_install,
+            commands::diagnostics_export,
+            commands::open_logs_folder,
+            screenshots::screenshots_list,
+            screenshots::screenshot_thumb,
+            screenshots::screenshot_delete,
+            screenshots::screenshot_reveal,
+            screenshots::screenshot_save_as,
+            skins::skins_list,
+            skins::skin_data,
+            skins::skin_import_file,
+            skins::skin_import_player,
+            skins::skin_save,
+            skins::skin_rename,
+            skins::skin_set_model,
+            skins::skin_delete,
+            skins::skin_export,
+            skins::skin_account,
+            skins::skin_apply,
+            skins::skin_set_cape,
+            skins::skin_import_account,
             game::launch,
             game::stop_game,
         ])

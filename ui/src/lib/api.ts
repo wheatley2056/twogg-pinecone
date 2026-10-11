@@ -1,4 +1,4 @@
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
   Account,
@@ -32,6 +32,21 @@ import type {
   SnapshotInfo,
   UpdatePlan,
   PreviewResult,
+  MigrateOptions,
+  MigrationPlan,
+  MigrationTarget,
+  ProfileSyncPack,
+  SyncMode,
+  SyncPack,
+  SyncReport,
+  AccountSkin,
+  SavedSkin,
+  SkinModel,
+  ScreenshotItem,
+  UpdateEvent,
+  AppUpdate,
+  NewsItem,
+  TwoggPack,
 } from "./types";
 
 export const api = {
@@ -82,6 +97,10 @@ export const api = {
   modrinthCategories: () => invoke<Category[]>("modrinth_categories"),
 
   packInstallModrinth: (project: string, version: string | null = null) => invoke<ImportResult>("pack_install_modrinth", { project, version }),
+  packInstallTwogg: (pack: string, version: string | null = null) => invoke<ImportResult>("pack_install_twogg", { pack, version }),
+  twoggPacks: () => invoke<TwoggPack[]>("twogg_packs"),
+  twoggPack: (id: string) => invoke<TwoggPack>("twogg_pack", { id }),
+  twoggNews: (limit = 5) => invoke<NewsItem[]>("twogg_news", { limit }),
   packInstallCurseforge: (project: number, file: number | null = null) => invoke<ImportResult>("pack_install_curseforge", { project, file }),
   packPreviewFile: (path: string) => invoke<PreviewResult>("pack_preview_file", { path }),
   packPreviewLink: (link: string) => invoke<PreviewResult>("pack_preview_link", { link }),
@@ -102,6 +121,49 @@ export const api = {
   packSnapshots: (id: string) => invoke<SnapshotInfo[]>("pack_snapshots", { id }),
   packRollback: (id: string, snapshot: string) => invoke<void>("pack_rollback", { id, snapshot }),
   packExport: (id: string, path: string, options: ExportOptions) => invoke<ExportReport>("pack_export", { id, path, options }),
+  migratePlan: (id: string, target: MigrationTarget) => invoke<MigrationPlan>("migrate_plan", { id, target }),
+  migrateApply: (id: string, options: MigrateOptions) =>
+    invoke<{ profile: Profile; warnings: string[] }>("migrate_apply", { id, options }),
+  syncpackList: () => invoke<SyncPack[]>("syncpack_list"),
+  syncpackCreate: (name: string, mode: SyncMode) => invoke<SyncPack>("syncpack_create", { name, mode }),
+  syncpackSave: (pack: SyncPack) => invoke<SyncPack>("syncpack_save", { id: pack.id, pack }),
+  syncpackDelete: (id: string) => invoke<void>("syncpack_delete", { id }),
+  syncpackAddFile: (id: string, path: string, target: string) => invoke<SyncPack>("syncpack_add_file", { id, path, target }),
+  syncpackAddFromProfile: (id: string, profileId: string, keys: string[]) =>
+    invoke<SyncPack>("syncpack_add_from_profile", { id, profileId, keys }),
+  syncpackForProfile: (profileId: string) => invoke<ProfileSyncPack[]>("syncpack_for_profile", { profileId }),
+  syncpackSetEnabled: (profileId: string, id: string, enabled: boolean) =>
+    invoke<SyncReport>("syncpack_set_enabled", { profileId, id, enabled }),
+  syncpackSync: (profileId: string) => invoke<SyncReport>("syncpack_sync", { profileId }),
+  updateCheck: () => invoke<AppUpdate | null>("update_check"),
+  updateInstall: (onEvent: (e: UpdateEvent) => void) => {
+    const channel = new Channel<UpdateEvent>();
+    channel.onmessage = onEvent;
+    return invoke<void>("update_install", { onEvent: channel });
+  },
+  diagnosticsExport: (path: string, profileId: string | null = null) =>
+    invoke<{ path: string; files: number; bytes: number }>("diagnostics_export", { path, profileId }),
+  openLogsFolder: () => invoke<void>("open_logs_folder"),
+  screenshotsList: () => invoke<ScreenshotItem[]>("screenshots_list"),
+  screenshotThumb: (path: string) => invoke<string>("screenshot_thumb", { path }),
+  screenshotDelete: (path: string) => invoke<void>("screenshot_delete", { path }),
+  screenshotReveal: (path: string) => invoke<void>("screenshot_reveal", { path }),
+  screenshotSaveAs: (path: string, target: string) => invoke<void>("screenshot_save_as", { path, target }),
+  onScreenshotsChanged: (handler: () => void) => listen("screenshots-changed", () => handler()),
+  skinsList: () => invoke<SavedSkin[]>("skins_list"),
+  skinData: (id: string) => invoke<string>("skin_data", { id }),
+  skinImportFile: (path: string, model: SkinModel) => invoke<SavedSkin>("skin_import_file", { path, model }),
+  skinImportPlayer: (player: string) => invoke<SavedSkin>("skin_import_player", { player }),
+  skinSave: (id: string | null, name: string, model: SkinModel, dataUrl: string) =>
+    invoke<SavedSkin>("skin_save", { id, name, model, dataUrl }),
+  skinRename: (id: string, name: string) => invoke<SavedSkin>("skin_rename", { id, name }),
+  skinSetModel: (id: string, model: SkinModel) => invoke<SavedSkin>("skin_set_model", { id, model }),
+  skinDelete: (id: string) => invoke<void>("skin_delete", { id }),
+  skinExport: (id: string, path: string) => invoke<void>("skin_export", { id, path }),
+  skinAccount: () => invoke<AccountSkin>("skin_account"),
+  skinApply: (id: string) => invoke<AccountSkin>("skin_apply", { id }),
+  skinSetCape: (capeId: string | null) => invoke<AccountSkin>("skin_set_cape", { capeId }),
+  skinImportAccount: () => invoke<SavedSkin>("skin_import_account"),
   /** Beim Start übergebene Links/Dateien (einmalig) und später geöffnete. */
   takeOpenRequests: () => invoke<string[]>("take_open_requests"),
   onOpenPack: (handler: (request: string) => void) => listen<string>("open-pack", (e) => handler(e.payload)),
@@ -114,6 +176,11 @@ export const api = {
   importTheme: (path: string) => invoke<Settings>("import_theme", { path }),
   stopGame: (id: string) => invoke<void>("stop_game", { id }),
 };
+
+/** Lokale Datei für `<img src>`; `data:`-URLs (Mock-Modus) bleiben unverändert. */
+export function fileSrc(path: string): string {
+  return path.startsWith("data:") ? path : convertFileSrc(path);
+}
 
 /** Fehler aus Tauri-Befehlen kommen als Text; alles andere lesbar machen. */
 export function errorText(e: unknown): string {
