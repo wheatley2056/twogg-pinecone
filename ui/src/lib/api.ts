@@ -127,6 +127,9 @@ export const api = {
   syncpackSetEnabled: (profileId: string, id: string, enabled: boolean) =>
     invoke<SyncReport>("syncpack_set_enabled", { profileId, id, enabled }),
   syncpackSync: (profileId: string) => invoke<SyncReport>("syncpack_sync", { profileId }),
+  diagnosticsExport: (path: string, profileId: string | null = null) =>
+    invoke<{ path: string; files: number; bytes: number }>("diagnostics_export", { path, profileId }),
+  openLogsFolder: () => invoke<void>("open_logs_folder"),
   screenshotsList: () => invoke<ScreenshotItem[]>("screenshots_list"),
   screenshotThumb: (path: string) => invoke<string>("screenshot_thumb", { path }),
   screenshotDelete: (path: string) => invoke<void>("screenshot_delete", { path }),

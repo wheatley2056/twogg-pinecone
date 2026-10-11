@@ -315,3 +315,32 @@ pub fn kind_label(kind: AccountKind) -> &'static str {
         AccountKind::Offline => "offline",
     }
 }
+
+/// Diagnose-ZIP (Logs, Crash-Reports, Konfiguration ohne Account-Daten) schreiben.
+#[tauri::command]
+pub async fn diagnostics_export(
+    state: State<'_, AppState>,
+    path: String,
+    profile_id: Option<String>,
+) -> CmdResult<pinecone_core::diagnostics::DiagnosticsReport> {
+    let logs = crate::logs_dir(state.launcher.paths());
+    let only = profile_id.map(|id| vec![id]);
+    pinecone_core::diagnostics::export(
+        &state.launcher,
+        std::path::Path::new(&path),
+        only.as_deref(),
+        Some(&logs),
+    )
+    .await
+    .map_err(err)
+}
+
+/// Ordner mit den Logdateien des Launchers öffnen.
+#[tauri::command]
+pub fn open_logs_folder(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
+    let dir = crate::logs_dir(state.launcher.paths());
+    std::fs::create_dir_all(&dir).map_err(err)?;
+    app.opener()
+        .open_path(dir.display().to_string(), None::<&str>)
+        .map_err(err)
+}

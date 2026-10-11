@@ -41,6 +41,47 @@ pub struct AppState {
     pub open_requests: Mutex<Vec<String>>,
 }
 
+/// Logs in die Konsole (Warnungen) und nach `<data-dir>/logs/pinecone.log.<datum>` (Infos),
+/// eine Datei pro Tag, die letzten sieben bleiben. `RUST_LOG` überschreibt beide Stufen.
+fn init_logging(paths: &Paths) -> Option<tracing_appender::non_blocking::WorkerGuard> {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+    use tracing_subscriber::{EnvFilter, Layer, fmt};
+
+    let filter =
+        |default: &str| EnvFilter::try_from_default_env().unwrap_or_else(|_| default.into());
+    let console = fmt::layer().with_filter(filter("warn"));
+    let file = tracing_appender::rolling::Builder::new()
+        .rotation(tracing_appender::rolling::Rotation::DAILY)
+        .filename_prefix("pinecone")
+        .filename_suffix("log")
+        .max_log_files(7)
+        .build(logs_dir(paths))
+        .ok();
+    match file {
+        Some(appender) => {
+            let (writer, guard) = tracing_appender::non_blocking(appender);
+            let file_layer = fmt::layer()
+                .with_ansi(false)
+                .with_writer(writer)
+                .with_filter(filter("info,tao=warn,wry=warn"));
+            tracing_subscriber::registry()
+                .with(console)
+                .with(file_layer)
+                .init();
+            Some(guard)
+        }
+        None => {
+            tracing_subscriber::registry().with(console).init();
+            None
+        }
+    }
+}
+
+pub fn logs_dir(paths: &Paths) -> std::path::PathBuf {
+    paths.root().join("logs")
+}
+
 fn main() {
     // WebKitGTK stürzt mit NVIDIA unter Wayland ab („Error 71 (Protokollfehler) dispatching to
     // Wayland display“). Ohne DMA-BUF-Renderer läuft es stabil; eine eigene Einstellung gewinnt.
@@ -50,18 +91,14 @@ fn main() {
         unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
     }
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
-        )
-        .init();
-
     let root = std::env::var_os("PINECONE_HOME")
         .map(Into::into)
         .map(Ok)
         .unwrap_or_else(Paths::default_root)
         .expect("Kein Datenverzeichnis");
     let paths = Paths::new(root);
+    // Der Guard muss bis zum Programmende leben, sonst gehen die letzten Logzeilen verloren.
+    let _log_guard = init_logging(&paths);
     let downloader = Downloader::new().expect("HTTP-Client");
     let msa = msa::client_id_from_env()
         .map(MsaClient::new)
@@ -80,6 +117,8 @@ fn main() {
             &std::env::current_dir().unwrap_or_default(),
         )),
     };
+
+    tracing::info!("TwoGG Pinecone {} gestartet", env!("CARGO_PKG_VERSION"));
 
     tauri::Builder::default()
         // Muss als erstes Plugin kommen: Eine zweite Instanz (Link oder Datei geöffnet)
@@ -173,6 +212,8 @@ fn main() {
             syncpacks::syncpack_for_profile,
             syncpacks::syncpack_set_enabled,
             syncpacks::syncpack_sync,
+            commands::diagnostics_export,
+            commands::open_logs_folder,
             screenshots::screenshots_list,
             screenshots::screenshot_thumb,
             screenshots::screenshot_delete,

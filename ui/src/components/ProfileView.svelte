@@ -9,6 +9,7 @@
   import ContentTab from "./ContentTab.svelte";
   import ShareDialog from "./ShareDialog.svelte";
   import MigrateDialog from "./MigrateDialog.svelte";
+  import { exportDiagnostics } from "../lib/diagnostics";
   import PackUpdateDialog from "./PackUpdateDialog.svelte";
   import Icon from "./Icon.svelte";
   import ProfileDialog from "./ProfileDialog.svelte";
@@ -42,6 +43,17 @@
   // null: geschlossen; target null: nur gesicherte Stände.
   let updateDialog = $state<{ target: { version: string | null; file: string | null } | null } | null>(null);
   let sharing = $state(false);
+
+  let logNotice = $state<string | null>(null);
+
+  async function exportLogs() {
+    actionError = logNotice = null;
+    try {
+      logNotice = await exportDiagnostics(profile.id, profile.name);
+    } catch (e) {
+      actionError = errorText(e);
+    }
+  }
   let migrating = $state(false);
   // Neu zeichnen der Inhalte nach Pack-Update oder Rollback.
   let contentKey = $state(0);
@@ -228,6 +240,7 @@
 
   {#if run.error}<p class="error">{run.error}</p>{/if}
   {#if actionError}<p class="error">{actionError}</p>{/if}
+  {#if logNotice}<p class="notice">{logNotice}</p>{/if}
 
   <div class="tabs" role="tablist">
     <button role="tab" aria-selected={tab === "content"} class:active={tab === "content"} onclick={() => (tab = "content")}>
@@ -244,9 +257,12 @@
     {/key}
   {:else}
     <div class="log-wrap">
-      <button class="ghost small clear" onclick={() => (ensureRun(profile.id).lines = [])} disabled={run.lines.length === 0}>
-        {t("profile.clear")}
-      </button>
+      <div class="log-tools">
+        <button class="ghost small" onclick={exportLogs}>{t("diag.exportProfile")}</button>
+        <button class="ghost small" onclick={() => (ensureRun(profile.id).lines = [])} disabled={run.lines.length === 0}>
+          {t("profile.clear")}
+        </button>
+      </div>
       <pre class="log" bind:this={logEl} onscroll={onLogScroll}>{#each run.lines as line, i (i)}<span
             class:warn={line.includes("/WARN]")}
             class:err={line.includes("/ERROR]") || line.startsWith("\tat ") || line.includes("Exception")}>{line}
@@ -500,7 +516,14 @@
     display: flex;
   }
 
-  .clear {
+  .notice {
+    color: var(--accent);
+    margin: 0;
+  }
+
+  .log-tools {
+    display: flex;
+    gap: 6px;
     position: absolute;
     top: 8px;
     right: 18px;

@@ -307,6 +307,8 @@ Object.assign(api, {
       : { installed: [], removed: ["Zoomify", "Fresh Animations"], present: [], unavailable: [], warnings: [] };
   },
   syncpackSync: async () => ({ installed: [], removed: [], present: [], unavailable: [], warnings: [] }),
+  diagnosticsExport: async (path: string) => (await wait(600), { path, files: 12, bytes: 48_000 }),
+  openLogsFolder: async () => {},
   screenshotsList: async () => mockShots,
   screenshotThumb: async (path: string) => path,
   screenshotDelete: async (path: string) => void (mockShots = mockShots.filter((s) => s.path !== path)),

@@ -115,6 +115,13 @@ enum Command {
     /// Skin-Bibliothek, Skin hochladen, Capes.
     #[command(subcommand)]
     Skin(SkinCommand),
+    /// Diagnose-ZIP für die Fehlersuche (Logs, Crash-Reports, Konfiguration; ohne Account-Daten).
+    Diag {
+        target: PathBuf,
+        /// Nur dieses Profil statt aller.
+        #[arg(long)]
+        profile: Option<String>,
+    },
     /// Mod-Loader abfragen.
     #[command(subcommand)]
     Loader(LoaderCommand),
@@ -613,6 +620,21 @@ async fn main() -> Result<()> {
         Command::Content(cmd) => content_command(cmd, &launcher).await,
         Command::Pack(cmd) => pack_command(cmd, &launcher).await,
         Command::Sync(cmd) => sync_command(cmd, &launcher).await,
+        Command::Diag { target, profile } => {
+            let only = match profile {
+                Some(p) => Some(vec![launcher.profiles().get(&p)?.id]),
+                None => None,
+            };
+            let r = pinecone_core::diagnostics::export(&launcher, &target, only.as_deref(), None)
+                .await?;
+            println!(
+                "{} geschrieben: {} Dateien, {} KB",
+                r.path,
+                r.files,
+                r.bytes / 1024
+            );
+            Ok(())
+        }
         Command::Skin(cmd) => skin_command(cmd, &launcher, &accounts, msa.as_ref()).await,
         Command::Stats => {
             let stats = launcher.stats().load()?;

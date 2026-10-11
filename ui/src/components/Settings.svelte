@@ -4,12 +4,27 @@
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
   import { ACCENTS, settings, updateSettings, useSettings } from "../lib/settings.svelte";
+  import { exportDiagnostics } from "../lib/diagnostics";
   import type { AppInfo, JavaInstallation, Settings, ThemeMode, WidgetId } from "../lib/types";
 
   let { info }: { info: AppInfo | null } = $props();
 
   let javas: JavaInstallation[] | null = $state(null);
   let error: string | null = $state(null);
+  let diagNotice = $state<string | null>(null);
+  let diagBusy = $state(false);
+
+  async function diagnose() {
+    diagBusy = true;
+    diagNotice = null;
+    try {
+      diagNotice = await exportDiagnostics();
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      diagBusy = false;
+    }
+  }
   let notice: string | null = $state(null);
 
   const s = $derived(settings.current);
@@ -217,9 +232,29 @@
       </table>
     {/if}
   </div>
+
+  <div class="card">
+    <h2>{t("diag.title")}</h2>
+    <p class="muted">{t("diag.hint")}</p>
+    <div class="row-buttons">
+      <button class="primary" onclick={diagnose} disabled={diagBusy}>{diagBusy ? t("common.loading") : t("diag.export")}</button>
+      <button onclick={() => api.openLogsFolder().catch((e) => (error = errorText(e)))}>{t("diag.openLogs")}</button>
+    </div>
+    {#if diagNotice}<p class="notice">{diagNotice}</p>{/if}
+  </div>
 </section>
 
 <style>
+  .row-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .notice {
+    color: var(--accent);
+  }
+
   .settings {
     display: flex;
     flex-direction: column;
