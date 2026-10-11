@@ -66,7 +66,8 @@ async fn migrates_to_vanilla_downgrade_into_new_profile() {
         Downloader::new().unwrap(),
         Modrinth::with_base(format!("{}/v2", server.base)).unwrap(),
         None,
-    );
+    )
+    .unwrap();
     let mut profile = Profile::new("Alt", "26.3");
     profile.loader = Some(LoaderSpec {
         kind: LoaderKind::Fabric,
@@ -193,7 +194,8 @@ async fn rejects_same_target() {
         Downloader::new().unwrap(),
         Modrinth::with_base("http://127.0.0.1:9/v2").unwrap(),
         None,
-    );
+    )
+    .unwrap();
     let profile = launcher
         .profiles()
         .create(Profile::new("Vanilla", "1.21.1"))

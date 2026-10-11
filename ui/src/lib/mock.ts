@@ -2,7 +2,7 @@
 // damit sich die Oberfläche ohne App-Fenster entwickeln und prüfen lässt.
 
 import { api } from "./api";
-import type { Account, InstalledContent, LaunchEvent, Profile, ProfileInput, SearchArgs, Settings, SyncMode, SyncPack, UpdateInfo } from "./types";
+import type { Account, InstalledContent, LaunchEvent, Profile, ProfileInput, SavedSkin, SearchArgs, Settings, SyncMode, SyncPack, UpdateInfo } from "./types";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -57,6 +57,28 @@ let syncPacks: SyncPack[] = [
   { id: "shader-setup", name: "Shader-Setup", mode: "template", entries: [{ type: "modrinth", projectId: "HVnmMxH1", kind: "shader", name: "Complementary Shaders" }], options: {}, auto: { enabled: false, loaders: [] } },
 ];
 const syncEnabled = new Set(["fabric-test/basics"]);
+
+// Einfarbiger 64×32-Platzhalter-Skin (Kopf blau, Gesicht hautfarben), als PNG erzeugt.
+const STEVE = (() => {
+  const c = document.createElement("canvas");
+  c.width = 64;
+  c.height = 32;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#3b6fb6"; g.fillRect(0, 16, 64, 16);
+  g.fillStyle = "#c69c7a"; g.fillRect(0, 0, 32, 16);
+  g.fillStyle = "#4a3222"; g.fillRect(8, 8, 8, 2); g.fillRect(0, 0, 32, 8);
+  g.fillStyle = "#ffffff"; g.fillRect(9, 12, 2, 1); g.fillRect(13, 12, 2, 1);
+  return c.toDataURL("image/png");
+})();
+let mockSkins: SavedSkin[] = [
+  { id: "1", name: "Tobi", model: "classic", created: now, updated: now },
+  { id: "2", name: "Winter", model: "slim", created: now - 100, updated: now - 100 },
+];
+function addMockSkin(name: string, model: "classic" | "slim" = "classic") {
+  const s = { id: String(Date.now()), name, model, created: now, updated: now };
+  mockSkins = [s, ...mockSkins];
+  return s;
+}
 
 function preview(token: string, source: "modrinth" | "curseforge" | "file") {
   return {
@@ -262,6 +284,20 @@ Object.assign(api, {
       : { installed: [], removed: ["Zoomify", "Fresh Animations"], present: [], unavailable: [], warnings: [] };
   },
   syncpackSync: async () => ({ installed: [], removed: [], present: [], unavailable: [], warnings: [] }),
+  skinsList: async () => mockSkins,
+  skinData: async () => STEVE,
+  skinImportFile: async () => addMockSkin("Datei-Skin"),
+  skinImportPlayer: async (player: string) => (await wait(500), addMockSkin(player)),
+  skinSave: async (id: string | null, name: string, model: "classic" | "slim") =>
+    id ? Object.assign(mockSkins.find((s) => s.id === id)!, { name, model }) : addMockSkin(name, model),
+  skinRename: async (id: string, name: string) => Object.assign(mockSkins.find((s) => s.id === id)!, { name }),
+  skinSetModel: async (id: string, model: "classic" | "slim") => Object.assign(mockSkins.find((s) => s.id === id)!, { model }),
+  skinDelete: async (id: string) => void (mockSkins = mockSkins.filter((s) => s.id !== id)),
+  skinExport: async () => {},
+  skinAccount: async () => { throw "Skins und Capes lassen sich nur mit einem Microsoft-Account ändern."; },
+  skinApply: async () => { throw "Microsoft-Login ist nicht eingerichtet"; },
+  skinSetCape: async () => { throw "Microsoft-Login ist nicht eingerichtet"; },
+  skinImportAccount: async () => addMockSkin("Account"),
   takeOpenRequests: async () => [],
   onOpenPack: async () => () => {},
   packInstallModrinth: async () => (await wait(800), { profile: profiles[0], missing: [] }),

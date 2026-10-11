@@ -39,6 +39,9 @@ import type {
   SyncMode,
   SyncPack,
   SyncReport,
+  AccountSkin,
+  SavedSkin,
+  SkinModel,
 } from "./types";
 
 export const api = {
@@ -123,6 +126,20 @@ export const api = {
   syncpackSetEnabled: (profileId: string, id: string, enabled: boolean) =>
     invoke<SyncReport>("syncpack_set_enabled", { profileId, id, enabled }),
   syncpackSync: (profileId: string) => invoke<SyncReport>("syncpack_sync", { profileId }),
+  skinsList: () => invoke<SavedSkin[]>("skins_list"),
+  skinData: (id: string) => invoke<string>("skin_data", { id }),
+  skinImportFile: (path: string, model: SkinModel) => invoke<SavedSkin>("skin_import_file", { path, model }),
+  skinImportPlayer: (player: string) => invoke<SavedSkin>("skin_import_player", { player }),
+  skinSave: (id: string | null, name: string, model: SkinModel, dataUrl: string) =>
+    invoke<SavedSkin>("skin_save", { id, name, model, dataUrl }),
+  skinRename: (id: string, name: string) => invoke<SavedSkin>("skin_rename", { id, name }),
+  skinSetModel: (id: string, model: SkinModel) => invoke<SavedSkin>("skin_set_model", { id, model }),
+  skinDelete: (id: string) => invoke<void>("skin_delete", { id }),
+  skinExport: (id: string, path: string) => invoke<void>("skin_export", { id, path }),
+  skinAccount: () => invoke<AccountSkin>("skin_account"),
+  skinApply: (id: string) => invoke<AccountSkin>("skin_apply", { id }),
+  skinSetCape: (capeId: string | null) => invoke<AccountSkin>("skin_set_cape", { capeId }),
+  skinImportAccount: () => invoke<SavedSkin>("skin_import_account"),
   /** Beim Start übergebene Links/Dateien (einmalig) und später geöffnete. */
   takeOpenRequests: () => invoke<string[]>("take_open_requests"),
   onOpenPack: (handler: (request: string) => void) => listen<string>("open-pack", (e) => handler(e.payload)),

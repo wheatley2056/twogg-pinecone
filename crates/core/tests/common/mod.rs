@@ -16,7 +16,7 @@ pub struct Request {
     pub body: String,
 }
 
-type Routes = HashMap<(String, String), VecDeque<(u16, String)>>;
+type Routes = HashMap<(String, String), VecDeque<(u16, Vec<u8>)>>;
 
 #[derive(Clone)]
 pub struct MockServer {
@@ -46,18 +46,19 @@ impl MockServer {
 
     /// Antwort für `METHOD /pfad` einreihen. Mehrere Antworten werden der Reihe nach geliefert,
     /// die letzte bleibt danach bestehen.
-    pub fn on(&self, method: &str, path: &str, status: u16, body: impl Into<String>) -> &Self {
+    /// Antworten dürfen Text oder Bytes sein (`&str`, `String`, `Vec<u8>`).
+    pub fn on(&self, method: &str, path: &str, status: u16, body: impl AsRef<[u8]>) -> &Self {
         self.routes
             .lock()
             .unwrap()
             .entry((method.into(), path.into()))
             .or_default()
-            .push_back((status, body.into()));
+            .push_back((status, body.as_ref().to_vec()));
         self
     }
 
     /// Bisherige Antworten einer Route verwerfen und durch diese ersetzen.
-    pub fn replace(&self, method: &str, path: &str, status: u16, body: impl Into<String>) -> &Self {
+    pub fn replace(&self, method: &str, path: &str, status: u16, body: impl AsRef<[u8]>) -> &Self {
         self.routes
             .lock()
             .unwrap()
@@ -124,13 +125,14 @@ impl MockServer {
             match routes.get_mut(&(method, route)) {
                 Some(queue) if queue.len() > 1 => queue.pop_front().unwrap(),
                 Some(queue) => queue.front().cloned().unwrap(),
-                None => (404, "{}".into()),
+                None => (404, b"{}".to_vec()),
             }
         };
-        let response = format!(
-            "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        let head = format!(
+            "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
             body.len()
         );
-        let _ = socket.write_all(response.as_bytes()).await;
+        let _ = socket.write_all(head.as_bytes()).await;
+        let _ = socket.write_all(&body).await;
     }
 }

@@ -9,6 +9,7 @@ mod game;
 mod migrate;
 mod open;
 mod packs;
+mod skins;
 mod syncpacks;
 
 use std::collections::HashMap;
@@ -170,6 +171,19 @@ fn main() {
             syncpacks::syncpack_for_profile,
             syncpacks::syncpack_set_enabled,
             syncpacks::syncpack_sync,
+            skins::skins_list,
+            skins::skin_data,
+            skins::skin_import_file,
+            skins::skin_import_player,
+            skins::skin_save,
+            skins::skin_rename,
+            skins::skin_set_model,
+            skins::skin_delete,
+            skins::skin_export,
+            skins::skin_account,
+            skins::skin_apply,
+            skins::skin_set_cape,
+            skins::skin_import_account,
             game::launch,
             game::stop_game,
         ])

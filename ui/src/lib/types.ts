@@ -381,3 +381,21 @@ export interface SyncReport {
   unavailable: string[];
   warnings: string[];
 }
+
+export type SkinModel = "classic" | "slim";
+
+export interface SavedSkin {
+  id: string;
+  name: string;
+  model: SkinModel;
+  created: number;
+  updated: number;
+}
+
+export interface AccountSkin {
+  name: string;
+  skinUrl: string | null;
+  skinDataUrl: string | null;
+  model: SkinModel;
+  capes: { id: string; alias: string | null; active: boolean; dataUrl: string | null }[];
+}

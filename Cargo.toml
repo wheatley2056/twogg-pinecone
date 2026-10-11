@@ -13,7 +13,7 @@ pinecone-core = { path = "crates/core" }
 anyhow = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs", "io-util", "process", "net", "time"] }
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream", "multipart"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha1 = "0.10"
@@ -29,6 +29,7 @@ clap = { version = "4", features = ["derive", "env"] }
 indicatif = "0.17"
 tempfile = "3"
 hickory-resolver = "0.26"
+base64 = "0.22"
 tauri = { version = "2.12", features = ["protocol-asset"] }
 tauri-build = { version = "2.5", features = [] }
 tauri-plugin-opener = "2.7"

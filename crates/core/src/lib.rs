@@ -24,6 +24,7 @@ pub mod screenshots;
 pub mod servers;
 pub mod settings;
 pub mod share;
+pub mod skins;
 pub mod stats;
 pub mod syncpacks;
 

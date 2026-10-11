@@ -388,6 +388,74 @@ impl MsaClient {
             .map_err(|source| Error::Http { url, source })
     }
 
+    /// Skin des Accounts setzen (PNG 64×64 oder 64×32). Liefert das aktualisierte Profil.
+    pub async fn upload_skin(
+        &self,
+        minecraft_token: &str,
+        model: crate::skins::SkinModel,
+        png: Vec<u8>,
+    ) -> Result<Profile> {
+        crate::skins::check_skin_png(&png)?;
+        let url = format!("{}/minecraft/profile/skins", self.endpoints.minecraft);
+        let part = reqwest::multipart::Part::bytes(png)
+            .file_name("skin.png")
+            .mime_str("image/png")
+            .map_err(|source| Error::Http {
+                url: url.clone(),
+                source,
+            })?;
+        let form = reqwest::multipart::Form::new()
+            .text("variant", model.variant())
+            .part("file", part);
+        let req = self
+            .http
+            .post(&url)
+            .bearer_auth(minecraft_token)
+            .multipart(form);
+        self.profile_response(req, &url).await
+    }
+
+    /// Cape aktivieren (`Some(id)` aus `Profile::capes`) oder ausblenden (`None`).
+    pub async fn set_cape(&self, minecraft_token: &str, cape_id: Option<&str>) -> Result<Profile> {
+        let url = format!(
+            "{}/minecraft/profile/capes/active",
+            self.endpoints.minecraft
+        );
+        let req = match cape_id {
+            Some(id) => self
+                .http
+                .put(&url)
+                .json(&serde_json::json!({ "capeId": id })),
+            None => self.http.delete(&url),
+        }
+        .bearer_auth(minecraft_token);
+        self.profile_response(req, &url).await
+    }
+
+    async fn profile_response(&self, req: reqwest::RequestBuilder, url: &str) -> Result<Profile> {
+        let resp = req.send().await.map_err(|source| Error::Http {
+            url: url.into(),
+            source,
+        })?;
+        let status = resp.status();
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(auth("Anmeldung abgelaufen, bitte neu anmelden"));
+        }
+        if !status.is_success() {
+            // Die API erklärt Ablehnungen (z. B. ungültiges Bild) im Feld `errorMessage`.
+            let text = resp.text().await.unwrap_or_default();
+            let detail = serde_json::from_str::<serde_json::Value>(&text)
+                .ok()
+                .and_then(|v| v["errorMessage"].as_str().map(str::to_string))
+                .unwrap_or_else(|| format!("HTTP {status}"));
+            return Err(Error::Invalid(format!("Minecraft hat abgelehnt: {detail}")));
+        }
+        resp.json().await.map_err(|source| Error::Http {
+            url: url.into(),
+            source,
+        })
+    }
+
     async fn xbox_request(&self, url: &str, body: serde_json::Value) -> Result<XboxResponse> {
         let resp = self
             .http

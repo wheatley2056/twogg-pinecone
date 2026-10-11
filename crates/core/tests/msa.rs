@@ -310,3 +310,94 @@ fn keyring_roundtrip() {
     KeyringStore.delete(key).unwrap();
     assert_eq!(KeyringStore.get(key).unwrap(), None);
 }
+
+#[tokio::test]
+async fn uploads_skin_and_switches_cape() {
+    use pinecone_core::skins::SkinModel;
+    let server = MockServer::start().await;
+    let profile = |cape: &str| {
+        format!(
+            r#"{{"id":"{PROFILE_ID}","name":"Tobi","skins":[{{"id":"s2","state":"ACTIVE","url":"https://textures.minecraft.net/texture/neu","variant":"SLIM"}}],"capes":[{{"id":"c1","state":"{cape}","url":"https://textures.minecraft.net/texture/cape","alias":"Migrator"}}]}}"#
+        )
+    };
+    server
+        .on(
+            "POST",
+            "/mc/minecraft/profile/skins",
+            200,
+            profile("INACTIVE"),
+        )
+        .on(
+            "PUT",
+            "/mc/minecraft/profile/capes/active",
+            200,
+            profile("ACTIVE"),
+        )
+        .on(
+            "DELETE",
+            "/mc/minecraft/profile/capes/active",
+            200,
+            profile("INACTIVE"),
+        );
+    let msa = client(&server);
+    let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13];
+    png.extend_from_slice(b"IHDR");
+    png.extend_from_slice(&64u32.to_be_bytes());
+    png.extend_from_slice(&64u32.to_be_bytes());
+
+    let p = msa
+        .upload_skin("mc-token", SkinModel::Slim, png.clone())
+        .await
+        .unwrap();
+    assert_eq!(p.active_skin().unwrap().id, "s2");
+    let req = &server.requests("/mc/minecraft/profile/skins")[0];
+    assert_eq!(req.headers["authorization"], "Bearer mc-token");
+    assert!(req.headers["content-type"].starts_with("multipart/form-data"));
+    assert!(req.body.contains("name=\"variant\"") && req.body.contains("slim"));
+    assert!(req.body.contains("filename=\"skin.png\""));
+
+    let p = msa.set_cape("mc-token", Some("c1")).await.unwrap();
+    assert_eq!(p.capes[0].state, "ACTIVE");
+    assert!(
+        server.requests("/mc/minecraft/profile/capes/active")[0]
+            .body
+            .contains("\"capeId\":\"c1\"")
+    );
+    let p = msa.set_cape("mc-token", None).await.unwrap();
+    assert_eq!(p.capes[0].state, "INACTIVE");
+
+    // HD-Skins lehnt Pinecone vor dem Senden ab.
+    let mut hd = png[..16].to_vec();
+    hd.extend_from_slice(&128u32.to_be_bytes());
+    hd.extend_from_slice(&128u32.to_be_bytes());
+    assert!(
+        msa.upload_skin("mc-token", SkinModel::Classic, hd)
+            .await
+            .is_err()
+    );
+    assert_eq!(server.requests("/mc/minecraft/profile/skins").len(), 1);
+}
+
+#[tokio::test]
+async fn skin_upload_errors_are_readable() {
+    use pinecone_core::skins::SkinModel;
+    let server = MockServer::start().await;
+    server.on(
+        "POST",
+        "/mc/minecraft/profile/skins",
+        400,
+        r#"{"path":"/minecraft/profile/skins","errorMessage":"Could not validate image data."}"#,
+    );
+    let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13];
+    png.extend_from_slice(b"IHDR");
+    png.extend_from_slice(&64u32.to_be_bytes());
+    png.extend_from_slice(&32u32.to_be_bytes());
+    let err = client(&server)
+        .upload_skin("mc-token", SkinModel::Classic, png)
+        .await
+        .unwrap_err();
+    assert!(
+        err.to_string().contains("Could not validate image data"),
+        "{err}"
+    );
+}

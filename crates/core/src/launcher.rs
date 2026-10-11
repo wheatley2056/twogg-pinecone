@@ -18,6 +18,7 @@ use crate::paths::Paths;
 use crate::profiles::{Profile, ProfileStore};
 use crate::servers::{ServerAddress, last_server_in_log};
 use crate::settings::SettingsStore;
+use crate::skins::SkinLibrary;
 use crate::stats::{ProfileStats, StatsStore, now_secs};
 use crate::syncpacks::SyncManager;
 
@@ -55,6 +56,7 @@ pub struct Launcher {
     content: ContentManager,
     packs: PackManager,
     sync: SyncManager,
+    skins: SkinLibrary,
 }
 
 impl Launcher {
@@ -62,12 +64,7 @@ impl Launcher {
         let curseforge = curseforge::api_key_from_env()
             .map(CurseForge::new)
             .transpose()?;
-        Ok(Self::with_services(
-            paths,
-            downloader,
-            Modrinth::new()?,
-            curseforge,
-        ))
+        Self::with_services(paths, downloader, Modrinth::new()?, curseforge)
     }
 
     /// Mit eigenen API-Clients (z. B. gegen einen Mock-Server in Tests).
@@ -76,7 +73,7 @@ impl Launcher {
         downloader: Downloader,
         modrinth: Modrinth,
         curseforge: Option<CurseForge>,
-    ) -> Self {
+    ) -> Result<Self> {
         let installer = Installer::new(paths.clone(), downloader.clone());
         let content = ContentManager::new(paths.clone(), downloader.clone(), modrinth.clone())
             .with_curseforge(curseforge.clone());
@@ -93,7 +90,8 @@ impl Launcher {
             downloader.clone(),
             installer.environment().clone(),
         );
-        Self {
+        Ok(Self {
+            skins: SkinLibrary::new(&paths)?,
             sync: SyncManager::new(
                 paths.clone(),
                 content.clone(),
@@ -108,7 +106,7 @@ impl Launcher {
             paths,
             installer,
             java,
-        }
+        })
     }
 
     pub fn content(&self) -> &ContentManager {
@@ -121,6 +119,10 @@ impl Launcher {
 
     pub fn syncpacks(&self) -> &SyncManager {
         &self.sync
+    }
+
+    pub fn skins(&self) -> &SkinLibrary {
+        &self.skins
     }
 
     pub fn paths(&self) -> &Paths {

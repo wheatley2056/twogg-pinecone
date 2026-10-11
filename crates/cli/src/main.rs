@@ -22,6 +22,7 @@ use pinecone_core::paths::Paths;
 use pinecone_core::profiles::Profile;
 use pinecone_core::servers::{ServerAddress, ping as server_ping, read_servers_dat};
 use pinecone_core::share::ShareLink;
+use pinecone_core::skins::SkinModel;
 use pinecone_core::stats::now_secs;
 use pinecone_core::syncpacks::{SyncEntry, SyncMode, SyncPack, SyncReport};
 use std::collections::HashMap;
@@ -111,6 +112,9 @@ enum Command {
     /// Sync-Packs und Vorlagen: Inhalte, die man Profilen zuschaltet.
     #[command(subcommand)]
     Sync(SyncCommand),
+    /// Skin-Bibliothek, Skin hochladen, Capes.
+    #[command(subcommand)]
+    Skin(SkinCommand),
     /// Mod-Loader abfragen.
     #[command(subcommand)]
     Loader(LoaderCommand),
@@ -330,6 +334,28 @@ impl From<KindArg> for ContentKind {
             KindArg::Shader => ContentKind::Shader,
         }
     }
+}
+
+#[derive(Subcommand)]
+enum SkinCommand {
+    /// Skins der Bibliothek anzeigen.
+    List,
+    /// Skin aus PNG-Datei oder vom Spielernamen in die Bibliothek übernehmen.
+    Import {
+        /// Pfad zu einer PNG-Datei oder ein Spielername.
+        source: String,
+        #[arg(long)]
+        name: Option<String>,
+        /// Schmale Arme (Alex); nur für Dateien, bei Spielern kommt das Modell von Mojang.
+        #[arg(long)]
+        slim: bool,
+    },
+    /// Skin aus der Bibliothek löschen.
+    Delete { id: String },
+    /// Skin aus der Bibliothek als Skin des aktiven Microsoft-Accounts setzen.
+    Upload { id: String },
+    /// Capes des aktiven Microsoft-Accounts anzeigen bzw. eins aktivieren (`none` blendet aus).
+    Cape { id: Option<String> },
 }
 
 #[derive(Subcommand)]
@@ -587,6 +613,7 @@ async fn main() -> Result<()> {
         Command::Content(cmd) => content_command(cmd, &launcher).await,
         Command::Pack(cmd) => pack_command(cmd, &launcher).await,
         Command::Sync(cmd) => sync_command(cmd, &launcher).await,
+        Command::Skin(cmd) => skin_command(cmd, &launcher, &accounts, msa.as_ref()).await,
         Command::Stats => {
             let stats = launcher.stats().load()?;
             let profiles = launcher.profiles().list()?;
@@ -956,6 +983,89 @@ async fn resolve_link(
         }
         ShareLink::Code(_) => bail!("Share-Codes gibt es erst mit dem Share-Dienst"),
     })
+}
+
+async fn skin_command(
+    cmd: SkinCommand,
+    launcher: &Launcher,
+    accounts: &AccountStore,
+    msa: Option<&MsaClient>,
+) -> Result<()> {
+    let lib = launcher.skins();
+    let model_label = |m: SkinModel| match m {
+        SkinModel::Classic => "classic",
+        SkinModel::Slim => "slim",
+    };
+    match cmd {
+        SkinCommand::List => {
+            let list = lib.list()?;
+            if list.is_empty() {
+                println!("Keine Skins. Übernehmen mit `pinecone skin import <spieler|datei.png>`.");
+            }
+            for s in list {
+                println!("  {:<20} {:<28} {}", s.id, s.name, model_label(s.model));
+            }
+        }
+        SkinCommand::Import { source, name, slim } => {
+            let path = PathBuf::from(&source);
+            let skin = if path.is_file() {
+                let model = if slim {
+                    SkinModel::Slim
+                } else {
+                    SkinModel::Classic
+                };
+                lib.import_file(&path, name.as_deref(), model)?
+            } else {
+                let mut s = lib.import_player(&source).await?;
+                if let Some(n) = name {
+                    s = lib.rename(&s.id, &n)?;
+                }
+                s
+            };
+            println!(
+                "Skin {:?} ({}) übernommen, ID {}",
+                skin.name,
+                model_label(skin.model),
+                skin.id
+            );
+        }
+        SkinCommand::Delete { id } => {
+            lib.delete(&id)?;
+            println!("Skin {id} gelöscht");
+        }
+        SkinCommand::Upload { id } => {
+            let msa =
+                msa.context("Microsoft-Login nicht konfiguriert (PINECONE_MSA_CLIENT_ID fehlt)")?;
+            let skin = lib
+                .list()?
+                .into_iter()
+                .find(|s| s.id == id)
+                .context("Kein Skin mit dieser ID")?;
+            let account = accounts.session(None, Some(msa)).await?;
+            let profile = msa
+                .upload_skin(&account.access_token, skin.model, lib.png(&id)?)
+                .await?;
+            println!("Skin {:?} für {} gesetzt", skin.name, profile.name);
+        }
+        SkinCommand::Cape { id } => {
+            let msa =
+                msa.context("Microsoft-Login nicht konfiguriert (PINECONE_MSA_CLIENT_ID fehlt)")?;
+            let account = accounts.session(None, Some(msa)).await?;
+            let profile = match id.as_deref() {
+                None => msa.profile(&account.access_token).await?,
+                Some("none") => msa.set_cape(&account.access_token, None).await?,
+                Some(cape) => msa.set_cape(&account.access_token, Some(cape)).await?,
+            };
+            if profile.capes.is_empty() {
+                println!("{} hat keine Capes.", profile.name);
+            }
+            for c in profile.capes {
+                let mark = if c.state == "ACTIVE" { "*" } else { " " };
+                println!("{mark} {:<38} {}", c.id, c.alias.unwrap_or_default());
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Neues Profil: Sync-Packs mit Auto-Regel einschalten (Fehler nur melden).

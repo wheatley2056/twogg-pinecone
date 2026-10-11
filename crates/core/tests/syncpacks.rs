@@ -90,7 +90,8 @@ async fn setup() -> (MockServer, tempfile::TempDir, Launcher) {
         Downloader::new().unwrap(),
         Modrinth::with_base(format!("{}/v2", server.base)).unwrap(),
         None,
-    );
+    )
+    .unwrap();
     (server, dir, launcher)
 }
 
