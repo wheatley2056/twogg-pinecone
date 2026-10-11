@@ -28,6 +28,9 @@ pub struct Profile {
     pub memory_mb: Option<u32>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub jvm_args: Vec<String>,
+    /// JVM-Preset (`aikar`, `none`, eigenes …); ohne Angabe gilt der globale Standard.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jvm_preset: Option<String>,
     /// Fester Java-Pfad; ohne Angabe wird automatisch gewählt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub java: Option<PathBuf>,
@@ -50,6 +53,7 @@ impl Profile {
             loader: None,
             memory_mb: None,
             jvm_args: Vec::new(),
+            jvm_preset: None,
             java: None,
             resolution: None,
             color: None,

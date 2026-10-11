@@ -2,7 +2,7 @@
 // damit sich die Oberfläche ohne App-Fenster entwickeln und prüfen lässt.
 
 import { api } from "./api";
-import type { Account, AppEvent, AppUser, FriendsState, Participation, InstalledContent, LaunchEvent, Profile, ProfileInput, SavedSkin, SearchArgs, Settings, SyncMode, SyncPack, UpdateInfo } from "./types";
+import type { Account, AppEvent, AppUser, FriendsState, Participation, InstalledContent, LaunchEvent, Profile, ProfileInput, SavedSkin, JvmPreset, SearchArgs, Settings, SyncMode, SyncPack, UpdateInfo } from "./types";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const loginHandlers: ((r: { user?: AppUser; error?: string }) => void)[] = [];
@@ -24,7 +24,20 @@ let settings: Settings = {
   updateChannel: "release",
   widgets: (["recent", "news", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
   language: "de",
+  jvm: { defaultPreset: "aikar", presets: [] },
 };
+// Gekürzte Flag-Listen; die echten stehen in crates/core/src/jvm.rs.
+const JVM_BUILTIN: JvmPreset[] = [
+  { id: "aikar", name: "Aikar's Flags", description: "Bewährte G1-Einstellungen für gleichmäßige Bildraten und kurze Ruckler. Guter Standard für die meisten Instanzen.",
+    args: ["-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled", "-XX:MaxGCPauseMillis=200", "-XX:+UnlockExperimentalVMOptions", "-XX:+DisableExplicitGC", "-XX:+AlwaysPreTouch", "-XX:G1NewSizePercent=30", "-XX:G1MaxNewSizePercent=40", "-XX:G1HeapRegionSize=8M"],
+    minJava: 8, builtin: true, modified: false },
+  { id: "meowice", name: "MeowIce's Flags", description: "Aggressiver abgestimmtes G1 mit JIT-Optimierungen. Für große Modpacks und starke Rechner, ab Java 17.",
+    args: ["-XX:+IgnoreUnrecognizedVMOptions", "-XX:+UnlockExperimentalVMOptions", "-XX:+UnlockDiagnosticVMOptions", "-XX:+AlwaysActAsServerClassMachine", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=37"],
+    minJava: 17, builtin: true, modified: false },
+  { id: "zgc", name: "Generational ZGC", description: "Kaum spürbare GC-Pausen, braucht etwas mehr Arbeitsspeicher. Ab Java 21 (Minecraft 1.20.5 und neuer).",
+    args: ["-XX:+IgnoreUnrecognizedVMOptions", "-XX:+UseZGC", "-XX:+ZGenerational", "-XX:+AlwaysPreTouch", "-XX:+DisableExplicitGC", "-XX:+PerfDisableSharedMem"],
+    minJava: 21, builtin: true, modified: false },
+];
 const hour = 3600;
 const now = Math.floor(Date.now() / 1000);
 const stats: Record<string, { playtimeSecs: number; sessions: number; lastPlayed: number | null; lastServer: null }> = {
@@ -458,6 +471,7 @@ Object.assign(api, {
   curseforgeFiles: async () => [],
   contentInstallCurseforge: async () => ({ installed: [["Just Enough Items (JEI)", "jei-1.0.jar"]], alreadyPresent: [], warnings: [] }),
   getSettings: async () => settings,
+  jvmBuiltinPresets: async () => JVM_BUILTIN,
   saveSettings: async (s: Settings) => (settings = s),
   exportTheme: async () => {},
   importTheme: async () => settings,

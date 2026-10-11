@@ -6,7 +6,9 @@
   import { onMount, untrack } from "svelte";
   import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
-  import type { JavaInstallation, LoaderKind, LoaderVersion, Profile, VersionInfo } from "../../lib/types";
+  import { NO_PRESET, mergePresets } from "../../lib/jvm";
+  import { settings } from "../../lib/settings.svelte";
+  import type { JvmPreset, JavaInstallation, LoaderKind, LoaderVersion, Profile, VersionInfo } from "../../lib/types";
   import ProfileIcon, { MOTIFS, imageOf, keptIcon, type Motif } from "../ProfileIcon.svelte";
   import Segmented from "../ui/Segmented.svelte";
 
@@ -33,6 +35,14 @@
   let javaMode: "auto" | "custom" = $state(initial?.java ? "custom" : "auto");
   let javaPath = $state(initial?.java ?? "");
   let jvmArgs = $state(initial?.jvmArgs.join(" ") ?? "");
+  // Leer = globaler Standard aus Einstellungen › Java.
+  let jvmPreset = $state(initial?.jvmPreset ?? "");
+  let builtinPresets: JvmPreset[] = $state([]);
+  const jvmPresets = $derived(settings.current ? mergePresets(builtinPresets, settings.current.jvm) : builtinPresets);
+  const defaultPresetName = $derived.by(() => {
+    const id = settings.current?.jvm.defaultPreset ?? NO_PRESET;
+    return jvmPresets.find((p) => p.id === id)?.name ?? t("jvm.none");
+  });
   // Motiv (`motif:<name>`), Pack-Logo (`data:`-URL) oder leer für Initialen.
   let icon = $state(keptIcon(initial?.icon) ?? "");
   const packLogo = imageOf(initial?.icon);
@@ -56,6 +66,7 @@
       error = errorText(e);
     }
     javas = await api.javaList().catch(() => []);
+    builtinPresets = await api.jvmBuiltinPresets().catch(() => []);
   });
 
   async function toggleSnapshots() {
@@ -99,6 +110,7 @@
     loader: loader === "none" ? null : { kind: loader, version: loaderVersion },
     memoryMb,
     jvmArgs: jvmArgs.split(/\s+/).filter(Boolean),
+    jvmPreset: jvmPreset || null,
     java: javaMode === "custom" && javaPath.trim() ? javaPath.trim() : null,
     icon: icon || null,
     color: initial?.color ?? null,
@@ -113,6 +125,7 @@
           loader: initial.loader,
           memoryMb: initial.memoryMb ?? 4096,
           jvmArgs: initial.jvmArgs,
+          jvmPreset: initial.jvmPreset ?? null,
           java: initial.java,
           icon: keptIcon(initial.icon),
           color: initial.color,
@@ -240,6 +253,17 @@
           {/each}
         </datalist>
       {/if}
+    </label>
+
+    <label class="wide">
+      {t("dialog.jvmPreset")}
+      <select bind:value={jvmPreset}>
+        <option value="">{t("dialog.jvmPresetDefault", { name: defaultPresetName })}</option>
+        <option value={NO_PRESET}>{t("jvm.none")}</option>
+        {#each jvmPresets as p (p.id)}
+          <option value={p.id}>{p.name}{p.minJava > 8 ? ` · Java ${p.minJava}+` : ""}</option>
+        {/each}
+      </select>
     </label>
 
     <label class="wide">

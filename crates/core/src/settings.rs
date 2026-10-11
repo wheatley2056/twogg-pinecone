@@ -139,6 +139,9 @@ pub struct Settings {
     pub widgets: Vec<Widget>,
     #[serde(default)]
     pub language: Language,
+    /// JVM-Presets (Aikar's Flags usw.) und globaler Standard.
+    #[serde(default)]
+    pub jvm: crate::jvm::JvmSettings,
 }
 
 fn default_splash() -> bool {
@@ -164,6 +167,7 @@ impl Default for Settings {
             update_channel: UpdateChannel::Release,
             widgets: default_widgets(),
             language: Language::default(),
+            jvm: crate::jvm::JvmSettings::default(),
         }
     }
 }
@@ -171,6 +175,7 @@ impl Default for Settings {
 impl Settings {
     /// Unbekannte Widgets entfernen, fehlende hinten anhängen (z. B. nach Updates).
     fn normalize(&mut self) {
+        self.jvm.normalize();
         let mut seen = std::collections::HashSet::new();
         self.widgets
             .retain(|w| WIDGETS.contains(&w.id.as_str()) && seen.insert(w.id.clone()));
@@ -214,6 +219,7 @@ impl SettingsStore {
 
     pub fn save(&self, settings: &Settings) -> Result<Settings> {
         settings.theme.validate()?;
+        settings.jvm.validate()?;
         let mut settings = settings.clone();
         settings.normalize();
         std::fs::create_dir_all(&self.root).map_err(Error::io(&self.root))?;

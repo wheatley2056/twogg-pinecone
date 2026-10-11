@@ -4,6 +4,7 @@
   import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
   import type { JavaInstallation } from "../../lib/types";
+  import JvmPresets from "./JvmPresets.svelte";
   import SettingRow from "./SettingRow.svelte";
 
   let javas = $state<JavaInstallation[] | null>(null);
@@ -46,6 +47,12 @@
       {/each}
     {/if}
   </div>
+</section>
+
+<section>
+  <h3 class="section-label">{t("jvm.title")}</h3>
+  <p class="hint">{t("jvm.lead")}</p>
+  <JvmPresets />
 </section>
 
 <section>

@@ -10,6 +10,7 @@ pub mod error;
 pub mod forge;
 pub mod install;
 pub mod java;
+pub mod jvm;
 pub mod launch;
 pub mod launcher;
 pub mod loader;

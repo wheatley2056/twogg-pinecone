@@ -150,6 +150,32 @@ impl Launcher {
         &self.stats
     }
 
+    /// JVM-Argumente einer Instanz: Preset (eigenes oder globaler Standard), danach die eigenen
+    /// Argumente der Instanz, damit diese gewinnen. Ist Java zu alt für das Preset, entfällt es.
+    pub fn jvm_args(&self, profile: &Profile, java_major: Option<u32>) -> Vec<String> {
+        let jvm = self.settings.load().map(|s| s.jvm).unwrap_or_default();
+        let id = profile
+            .jvm_preset
+            .clone()
+            .unwrap_or_else(|| jvm.default_preset.clone());
+        let mut args = match jvm.find(&id) {
+            Some(preset) => {
+                let args = crate::jvm::launch_args(&preset, java_major);
+                if args.is_empty() && !preset.args.is_empty() {
+                    tracing::warn!(
+                        "JVM-Preset {} braucht Java {}+, gestartet wird ohne",
+                        preset.name,
+                        preset.min_java
+                    );
+                }
+                args
+            }
+            None => Vec::new(),
+        };
+        args.extend(profile.jvm_args.iter().cloned());
+        args
+    }
+
     pub fn settings(&self) -> &SettingsStore {
         &self.settings
     }
@@ -225,8 +251,11 @@ impl Launcher {
         };
 
         on_event(PrepareEvent::Stage(Stage::Java));
-        let java = match &profile.java {
-            Some(path) => path.clone(),
+        let (java, java_major) = match &profile.java {
+            Some(path) => (
+                path.clone(),
+                crate::java::probe(path).await.map(|j| j.major),
+            ),
             None => {
                 let wanted = version.java_version.clone().unwrap_or(DEFAULT_JAVA);
                 let found = self
@@ -237,7 +266,7 @@ impl Launcher {
                     version: found.version.clone(),
                     path: found.path.clone(),
                 });
-                found.path
+                (found.path, Some(found.major))
             }
         };
 
@@ -259,7 +288,7 @@ impl Launcher {
             game_dir,
             game_assets: Some(game_assets),
             memory_mb: Some(profile.memory_mb.unwrap_or(DEFAULT_MEMORY_MB)),
-            extra_jvm_args: profile.jvm_args.clone(),
+            extra_jvm_args: self.jvm_args(profile, java_major),
             resolution: profile.resolution.map(|r| (r.width, r.height)),
             quick_play,
         };

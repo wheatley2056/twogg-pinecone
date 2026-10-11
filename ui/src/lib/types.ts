@@ -34,6 +34,8 @@ export interface Profile {
   loader: LoaderSpec | null;
   memoryMb: number | null;
   jvmArgs: string[];
+  /** JVM-Preset der Instanz; `null` = globaler Standard. */
+  jvmPreset?: string | null;
   java: string | null;
   color: string | null;
   icon: string | null;
@@ -51,6 +53,7 @@ export interface ProfileInput {
   loader: LoaderSpec | null;
   memoryMb: number | null;
   jvmArgs: string[];
+  jvmPreset: string | null;
   java: string | null;
   color: string | null;
   icon: string | null;
@@ -135,6 +138,31 @@ export interface Settings {
   updateChannel: "release" | "beta";
   widgets: { id: WidgetId; visible: boolean }[];
   language: "de" | "en";
+  jvm: JvmSettings;
+}
+
+/** JVM-Presets in den Einstellungen: eigene und geänderte eingebaute (gleiche ID). */
+export interface StoredPreset {
+  id: string;
+  name: string;
+  args: string[];
+  minJava: number;
+}
+
+export interface JvmSettings {
+  /** `none` oder die ID eines Presets. */
+  defaultPreset: string;
+  presets: StoredPreset[];
+}
+
+export interface JvmPreset {
+  id: string;
+  name: string;
+  description: string;
+  args: string[];
+  minJava: number;
+  builtin: boolean;
+  modified: boolean;
 }
 
 export type ContentKind = "mod" | "resourcepack" | "shader";
