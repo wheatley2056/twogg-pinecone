@@ -11,7 +11,7 @@
   import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
   import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType } from "./lib/types";
   import Discover from "./components/Discover.svelte";
-  import Home from "./components/Home.svelte";
+  import PlayPage from "./components/pages/PlayPage.svelte";
   import ImportDialog from "./components/ImportDialog.svelte";
   import Library from "./components/Library.svelte";
   import MissingDialog from "./components/MissingDialog.svelte";
@@ -209,7 +209,7 @@
     onPanel={togglePanel}
   />
 
-  <main class="view">
+  <main class="view" class:bleed={view === "home" && profiles.length > 0}>
     {#if loadError}
       <p class="error">{loadError}</p>
     {/if}
@@ -227,7 +227,14 @@
         </div>
       {:else}
         {#key homeKey}
-          <Home {profiles} {hasAccount} onPlay={play} onOpen={(id) => openProfile(id)} />
+          <PlayPage
+            {profiles}
+            {selectedId}
+            onSelect={select}
+            onJoin={(address) => selected && play(selected.id, address)}
+            onLibrary={() => (view = "library")}
+            onEvents={() => (view = "events")}
+          />
         {/key}
       {/if}
     {:else if view === "library"}
@@ -338,6 +345,10 @@
     flex-direction: column;
     gap: 12px;
     overflow: hidden;
+  }
+
+  .view.bleed {
+    padding: 0;
   }
 
   .subnav {

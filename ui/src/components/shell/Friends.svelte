@@ -68,7 +68,7 @@
   <button class="trigger" onclick={() => ((open = !open), open && refreshFriends())} aria-expanded={open} aria-label={t("friends.title")}>
     <span class="stack" aria-hidden="true">
       {#each stack as f (f.uuid)}
-        <span class="face" style:background={friendColor(f.uuid)}>{f.name[0].toUpperCase()}</span>
+        <span class="face" style:background={friendColor(f.uuid)}></span>
       {/each}
       {#if rest > 0}<span class="face more">+{rest}</span>{/if}
       {#if list.length === 0}<span class="face empty"><Icon name="users" size={14} /></span>{/if}

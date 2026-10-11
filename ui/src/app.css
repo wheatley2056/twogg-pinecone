@@ -46,6 +46,10 @@
   --toggle-knob-off: #8f8270;
   --selected-tile: #3a2a18;
   --segment-active: #3a2f22;
+  --forest-back: #2e2318;
+  --forest-front: #0e0b08;
+  --forest-hill: #211910;
+  --forest-moon: #f3d9a4;
 
   --font-pixel: "Pixelify Sans", "Figtree", sans-serif;
   --font-ui: "Figtree", system-ui, sans-serif;
@@ -99,6 +103,10 @@
   --toggle-knob-off: #7e9187;
   --selected-tile: #24342b;
   --segment-active: #2a3a31;
+  --forest-back: #1d2c24;
+  --forest-front: #070c09;
+  --forest-hill: #15201a;
+  --forest-moon: #e3ecd9;
 }
 
 /* Theme „Winterland“: hell */
@@ -127,6 +135,10 @@
   --toggle-knob-off: #56685f;
   --selected-tile: #d6e1dd;
   --segment-active: #c9d6d1;
+  --forest-back: #c3d1cc;
+  --forest-front: #8fa59c;
+  --forest-hill: #d3dfdb;
+  --forest-moon: #ffffff;
   color-scheme: light;
 }
 
