@@ -217,6 +217,26 @@ gesetzt als `PINECONE_CURSEFORGE_API_KEY` (beim Bauen gesetzt, wird er einkompil
 Autoren Downloads über andere Launcher gesperrt haben, meldet Pinecone mit Link zum manuellen
 Herunterladen.
 
+## TwoGG-Server (Neuigkeiten und TwoGG-Modpacks)
+
+`crates/server` ist der Server hinter `https://pinecone.twogg.app`: Er liefert dem Launcher
+Neuigkeiten (Startseite, Widget „Neuigkeiten“) und TwoGG-Modpacks (Entdecken → TwoGG). Die
+Modpack-Dateien gibt es nur über kurzlebige, signierte Links, die der Launcher anfordert. Verwaltet
+wird alles unter `/admin` (React-Admin, Quellcode in `admin/`): Modpacks anlegen, Versionen als
+`.mrpack` hochladen (Minecraft-Version und Loader liest der Server aus der Datei), Neuigkeiten mit
+Markdown und Bild, geplante Veröffentlichung.
+
+```sh
+cd admin && npm ci && npm run build && cd ..
+PINECONE_ADMIN_PASSWORD=ein-langes-passwort PINECONE_ADMIN_DIR=admin/dist cargo run -p pinecone-server
+# → http://localhost:8080/admin ; der Launcher nutzt ihn mit PINECONE_SERVER_URL=http://localhost:8080
+```
+
+Launcher-Seite: `pinecone pack import twogg:<pack>` bzw. `pinecone://twogg/<pack>[/<version>]`;
+TwoGG-Packs bekommen Updates wie Modrinth-Packs. Die Server-Adresse ist `https://pinecone.twogg.app`,
+abweichend über `PINECONE_SERVER_URL` (Laufzeit oder beim Bauen). Deploy auf core01 (Docker-Stack,
+Nginx Proxy Manager, Backup): [deploy/pinecone/README.md](deploy/pinecone/README.md).
+
 ## Logs, Diagnose und Updates
 
 Die App schreibt ihre Logs nach `<data-dir>/logs/` (eine Datei pro Tag, die letzten sieben bleiben).

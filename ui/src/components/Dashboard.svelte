@@ -5,7 +5,8 @@
   import { formatAgo, formatDuration, t } from "../lib/i18n.svelte";
   import { runOf } from "../lib/runs.svelte";
   import { settings } from "../lib/settings.svelte";
-  import type { Dashboard, PackUpdate, Profile, ServerEntry, ServerStatus, WidgetId } from "../lib/types";
+  import { externalLinks } from "../lib/links";
+  import type { Dashboard, NewsItem, PackUpdate, Profile, ServerEntry, ServerStatus, WidgetId } from "../lib/types";
   import ProfileIcon from "./ProfileIcon.svelte";
 
   interface Props {
@@ -20,6 +21,8 @@
   // Status je Adresse: undefined = lädt, null = nicht erreichbar.
   let statuses: Record<string, ServerStatus | null | undefined> = $state({});
   let packUpdates = $state<{ profile: Profile; update: PackUpdate }[] | null>(null);
+  // null = lädt, false = Server nicht erreichbar.
+  let news = $state<NewsItem[] | null | false>(null);
 
   const widgets = $derived(
     (settings.current?.widgets ?? []).filter((w) => w.visible).map((w) => w.id as WidgetId),
@@ -29,6 +32,12 @@
   const maxPlaytime = $derived(Math.max(1, ...data.recent.map((r) => r.stats.playtimeSecs)));
 
   onMount(() => {
+    if (widgets.includes("news")) {
+      api
+        .twoggNews(5)
+        .then((list) => (news = list))
+        .catch(() => (news = false));
+    }
     if (widgets.includes("packs")) {
       api
         .packUpdatesAll()
@@ -160,6 +169,35 @@
             </ul>
           {/if}
         </div>
+      {:else if widget === "news"}
+        <div class="card">
+          <h2>{t("dash.news")}</h2>
+          {#if news === null}
+            <p class="muted">{t("common.loading")}</p>
+          {:else if news === false}
+            <p class="muted">{t("dash.newsOffline")}</p>
+          {:else if news.length === 0}
+            <p class="muted">{t("dash.noNews")}</p>
+          {:else}
+            <ul class="news">
+              {#each news as n (n.id)}
+                <li class:pinned={n.pinned}>
+                  {#if n.imageUrl}<img src={n.imageUrl} alt="" loading="lazy" />{/if}
+                  <div class="news-text">
+                    <div class="news-head">
+                      <strong>{n.title}</strong>
+                      <span class="muted small">{formatAgo(n.publishedAt)}</span>
+                    </div>
+                    <div class="news-body" use:externalLinks>{@html n.bodyHtml}</div>
+                    {#if n.link}
+                      <a class="more" href={n.link} use:externalLinks>{t("dash.readMore")}</a>
+                    {/if}
+                  </div>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {:else if widget === "screenshots"}
         <div class="card">
           <h2>{t("dash.screenshots")}</h2>
@@ -202,6 +240,62 @@
 </section>
 
 <style>
+  .news {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .news li {
+    display: flex;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+  }
+
+  .news li.pinned {
+    border-left: 3px solid var(--accent);
+  }
+
+  .news img {
+    width: 120px;
+    height: 68px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex: none;
+  }
+
+  .news-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .news-head {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+
+  .news-body :global(p) {
+    margin: 0;
+  }
+
+  .news-body :global(a),
+  .more {
+    color: var(--accent);
+  }
+
+  .more {
+    font-size: 13px;
+  }
+
   .dashboard {
     display: flex;
     flex-direction: column;

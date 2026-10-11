@@ -45,6 +45,8 @@ import type {
   ScreenshotItem,
   UpdateEvent,
   AppUpdate,
+  NewsItem,
+  TwoggPack,
 } from "./types";
 
 export const api = {
@@ -95,6 +97,10 @@ export const api = {
   modrinthCategories: () => invoke<Category[]>("modrinth_categories"),
 
   packInstallModrinth: (project: string, version: string | null = null) => invoke<ImportResult>("pack_install_modrinth", { project, version }),
+  packInstallTwogg: (pack: string, version: string | null = null) => invoke<ImportResult>("pack_install_twogg", { pack, version }),
+  twoggPacks: () => invoke<TwoggPack[]>("twogg_packs"),
+  twoggPack: (id: string) => invoke<TwoggPack>("twogg_pack", { id }),
+  twoggNews: (limit = 5) => invoke<NewsItem[]>("twogg_news", { limit }),
   packInstallCurseforge: (project: number, file: number | null = null) => invoke<ImportResult>("pack_install_curseforge", { project, file }),
   packPreviewFile: (path: string) => invoke<PreviewResult>("pack_preview_file", { path }),
   packPreviewLink: (link: string) => invoke<PreviewResult>("pack_preview_link", { link }),

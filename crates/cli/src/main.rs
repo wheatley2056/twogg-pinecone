@@ -267,7 +267,8 @@ enum ContentCommand {
 
 #[derive(Subcommand)]
 enum PackCommand {
-    /// `.mrpack`-Datei oder Modrinth-Projekt (`modrinth:<slug>`) als neues Profil importieren.
+    /// Als neues Profil importieren: `.mrpack`-Datei, `modrinth:<slug>`, `curseforge:<id>`,
+    /// `twogg:<pack>` oder ein `pinecone://`-Link.
     Import {
         source: String,
         /// Bestimmte Modrinth-Versions-ID.
@@ -781,6 +782,8 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
                 resolve_link(packs, &source).await?
             } else if let Some(slug) = source.strip_prefix("modrinth:") {
                 packs.download_modrinth(slug, version.as_deref()).await?
+            } else if let Some(id) = source.strip_prefix("twogg:") {
+                packs.download_twogg(id, version.as_deref()).await?
             } else if let Some(id) = source.strip_prefix("curseforge:") {
                 let file = version
                     .as_deref()
@@ -863,6 +866,19 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
                     packs
                         .download_curseforge(*project_id, Some(target), None)
                         .await?
+                }
+                (None, PackSource::Twogg { pack_id, .. }) => {
+                    let target = match version {
+                        Some(v) => v,
+                        None => match packs.check_update(&p).await? {
+                            Some(u) => u.version_id,
+                            None => {
+                                println!("{} ist aktuell", info.name);
+                                return Ok(());
+                            }
+                        },
+                    };
+                    packs.download_twogg(pack_id, Some(&target)).await?
                 }
                 (None, PackSource::File) => {
                     bail!("Pack ohne Online-Quelle: neue Version mit --file angeben")
@@ -1002,6 +1018,9 @@ async fn resolve_link(
         }
         ShareLink::Curseforge { project, file } => {
             packs.download_curseforge(project, file, None).await?
+        }
+        ShareLink::Twogg { pack, version } => {
+            packs.download_twogg(&pack, version.as_deref()).await?
         }
         ShareLink::Code(_) => bail!("Share-Codes gibt es erst mit dem Share-Dienst"),
     })

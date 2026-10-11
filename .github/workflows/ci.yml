@@ -41,6 +41,12 @@ jobs:
       - run: npm run build
       - run: npm run check
 
+      - name: Admin-Oberfläche (Server)
+        working-directory: admin
+        run: |
+          npm ci
+          npm run build
+
       - run: cargo fmt --all -- --check
         if: runner.os == 'Linux'
       - run: cargo clippy --workspace --all-targets -- -D warnings

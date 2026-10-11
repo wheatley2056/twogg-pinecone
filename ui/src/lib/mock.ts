@@ -17,7 +17,7 @@ let settings: Settings = {
   theme: { mode: "system", accent: "#4caf50", backgroundDim: 60 },
   background: null,
   backgroundPath: null,
-  widgets: (["recent", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
+  widgets: (["recent", "news", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
   language: "de",
 };
 const hour = 3600;
@@ -93,6 +93,12 @@ let mockShots = [200, 30, 260, 180, 320, 90].map((hue, i) => ({
   modified: now - i * 7000 - (i > 3 ? 86400 : 0),
   size: 1000,
 }));
+const TWOGG_PACK = {
+  id: "horizons-unbound", title: "Horizons Unbound", summary: "Das Modpack für unseren Survival-Server", iconUrl: null, featured: true,
+  updatedAt: now - 86400, downloads: 128,
+  latest: { id: "v2", version: "2.0.0", minecraft: "1.20.1", loader: "fabric", loaderVersion: "0.19.5", channel: "release",
+    changelogHtml: "<ul><li>Neue Farmwelt</li><li>Create 6</li></ul>", size: 2_400_000, sha1: "0", publishedAt: now - 86400 },
+};
 let mockSkins: SavedSkin[] = [
   { id: "1", name: "Tobi", model: "classic", created: now, updated: now },
   { id: "2", name: "Winter", model: "slim", created: now - 100, updated: now - 100 },
@@ -325,6 +331,13 @@ Object.assign(api, {
   screenshotReveal: async () => {},
   screenshotSaveAs: async () => {},
   onScreenshotsChanged: async () => () => {},
+  twoggPacks: async () => (await wait(300), [TWOGG_PACK]),
+  twoggPack: async () => (await wait(300), { ...TWOGG_PACK, descriptionHtml: "<h2>Willkommen</h2><p>Alles für <strong>Horizons Unbound</strong>: Create, Farmwelt und mehr.</p>", versions: [TWOGG_PACK.latest, { ...TWOGG_PACK.latest, id: "v1", version: "1.9.0", channel: "release", publishedAt: now - 30 * 86400 }] }),
+  twoggNews: async () => (await wait(300), [
+    { id: "n1", title: "Pinecone ist da!", bodyHtml: "<p>Der neue <strong>TwoGG-Launcher</strong> ist da. Modpacks, Skins und mehr an einem Ort.</p>", imageUrl: null, link: "https://twogg.de", pinned: true, publishedAt: now - 3600 },
+    { id: "n2", title: "Farmwelt-Reset am Sonntag", bodyHtml: "<p>Wie jede Woche um 4 Uhr.</p>", imageUrl: null, link: null, pinned: false, publishedAt: now - 3 * 86400 },
+  ]),
+  packInstallTwogg: async () => (await wait(800), { profile: profiles[0], missing: [] }),
   skinsList: async () => mockSkins,
   skinData: async () => STEVE,
   skinImportFile: async () => addMockSkin("Datei-Skin"),

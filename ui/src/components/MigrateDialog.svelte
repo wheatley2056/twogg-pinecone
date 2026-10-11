@@ -88,7 +88,9 @@
       const r =
         offer.platform === "curseforge"
           ? await api.packInstallCurseforge(Number(offer.projectId), Number(offer.versionId))
-          : await api.packInstallModrinth(offer.projectId, offer.versionId);
+          : offer.platform === "twogg"
+            ? await api.packInstallTwogg(offer.projectId, offer.versionId)
+            : await api.packInstallModrinth(offer.projectId, offer.versionId);
       onCreated(r);
       onClose();
     } catch (e) {

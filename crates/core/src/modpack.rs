@@ -39,6 +39,11 @@ pub enum PackSource {
         project_id: u64,
         file_id: u64,
     },
+    /// TwoGG-Modpack vom Pinecone-Server.
+    Twogg {
+        pack_id: String,
+        version_id: String,
+    },
     /// Aus einer Datei importiert, ohne Update-Quelle.
     File,
 }
@@ -552,6 +557,7 @@ pub struct PackManager {
     profiles: ProfileStore,
     allowed_hosts: Vec<String>,
     curseforge: Option<CurseForge>,
+    twogg: Option<crate::twogg::TwoggClient>,
 }
 
 /// Aktueller Stand einer Pack-Datei: tatsächlicher Pfad (evtl. `.disabled`) und Hash.
@@ -581,12 +587,61 @@ impl PackManager {
             profiles,
             allowed_hosts: ALLOWED_HOSTS.iter().map(|h| h.to_string()).collect(),
             curseforge: None,
+            twogg: None,
         }
     }
 
     pub fn with_curseforge(mut self, cf: Option<CurseForge>) -> Self {
         self.curseforge = cf;
         self
+    }
+
+    pub fn with_twogg(mut self, client: Option<crate::twogg::TwoggClient>) -> Self {
+        self.twogg = client;
+        self
+    }
+
+    pub fn twogg(&self) -> Option<&crate::twogg::TwoggClient> {
+        self.twogg.as_ref()
+    }
+
+    /// TwoGG-Modpack (bestimmte oder neueste stabile Version) über einen signierten Link laden.
+    pub async fn download_twogg(
+        &self,
+        pack_id: &str,
+        version_id: Option<&str>,
+    ) -> Result<(PathBuf, PackSource)> {
+        let client = self
+            .twogg
+            .as_ref()
+            .ok_or_else(|| Error::Invalid("TwoGG-Server ist nicht eingerichtet".into()))?;
+        let version_id = match version_id {
+            Some(v) => v.to_string(),
+            None => {
+                let pack = client.pack(pack_id).await?;
+                crate::twogg::best_version(pack.versions.as_deref().unwrap_or_default(), None)
+                    .ok_or_else(|| Error::Invalid("Dieses Modpack hat noch keine Version".into()))?
+                    .id
+                    .clone()
+            }
+        };
+        let link = client.download_link(pack_id, &version_id).await?;
+        let dest = self.cache_dir().join(format!("twogg-{version_id}.mrpack"));
+        self.downloader
+            .download(&DownloadTask {
+                url: link.url,
+                dest: dest.clone(),
+                sha1: Some(link.sha1),
+                size: Some(link.size),
+            })
+            .await?;
+        Ok((
+            dest,
+            PackSource::Twogg {
+                pack_id: pack_id.to_string(),
+                version_id,
+            },
+        ))
     }
 
     /// Liest ein Modrinth- (`.mrpack`) oder CurseForge-Pack (ZIP mit `manifest.json`).
@@ -1074,6 +1129,35 @@ impl PackManager {
                         latest: f.display_name.clone(),
                         version_id: f.id.to_string(),
                     }))
+            }
+            PackSource::Twogg {
+                pack_id,
+                version_id,
+            } => {
+                let Some(client) = &self.twogg else {
+                    return Ok(None);
+                };
+                let pack = client.pack(&pack_id).await?;
+                let versions = pack.versions.unwrap_or_default();
+                let Some(best) = crate::twogg::best_version(&versions, Some(&profile.minecraft))
+                else {
+                    return Ok(None);
+                };
+                // Liste kommt neueste zuerst: nur anbieten, wenn die Kandidatin neuer ist.
+                let position = |id: &str| {
+                    versions
+                        .iter()
+                        .position(|v| v.id == id)
+                        .unwrap_or(usize::MAX)
+                };
+                if best.id == version_id || position(&best.id) > position(&version_id) {
+                    return Ok(None);
+                }
+                Ok(Some(PackUpdate {
+                    current: info.version,
+                    latest: best.version.clone(),
+                    version_id: best.id.clone(),
+                }))
             }
             PackSource::File => Ok(None),
         }

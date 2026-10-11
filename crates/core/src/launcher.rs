@@ -84,7 +84,8 @@ impl Launcher {
             modrinth,
             ProfileStore::new(paths.clone()),
         )
-        .with_curseforge(curseforge);
+        .with_curseforge(curseforge)
+        .with_twogg(crate::twogg::TwoggClient::new().ok());
         let java = JavaManager::new(
             paths.clone(),
             downloader.clone(),

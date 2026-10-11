@@ -198,7 +198,7 @@
       <span>{packInfo.name} <strong>{packInfo.version}</strong></span>
       <span class="spacer"></span>
       {#if packMessage}<span class="muted small">{packMessage}</span>{/if}
-      {#if packInfo.source === "modrinth"}
+      {#if packInfo.source !== "file"}
         {#if packUpdate}
           <button class="primary small" disabled={run.status !== "idle"} onclick={() => (updateDialog = { target: { version: packUpdate!.versionId, file: null } })}>
             <Icon name="download" size={15} />{t("pack.updateTo", { version: packUpdate.latest })}

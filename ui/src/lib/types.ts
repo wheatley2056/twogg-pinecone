@@ -121,7 +121,7 @@ export interface ServerStatus {
 }
 
 export type ThemeMode = "system" | "light" | "dark";
-export type WidgetId = "recent" | "packs" | "servers" | "screenshots" | "playtime";
+export type WidgetId = "recent" | "news" | "packs" | "servers" | "screenshots" | "playtime";
 
 export interface Settings {
   theme: { mode: ThemeMode; accent: string; backgroundDim: number };
@@ -226,7 +226,7 @@ export interface SearchArgs {
 export interface PackInfo {
   name: string;
   version: string;
-  source: "modrinth" | "curseforge" | "file";
+  source: "modrinth" | "curseforge" | "twogg" | "file";
 }
 
 export interface PackUpdate {
@@ -274,7 +274,7 @@ export interface ImportResult {
   missing: ManualDownload[];
 }
 
-export type Platform = "modrinth" | "curseforge";
+export type Platform = "modrinth" | "curseforge" | "twogg";
 
 /** Was beim Export als Datei mitkommt (Mods immer; Welten, Serverliste und Accounts nie). */
 export interface ExportOptions {
@@ -309,7 +309,7 @@ export interface PackPreview {
 export interface PreviewResult {
   token: string;
   preview: PackPreview;
-  source: "modrinth" | "curseforge" | "file";
+  source: "modrinth" | "curseforge" | "twogg" | "file";
 }
 
 /** Von außen geöffnet (Link, Datei) oder in der Bibliothek gewählt; leerer Link = Eingabefeld. */
@@ -417,3 +417,40 @@ export interface AppUpdate {
 }
 
 export type UpdateEvent = { type: "progress"; done: number; total: number | null } | { type: "installing" };
+
+export interface TwoggVersion {
+  id: string;
+  version: string;
+  minecraft: string;
+  loader: string | null;
+  loaderVersion: string | null;
+  channel: string;
+  changelogHtml: string;
+  size: number;
+  sha1: string;
+  publishedAt: number;
+}
+
+export interface TwoggPack {
+  id: string;
+  title: string;
+  summary: string;
+  iconUrl: string | null;
+  featured: boolean;
+  updatedAt: number;
+  downloads: number;
+  latest: TwoggVersion | null;
+  descriptionHtml?: string | null;
+  versions?: TwoggVersion[] | null;
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  /** Vom Server aus Markdown erzeugt (ohne rohes HTML). */
+  bodyHtml: string;
+  imageUrl: string | null;
+  link: string | null;
+  pinned: boolean;
+  publishedAt: number;
+}

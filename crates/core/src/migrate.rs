@@ -401,6 +401,24 @@ impl Launcher {
                     version: best.display_name.clone(),
                 })
             }
+            PackSource::Twogg { pack_id, .. } => {
+                let pack = self.packs().twogg()?.pack(pack_id).await.ok()?;
+                let versions = pack.versions.unwrap_or_default();
+                let best = crate::twogg::best_version(&versions, Some(&target.minecraft))?;
+                // Loader muss passen (Pack-Versionen haben einen festen Loader).
+                if best.loader.as_deref()
+                    != loader.map(|k| k.name().to_ascii_lowercase()).as_deref()
+                {
+                    return None;
+                }
+                Some(PackOffer {
+                    name: info.name.clone(),
+                    platform: "twogg".into(),
+                    project_id: pack_id.clone(),
+                    version_id: best.id.clone(),
+                    version: best.version.clone(),
+                })
+            }
             PackSource::File => None,
         }
     }

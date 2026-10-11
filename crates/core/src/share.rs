@@ -22,6 +22,11 @@ pub enum ShareLink {
         project: u64,
         file: Option<u64>,
     },
+    /// TwoGG-Modpack vom Pinecone-Server.
+    Twogg {
+        pack: String,
+        version: Option<String>,
+    },
     /// Share-Code des (noch nicht vorhandenen) Share-Dienstes.
     Code(String),
 }
@@ -43,6 +48,13 @@ impl ShareLink {
             } => Some(ShareLink::Curseforge {
                 project: *project_id,
                 file: Some(*file_id),
+            }),
+            PackSource::Twogg {
+                pack_id,
+                version_id,
+            } => Some(ShareLink::Twogg {
+                pack: pack_id.clone(),
+                version: Some(version_id.clone()),
             }),
             PackSource::File => None,
         }
@@ -76,6 +88,14 @@ impl ShareLink {
                 ("curseforge", [project, file]) => Ok(ShareLink::Curseforge {
                     project: project.parse().map_err(|_| invalid())?,
                     file: Some(file.parse().map_err(|_| invalid())?),
+                }),
+                ("twogg", [pack]) => Ok(ShareLink::Twogg {
+                    pack: id(pack).ok_or_else(invalid)?,
+                    version: None,
+                }),
+                ("twogg", [pack, version]) => Ok(ShareLink::Twogg {
+                    pack: id(pack).ok_or_else(invalid)?,
+                    version: Some(id(version).ok_or_else(invalid)?),
                 }),
                 ("pack", [code]) => Ok(ShareLink::Code(id(code).ok_or_else(invalid)?)),
                 _ => Err(invalid()),
@@ -113,6 +133,13 @@ impl fmt::Display for ShareLink {
                 }
                 Ok(())
             }
+            ShareLink::Twogg { pack, version } => {
+                write!(f, "{SCHEME}://twogg/{pack}")?;
+                if let Some(v) = version {
+                    write!(f, "/{v}")?;
+                }
+                Ok(())
+            }
             ShareLink::Code(code) => write!(f, "{SCHEME}://pack/{code}"),
         }
     }
@@ -141,6 +168,8 @@ mod tests {
             "pinecone://curseforge/394468",
             "pinecone://curseforge/394468/5512345",
             "pinecone://pack/ab12cd",
+            "pinecone://twogg/horizons-unbound",
+            "pinecone://twogg/horizons-unbound/af1508aa3b19432f",
         ] {
             assert_eq!(ShareLink::parse(link).unwrap().to_string(), link);
         }

@@ -28,6 +28,7 @@ pub mod share;
 pub mod skins;
 pub mod stats;
 pub mod syncpacks;
+pub mod twogg;
 
 pub use error::{Error, Result};
 
