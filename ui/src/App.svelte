@@ -16,6 +16,7 @@
   import InstanceView, { type InstanceTab } from "./components/library/InstanceView.svelte";
   import NewSyncDialog from "./components/library/NewSyncDialog.svelte";
   import SyncPackView from "./components/library/SyncPackView.svelte";
+  import EventsPage from "./components/pages/EventsPage.svelte";
   import LibraryPage from "./components/pages/LibraryPage.svelte";
   import MissingDialog from "./components/MissingDialog.svelte";
   import ProfileDialog from "./components/ProfileDialog.svelte";
@@ -49,6 +50,7 @@
   let syncPacks = $state<SyncPack[]>([]);
   let creatingSync = $state(false);
   let settingsSection = $state<SettingsSection>("general");
+  let eventId = $state<string | null>(null);
   let missing = $state<ImportResult | null>(null);
   // Modpack-Vorschau: aus der Bibliothek, per pinecone://-Link oder beim Öffnen einer .mrpack-Datei.
   let openRequest = $state<OpenRequest | null>(null);
@@ -214,7 +216,7 @@
     onPanel={togglePanel}
   />
 
-  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library" || view === "discover" || view === "settings"}>
+  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library" || view === "discover" || view === "settings" || view === "events"}>
     {#if loadError}
       <p class="error">{loadError}</p>
     {/if}
@@ -233,7 +235,7 @@
             onSelect={select}
             onJoin={(address) => selected && play(selected.id, address)}
             onLibrary={() => (view = "library")}
-            onEvents={() => (view = "events")}
+            onEvents={(id) => ((eventId = id ?? null), (view = "events"))}
           />
         {/key}
       {/if}
@@ -290,7 +292,12 @@
         />
       {/key}
     {:else if view === "events"}
-      <p class="muted placeholder">{t("events.soon")}</p>
+      <EventsPage
+        initialId={eventId}
+        hasInstance={!!selected}
+        onJoin={(address) => selected && play(selected.id, address)}
+        onLink={() => ((settingsSection = "twogg"), (view = "settings"))}
+      />
     {:else if view === "skins"}
       <Skins {accounts} />
     {:else if view === "settings"}
@@ -391,9 +398,5 @@
 
   .welcome h2 {
     font-size: 28px;
-  }
-
-  .placeholder {
-    margin: auto;
   }
 </style>
