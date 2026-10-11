@@ -25,6 +25,6 @@
 <style>
   canvas {
     image-rendering: pixelated;
-    border-radius: 6px;
+    border-radius: 0;
   }
 </style>

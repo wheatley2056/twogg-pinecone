@@ -181,7 +181,7 @@
   }
 
   .summary {
-    color: var(--muted);
+    color: var(--text-muted);
   }
 
   dl {
@@ -190,12 +190,11 @@
     gap: 6px 14px;
     margin: 0;
     padding: 10px 12px;
-    border-radius: var(--radius);
     background: var(--surface-2);
   }
 
   dt {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 13px;
   }
 
@@ -208,7 +207,6 @@
     align-items: flex-start;
     gap: 8px;
     padding: 8px 12px;
-    border-radius: var(--radius);
     border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     background: color-mix(in srgb, var(--accent) 10%, transparent);
     font-size: 13px;

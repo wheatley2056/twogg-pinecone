@@ -61,18 +61,9 @@
   --edge-accent: inset 0 -3px 0 var(--accent-edge);
   --edge-dark: inset 0 -3px 0 var(--bar);
 
-  /* Alte Namen, solange noch nicht alle Seiten umgebaut sind (Phase 11h entfernt sie). */
-  --muted: var(--text-muted);
-  --border: var(--line-strong);
-  --surface-3: var(--surface-active);
-  --accent-text: var(--ink);
-  --accent-strong: var(--accent-edge);
-  --radius: 0px;
-  --shadow: none;
-  --log-bg: var(--bar);
-
   color-scheme: dark;
   font-family: var(--font-ui);
+  font-variant-ligatures: none;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text);
@@ -172,6 +163,8 @@ h3 {
 h1,
 h2 {
   font-family: var(--font-pixel);
+  /* Pixelify Sans hat eine fehlerhafte fi-Ligatur. */
+  font-variant-ligatures: none;
 }
 
 :root[data-pixel="off"] {

@@ -71,8 +71,7 @@
     text-align: center;
     padding: 14px;
     background: var(--bg);
-    border: 1px dashed var(--border);
-    border-radius: var(--radius);
+    border: 1px dashed var(--line-strong);
     user-select: all;
   }
 

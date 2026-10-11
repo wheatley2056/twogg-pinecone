@@ -102,7 +102,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line-strong);
     background: var(--surface);
   }
 
@@ -126,7 +126,7 @@
 
   footer {
     padding: 4px 14px;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line-strong);
   }
 
   .small {

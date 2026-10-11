@@ -52,7 +52,6 @@
     align-items: center;
     gap: 10px;
     padding: 8px 10px;
-    border-radius: var(--radius);
     background: var(--surface-2);
   }
 
@@ -64,7 +63,7 @@
 
   code {
     font-size: 12px;
-    color: var(--muted);
+    color: var(--text-muted);
     overflow-wrap: anywhere;
     user-select: text;
   }

@@ -144,8 +144,7 @@
   }
 
   fieldset {
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border: 1px solid var(--line-strong);
     padding: 8px 12px 10px;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -153,7 +152,7 @@
   }
 
   legend {
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 12px;
     padding: 0 4px;
   }
@@ -172,7 +171,7 @@
 
   .fixed {
     display: flex;
-    color: var(--muted);
+    color: var(--text-muted);
   }
 
   .small {
