@@ -4,6 +4,7 @@ name: Release
 # signiert die Update-Pakete und legt ein Release als Entwurf an, inklusive latest.json für
 # den eingebauten Updater. Den Entwurf prüfen und dann veröffentlichen.
 #
+# Secrets und Variable kommen aus der Umgebung „TAURI“ (oder dem Repository).
 # Benötigte Secrets:  TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 # Optionale Secrets:  PINECONE_MSA_CLIENT_ID, PINECONE_CURSEFORGE_API_KEY
 # Variable:           PINECONE_UPDATE_PUBKEY (öffentlicher Schlüssel, Inhalt der .pub-Datei)
@@ -23,6 +24,8 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.os }}
+    # Signatur-Secrets und PINECONE_UPDATE_PUBKEY liegen in der Umgebung „TAURI“.
+    environment: TAURI
     steps:
       - uses: actions/checkout@v4
 
@@ -43,8 +46,8 @@ jobs:
           KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           PUBKEY: ${{ vars.PINECONE_UPDATE_PUBKEY }}
         run: |
-          [ -n "$KEY" ] || { echo "::error::Secret TAURI_SIGNING_PRIVATE_KEY fehlt oder ist leer (Settings → Secrets and variables → Actions → Repository secrets)"; exit 1; }
-          [ -n "$PUBKEY" ] || { echo "::error::Variable PINECONE_UPDATE_PUBKEY fehlt (Tab „Variables“, nicht „Secrets“)"; exit 1; }
+          [ -n "$KEY" ] || { echo "::error::Secret TAURI_SIGNING_PRIVATE_KEY fehlt oder ist leer (Umgebung „TAURI“ oder Repository secrets)"; exit 1; }
+          [ -n "$PUBKEY" ] || { echo "::error::Variable PINECONE_UPDATE_PUBKEY fehlt (Tab „Variables“, Umgebung „TAURI“ oder Repository variables)"; exit 1; }
 
       - name: Linux-Abhängigkeiten
         if: runner.os == 'Linux'

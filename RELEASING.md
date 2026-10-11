@@ -8,7 +8,7 @@ Updates werden nur installiert, wenn sie mit dem eigenen Schlüssel signiert sin
 npx tauri signer generate -w ~/.tauri/pinecone.key
 ```
 
-- Inhalt von `~/.tauri/pinecone.key` → GitHub-Secret `TAURI_SIGNING_PRIVATE_KEY`,
+- Inhalt von `~/.tauri/pinecone.key` → GitHub-Secret (in der Umgebung `TAURI` oder als Repository-Secret) `TAURI_SIGNING_PRIVATE_KEY`,
   das Passwort → `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. **Nie einchecken**, sicher aufbewahren:
   ohne ihn lassen sich keine Updates mehr ausliefern.
 - Inhalt von `~/.tauri/pinecone.key.pub` → GitHub-Variable `PINECONE_UPDATE_PUBKEY`
