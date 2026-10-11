@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 0.9.3
 
 - **Forge und NeoForge:** Instanzen mit Forge (ab 1.13 und ältere bis 1.12.2) und NeoForge,
   installiert über die offiziellen Installer. Modpacks mit Forge/NeoForge von Modrinth und
