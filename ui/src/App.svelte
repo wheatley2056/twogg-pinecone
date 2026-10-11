@@ -21,7 +21,7 @@
   import MissingDialog from "./components/MissingDialog.svelte";
   import ProfileDialog from "./components/ProfileDialog.svelte";
   import SettingsPage, { type SettingsSection } from "./components/pages/SettingsPage.svelte";
-  import Skins from "./components/Skins.svelte";
+  import SkinsPage from "./components/pages/SkinsPage.svelte";
   import Friends from "./components/shell/Friends.svelte";
   import Panels from "./components/shell/Panels.svelte";
   import PlayBar from "./components/shell/PlayBar.svelte";
@@ -216,7 +216,7 @@
     onPanel={togglePanel}
   />
 
-  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library" || view === "discover" || view === "settings" || view === "events"}>
+  <main class="view" class:bleed={(view === "home" && profiles.length > 0) || view === "library" || view === "discover" || view === "settings" || view === "events" || view === "skins"}>
     {#if loadError}
       <p class="error">{loadError}</p>
     {/if}
@@ -299,7 +299,7 @@
         onLink={() => ((settingsSection = "twogg"), (view = "settings"))}
       />
     {:else if view === "skins"}
-      <Skins {accounts} />
+      <SkinsPage {accounts} />
     {:else if view === "settings"}
       <SettingsPage {info} {accounts} bind:section={settingsSection} onAccountsChange={reloadAccounts} />
     {/if}

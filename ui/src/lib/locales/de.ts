@@ -762,6 +762,7 @@ const de = {
   "events.notRegistered": "Noch nicht angemeldet",
   "events.closed": "Die Anmeldung ist geschlossen.",
   "events.registerHint": "Melde dich auf twogg.app an; Pinecone zeigt danach deinen Stand.",
+  "skins.selected": "Ausgewählt",
 };
 
 export default de;

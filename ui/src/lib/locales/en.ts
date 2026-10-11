@@ -764,6 +764,7 @@ const en: Record<MessageKey, string> = {
   "events.notRegistered": "Not signed up yet",
   "events.closed": "Sign-up is closed.",
   "events.registerHint": "Sign up on twogg.app; Pinecone then shows your status.",
+  "skins.selected": "Selected",
 };
 
 export default en;
