@@ -165,14 +165,29 @@ pub fn allow_assets(app: &AppHandle) {
     }
 }
 
+/// Eigene Kopfleiste oder Rahmen des Systems (Einstellung `systemFrame`).
+pub fn apply_frame(app: &AppHandle, settings: &Settings) {
+    if let Some(window) = app.get_webview_window("main")
+        && let Err(e) = window.set_decorations(settings.system_frame)
+    {
+        tracing::warn!("Fensterrahmen nicht umschaltbar: {e}");
+    }
+}
+
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
     state.launcher.settings().load().map_err(err)
 }
 
 #[tauri::command]
-pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> CmdResult<Settings> {
-    state.launcher.settings().save(&settings).map_err(err)
+pub fn save_settings(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    settings: Settings,
+) -> CmdResult<Settings> {
+    let saved = state.launcher.settings().save(&settings).map_err(err)?;
+    apply_frame(&app, &saved);
+    Ok(saved)
 }
 
 #[tauri::command]

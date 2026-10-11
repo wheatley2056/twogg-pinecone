@@ -15,14 +15,15 @@
       {
         "label": "main",
         "title": "TwoGG Pinecone",
-        "width": 1120,
-        "height": 720,
-        "minWidth": 880,
-        "minHeight": 560
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "decorations": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: http://asset.localhost https://cdn.modrinth.com https://media.forgecdn.net; connect-src ipc: http://ipc.localhost",
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: http://asset.localhost https://cdn.modrinth.com https://media.forgecdn.net https://twogg.app https://pinecone.twogg.app; connect-src ipc: http://ipc.localhost",
       "assetProtocol": { "enable": true, "scope": [] }
     }
   },

@@ -75,6 +75,68 @@ pub struct DownloadLink {
     pub file_name: String,
 }
 
+/// Angaben des Servers für den Launcher (`/api/v1/info`).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerInfo {
+    #[serde(default)]
+    pub game_server: Option<GameServer>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameServer {
+    pub name: String,
+    pub address: String,
+}
+
+/// Was man Freunden zeigt (Pinecone-Freundesliste).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Activity {
+    #[serde(default)]
+    pub instance: Option<String>,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub server: Option<String>,
+    #[serde(default)]
+    pub playing: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Friend {
+    pub uuid: String,
+    pub name: String,
+    pub online: bool,
+    pub last_seen: i64,
+    #[serde(default)]
+    pub activity: Option<Activity>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlayerRef {
+    pub uuid: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FriendList {
+    pub friends: Vec<Friend>,
+    pub incoming: Vec<PlayerRef>,
+    pub outgoing: Vec<PlayerRef>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerSession {
+    pub token: String,
+    pub expires_at: i64,
+    pub player: PlayerRef,
+}
+
+pub const MOJANG_SESSION: &str = "https://sessionserver.mojang.com";
+
 #[derive(Clone)]
 pub struct TwoggClient {
     http: reqwest::Client,
@@ -127,12 +189,113 @@ impl TwoggClient {
                 .ok()
                 .and_then(|v| v["error"].as_str().map(str::to_string))
                 .unwrap_or_else(|| format!("HTTP {status}"));
+            if status == reqwest::StatusCode::UNAUTHORIZED {
+                return Err(Error::Auth(format!("TwoGG-Server: {message}")));
+            }
             return Err(Error::Invalid(format!("TwoGG-Server: {message}")));
         }
         resp.json().await.map_err(|source| Error::Http {
             url: url.to_string(),
             source,
         })
+    }
+
+    async fn send_empty(&self, req: reqwest::RequestBuilder, url: &str) -> Result<()> {
+        let _: serde_json::Value = self.send(req, url).await?;
+        Ok(())
+    }
+
+    pub async fn info(&self) -> Result<ServerInfo> {
+        let url = format!("{}/api/v1/info", self.base);
+        self.send(self.http.get(&url), &url).await
+    }
+
+    // --- Freundesliste ---------------------------------------------------------------------
+
+    /// Anmeldung am Pinecone-Server mit dem Minecraft-Account: Server-ID holen, bei Mojang
+    /// „beitreten“ (wie beim Betreten eines Servers), dann bestätigen lassen.
+    pub async fn player_login(
+        &self,
+        minecraft_token: &str,
+        uuid: &str,
+        name: &str,
+    ) -> Result<PlayerSession> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Challenge {
+            server_id: String,
+        }
+        let url = format!("{}/api/v1/auth/challenge", self.base);
+        let c: Challenge = self.send(self.http.post(&url), &url).await?;
+        let join = format!("{MOJANG_SESSION}/session/minecraft/join");
+        let resp = self
+            .http
+            .post(&join)
+            .json(&serde_json::json!({
+                "accessToken": minecraft_token,
+                "selectedProfile": uuid.replace('-', ""),
+                "serverId": c.server_id,
+            }))
+            .send()
+            .await
+            .map_err(|source| Error::Http {
+                url: join.clone(),
+                source,
+            })?;
+        if !resp.status().is_success() {
+            return Err(Error::Auth(format!(
+                "Mojang hat die Anmeldung abgelehnt (HTTP {})",
+                resp.status()
+            )));
+        }
+        let url = format!("{}/api/v1/auth/verify", self.base);
+        let body = serde_json::json!({ "username": name, "serverId": c.server_id });
+        self.send(self.http.post(&url).json(&body), &url).await
+    }
+
+    pub async fn friends(&self, token: &str) -> Result<FriendList> {
+        let url = format!("{}/api/v1/friends", self.base);
+        self.send(self.http.get(&url).bearer_auth(token), &url)
+            .await
+    }
+
+    pub async fn presence(&self, token: &str, activity: &Activity) -> Result<()> {
+        let url = format!("{}/api/v1/presence", self.base);
+        let body = serde_json::json!({ "activity": activity });
+        self.send_empty(self.http.post(&url).bearer_auth(token).json(&body), &url)
+            .await
+    }
+
+    /// Anfrage per Spielername; Antwort `requested` oder `friends`.
+    pub async fn friend_request(&self, token: &str, name: &str) -> Result<String> {
+        let url = format!("{}/api/v1/friends/requests", self.base);
+        let body = serde_json::json!({ "name": name });
+        let v: serde_json::Value = self
+            .send(self.http.post(&url).bearer_auth(token).json(&body), &url)
+            .await?;
+        Ok(v["status"].as_str().unwrap_or("requested").to_string())
+    }
+
+    pub async fn friend_accept(&self, token: &str, uuid: &str) -> Result<()> {
+        let uuid = checked_uuid(uuid)?;
+        let url = format!("{}/api/v1/friends/requests/{uuid}/accept", self.base);
+        self.send_empty(self.http.post(&url).bearer_auth(token), &url)
+            .await
+    }
+
+    /// Anfrage ablehnen oder eigene zurückziehen.
+    pub async fn friend_decline(&self, token: &str, uuid: &str) -> Result<()> {
+        let uuid = checked_uuid(uuid)?;
+        let url = format!("{}/api/v1/friends/requests/{uuid}", self.base);
+        self.send_empty(self.http.delete(&url).bearer_auth(token), &url)
+            .await
+    }
+
+    pub async fn friend_remove(&self, token: &str, uuid: &str) -> Result<()> {
+        let uuid = checked_uuid(uuid)?;
+        let url = format!("{}/api/v1/friends/{uuid}", self.base);
+        self.send_empty(self.http.delete(&url).bearer_auth(token), &url)
+            .await
     }
 
     pub async fn news(&self, limit: u32) -> Result<Vec<NewsItem>> {
@@ -162,6 +325,15 @@ impl TwoggClient {
             self.base
         );
         self.send(self.http.post(&url), &url).await
+    }
+}
+
+fn checked_uuid(uuid: &str) -> Result<String> {
+    let u: String = uuid.chars().filter(|c| *c != '-').collect();
+    if u.len() == 32 && u.bytes().all(|b| b.is_ascii_hexdigit()) {
+        Ok(u)
+    } else {
+        Err(Error::Invalid(format!("Ungültige UUID {uuid:?}")))
     }
 }
 

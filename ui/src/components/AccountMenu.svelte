@@ -3,16 +3,16 @@
   import { t } from "../lib/i18n.svelte";
   import type { Account } from "../lib/types";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import Icon from "./Icon.svelte";
   import LoginDialog from "./LoginDialog.svelte";
+  import PixelAvatar from "./ui/PixelAvatar.svelte";
 
   interface Props {
     accounts: Account[];
     msaConfigured: boolean;
     onChange: () => void;
-    /** Nur Avatar (Navigationsleiste); Menü öffnet nach rechts. */
-    compact?: boolean;
   }
-  let { accounts, msaConfigured, onChange, compact = false }: Props = $props();
+  let { accounts, msaConfigured, onChange }: Props = $props();
 
   let open = $state(false);
   let offlineName = $state("");
@@ -20,9 +20,26 @@
   let loggingIn = $state(false);
   let removing: Account | null = $state(null);
   let menu: HTMLElement | undefined = $state();
+  // Skin-Kopf des aktiven Microsoft-Kontos (einmal je Konto geladen).
+  let skins = $state<Record<string, string | null>>({});
 
   const active = $derived(accounts.find((a) => a.active) ?? null);
   const validName = $derived(/^[A-Za-z0-9_]{1,16}$/.test(offlineName));
+
+  $effect(() => {
+    const a = active;
+    if (!a || a.kind !== "microsoft" || a.uuid in skins) return;
+    skins[a.uuid] = null;
+    api
+      .skinAccount()
+      .then((s) => (skins[a.uuid] = s.skinDataUrl))
+      .catch(() => {});
+  });
+
+  /** Von außen öffnen (z. B. SPIELEN ohne Konto). */
+  export function show() {
+    open = true;
+  }
 
   function onWindowClick(e: MouseEvent) {
     if (open && menu && !menu.contains(e.target as Node)) open = false;
@@ -44,32 +61,21 @@
     await run(() => api.addOfflineAccount(offlineName));
     if (!error) offlineName = "";
   }
+
+  const kindLabel = (a: Account) => (a.kind === "microsoft" ? t("account.microsoftLong") : t("account.offlineLong"));
 </script>
 
 <svelte:window onclick={onWindowClick} />
 
-<div class="account-menu" class:compact bind:this={menu}>
-  {#if compact}
-    <button
-      class="trigger-compact"
-      onclick={() => (open = !open)}
-      aria-expanded={open}
-      title={active ? `${active.name} (${active.kind === "microsoft" ? t("account.microsoft") : t("account.offline")})` : t("account.none")}
-    >
-      <span class="avatar big" class:empty={!active}>{active ? active.name[0].toUpperCase() : "?"}</span>
-    </button>
-  {:else}
-  <button class="trigger" onclick={() => (open = !open)} aria-expanded={open}>
-    {#if active}
-      <span class="avatar">{active.name[0].toUpperCase()}</span>
-      <span>{active.name}</span>
-      <span class="badge">{active.kind === "microsoft" ? t("account.microsoft") : t("account.offline")}</span>
-    {:else}
-      <span>{t("account.none")}</span>
-    {/if}
-    <span class="chevron">▾</span>
+<div class="account-menu" bind:this={menu}>
+  <button class="trigger" onclick={() => (open = !open)} aria-expanded={open} aria-haspopup="menu">
+    <PixelAvatar skin={active ? (skins[active.uuid] ?? null) : null} size={40} />
+    <span class="who">
+      <span class="name">{active?.name ?? t("account.none")}</span>
+      <span class="kind">{active ? kindLabel(active) : t("account.addHint")}</span>
+    </span>
+    <Icon name="chevron-up" size={16} />
   </button>
-  {/if}
 
   {#if open}
     <div class="popover">
@@ -78,11 +84,13 @@
           {#each accounts as a (a.uuid)}
             <li class:active={a.active}>
               <button class="pick" onclick={() => run(() => api.setActiveAccount(a.uuid))}>
-                <span class="avatar">{a.name[0].toUpperCase()}</span>
+                <PixelAvatar skin={skins[a.uuid] ?? null} size={28} />
                 <span class="name">{a.name}</span>
-                <span class="badge">{a.kind === "microsoft" ? t("account.microsoft") : t("account.offline")}</span>
+                <span class="tag">{a.kind === "microsoft" ? t("account.microsoft") : t("account.offline")}</span>
               </button>
-              <button class="ghost remove" title={t("account.remove")} onclick={() => (removing = a)}>✕</button>
+              <button class="ghost remove" aria-label={t("account.remove")} title={t("account.remove")} onclick={() => (removing = a)}>
+                <Icon name="close" size={14} />
+              </button>
             </li>
           {/each}
         </ul>
@@ -145,64 +153,50 @@
   .trigger {
     display: flex;
     align-items: center;
-    gap: 8px;
-  }
-
-  .chevron {
-    color: var(--muted);
-    font-size: 11px;
-  }
-
-  .avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    background: var(--accent);
-    color: var(--accent-text);
-    display: inline-grid;
-    place-items: center;
-    font-weight: 700;
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-
-  .trigger-compact {
-    border: none;
+    gap: 12px;
+    min-height: 56px;
+    padding: 0 8px 0 0;
     background: transparent;
-    padding: 6px;
-    margin-top: 6px;
+    color: var(--text-muted);
+    text-align: left;
   }
 
-  .avatar.big {
-    width: 38px;
-    height: 38px;
-    font-size: 16px;
-    border-radius: 10px;
+  .trigger:hover:not(:disabled) {
+    background: transparent;
+    color: var(--text);
   }
 
-  .avatar.empty {
-    background: var(--surface-3);
-    color: var(--muted);
+  .who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
-  .compact .popover {
-    left: calc(100% + 12px);
-    right: auto;
-    top: auto;
-    bottom: 0;
+  .who .name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+
+  .kind {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-dim);
   }
 
   .popover {
     position: absolute;
     right: 0;
-    top: calc(100% + 6px);
-    z-index: 10;
-    width: 300px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-    padding: 10px;
+    bottom: calc(100% + 14px);
+    z-index: 20;
+    width: 320px;
+    background: var(--bar);
+    border: 1px solid var(--line-strong);
+    padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -220,33 +214,33 @@
   li {
     display: flex;
     align-items: center;
-    border-radius: var(--radius);
   }
 
   li.active {
-    background: var(--surface-3);
+    background: var(--surface-active);
+    clip-path: var(--cut-1);
   }
 
   .pick {
     flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: none;
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 40px;
+    padding: 0 8px;
     background: transparent;
     text-align: left;
     min-width: 0;
   }
 
-  .name {
+  .pick .name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .remove {
-    padding: 4px 8px;
-    color: var(--muted);
+    width: 32px;
+    padding: 0;
   }
 
   form {
@@ -256,7 +250,7 @@
 
   .hint {
     margin: 0;
-    color: var(--muted);
+    color: var(--text-dim);
     font-size: 12px;
   }
 </style>

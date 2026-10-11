@@ -38,6 +38,9 @@ export interface Profile {
   color: string | null;
   icon: string | null;
   running: boolean;
+  /** Herkunft, falls aus einem Modpack; nur in der Profil-Liste gesetzt. */
+  packSource?: "twogg" | "modrinth" | "curseforge" | "file" | null;
+  lastPlayed?: number | null;
 }
 
 export interface ProfileInput {
@@ -452,4 +455,78 @@ export interface NewsItem {
   link: string | null;
   pinned: boolean;
   publishedAt: number;
+}
+
+/** Event von twogg.app (Titel ohne Emojis, Zusammenfassung als Klartext). */
+export interface AppEvent {
+  id: string;
+  title: string;
+  summary: string;
+  eventType: "STANDARD" | "TEAM" | "ROLEPLAY" | string;
+  eventDate: string | null;
+  registrationDeadline: string | null;
+  registrationClosed: boolean;
+  requiresApplication: boolean;
+  minecraftVersion: string | null;
+  maxPlayers: number | null;
+  teamSize: number | null;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  ended: boolean;
+  url: string;
+}
+
+export interface AppUser {
+  id: string;
+  username: string;
+  avatarUrl: string | null;
+  mcUsername: string | null;
+  mcUuid: string | null;
+}
+
+export interface Participation {
+  eventId: string;
+  kind: "registered" | "team" | "pre" | "invite";
+  status: string;
+  teamName: string | null;
+}
+
+export interface JoinInfo {
+  approved: boolean;
+  serverAddress: string | null;
+}
+
+export interface AppFriend {
+  id: string;
+  username: string;
+  mcUsername: string | null;
+  avatarUrl: string | null;
+}
+
+/** Pinecone-Freundesliste (eigener Server, Minecraft-Account als Identität). */
+export interface FriendActivity {
+  instance: string | null;
+  version: string | null;
+  server: string | null;
+  playing: boolean;
+}
+
+export interface Friend {
+  uuid: string;
+  name: string;
+  online: boolean;
+  lastSeen: number;
+  activity: FriendActivity | null;
+}
+
+export interface FriendsState {
+  /** false bei Offline-Accounts. */
+  available: boolean;
+  friends?: Friend[];
+  incoming?: { uuid: string; name: string }[];
+  outgoing?: { uuid: string; name: string }[];
+}
+
+export interface ServerInfo {
+  gameServer: { name: string; address: string } | null;
 }

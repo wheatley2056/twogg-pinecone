@@ -2,6 +2,14 @@ import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
   Account,
+  AppEvent,
+  AppFriend,
+  AppUser,
+  FriendActivity,
+  FriendsState,
+  JoinInfo,
+  ServerInfo,
+  Participation,
   AppInfo,
   JavaInstallation,
   LaunchEvent,
@@ -173,6 +181,24 @@ export const api = {
   exportTheme: (path: string) => invoke<void>("export_theme", { path }),
   importTheme: (path: string) => invoke<Settings>("import_theme", { path }),
   stopGame: (id: string) => invoke<void>("stop_game", { id }),
+
+  serverInfo: () => invoke<ServerInfo>("twogg_server_info"),
+  friends: () => invoke<FriendsState>("friends_list"),
+  friendsPresence: (activity: FriendActivity) => invoke<void>("friends_presence", { activity }),
+  friendRequest: (name: string) => invoke<"requested" | "friends">("friends_request", { name }),
+  friendAccept: (uuid: string) => invoke<void>("friends_accept", { uuid }),
+  friendDecline: (uuid: string) => invoke<void>("friends_decline", { uuid }),
+  friendRemove: (uuid: string) => invoke<void>("friends_remove", { uuid }),
+  appEvents: () => invoke<AppEvent[]>("twogg_app_events"),
+  appMe: () => invoke<AppUser | null>("twogg_app_me"),
+  appLoginDiscord: () => invoke<void>("twogg_app_login_discord"),
+  appLoginPassword: (email: string, password: string) => invoke<AppUser>("twogg_app_login_password", { email, password }),
+  appLogout: () => invoke<void>("twogg_app_logout"),
+  appParticipations: () => invoke<Participation[]>("twogg_app_participations"),
+  appJoin: (eventId: string) => invoke<JoinInfo>("twogg_app_join", { eventId }),
+  appFriends: () => invoke<AppFriend[]>("twogg_app_friends"),
+  onAppLogin: (handler: (result: { user?: AppUser; error?: string }) => void) =>
+    listen<{ user?: AppUser; error?: string }>("twogg-app-login", (e) => handler(e.payload)),
 };
 
 /** Lokale Datei für `<img src>`; `data:`-URLs (Mock-Modus) bleiben unverändert. */
