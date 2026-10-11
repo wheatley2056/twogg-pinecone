@@ -46,6 +46,7 @@ Crates: tokio, reqwest (rustls), serde/serde_json, sha1, zip, thiserror/anyhow, 
 8. **Screenshots + Skins**: Galerie mit Watcher, Skin-Upload/Bibliothek/Capes, dann Skin-Editor mit 3D-Vorschau.
 9. **Politur**: Logfile-Export, Self-Update, Installer/Bundles (MSI/NSIS, AppImage/deb).
 10. **Optional**: Forge/NeoForge, eigenes TwoGG-Server-Profil mit Auto-Update (z. B. Horizons Unbound).
+11. **Redesign**: Überarbeitung der gesamten Oberfläche, wenn der Funktionsumfang steht (siehe unten).
 
 ## Feature-Module (Erweiterung)
 Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
@@ -95,6 +96,14 @@ Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
 
 **Personalisierung (`settings` + UI)**
 - Themes über CSS-Variablen (hell/dunkel/System, Akzentfarbe, Presets), Hintergrundbild, Anordnung der Dashboard-Widgets, Profil-Icons/Farben, Sprache (de/en), alles in `settings.json` und als Theme-Datei exportierbar.
+
+**Redesign (Phase 11)**
+- Zum Schluss, damit es alle Funktionen aus 1–10 umfasst und nicht mehrfach angepasst werden muss.
+- Eigene visuelle Identität für TwoGG Pinecone statt der bisherigen Anlehnung an Modrinth App/CurseForge: Farbwelt, Typografie, Icons, Pixel-Art-Elemente passend zum Tannenzapfen-Logo, Animationen beim Spielstart.
+- Navigation und Informationsarchitektur neu prüfen (Start, Bibliothek, Entdecken, Profil, Sync-Packs, Einstellungen), Wege für häufige Aufgaben kürzen (Spielen, Mod hinzufügen, Pack teilen).
+- Grundlage als Design-System: CSS-Variablen/Tokens, gemeinsame Komponenten (Dialoge, Listen, Karten, Schalter), damit Themes und Personalisierung weiter funktionieren.
+- Barrierefreiheit (Kontraste, Tastaturbedienung, Fokus), kleine Fenstergrößen, hell/dunkel.
+- Ablauf: Entwürfe zuerst als klickbarer Prototyp mit Beispieldaten (Mock-Modus), Feedback aus der TwoGG-Community, dann Umsetzung Seite für Seite.
 
 ## Risiken / offene Punkte
 - **Share-Dienst**: braucht einen kleinen Server (Hosting, Missbrauchsschutz, Limits). Offene Entscheidung: selbst hosten (z. B. bei TwoGG) oder zunächst nur Datei-Sharing. Empfehlung: Datei-Sharing und Deep-Links zuerst, Dienst danach.
