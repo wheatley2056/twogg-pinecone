@@ -1,5 +1,6 @@
 import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type {
   Account,
   AppEvent,
@@ -98,6 +99,8 @@ export const api = {
   contentSetEnabled: (id: string, key: string, enabled: boolean) => invoke<void>("content_set_enabled", { id, key, enabled }),
   contentRemove: (id: string, key: string) => invoke<void>("content_remove", { id, key }),
   contentAddLocal: (id: string, kind: ContentKind, path: string) => invoke<string>("content_add_local", { id, kind, path }),
+  /** Art wird aus Endung und Inhalt erkannt (Drag & Drop). */
+  contentAddDropped: (id: string, path: string) => invoke<string>("content_add_dropped", { id, path }),
   contentInstall: (id: string, kind: ContentKind, project: string, version: string | null = null) =>
     invoke<InstallReport>("content_install", { id, kind, project, version }),
   contentUpdates: (id: string) => invoke<UpdateInfo[]>("content_updates", { id }),
@@ -208,6 +211,15 @@ export const api = {
   appParticipations: () => invoke<Participation[]>("twogg_app_participations"),
   appJoin: (eventId: string) => invoke<JoinInfo>("twogg_app_join", { eventId }),
   appFriends: () => invoke<AppFriend[]>("twogg_app_friends"),
+  /** Dateien, die ins Fenster gezogen werden: `over` beim Hineinziehen, `drop` beim Loslassen. */
+  onFileDrop: (handler: (e: { type: "over" | "drop" | "leave"; paths: string[] }) => void) =>
+    getCurrentWebview().onDragDropEvent((ev) => {
+      const p = ev.payload;
+      if (p.type === "enter") handler({ type: "over", paths: p.paths });
+      else if (p.type === "over") handler({ type: "over", paths: [] });
+      else if (p.type === "drop") handler({ type: "drop", paths: p.paths });
+      else handler({ type: "leave", paths: [] });
+    }),
   onAppLogin: (handler: (result: { user?: AppUser; error?: string }) => void) =>
     listen<{ user?: AppUser; error?: string }>("twogg-app-login", (e) => handler(e.payload)),
 };

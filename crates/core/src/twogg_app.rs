@@ -387,7 +387,10 @@ impl TwoggApp {
         } else {
             body
         };
-        serde_json::from_value(user).map_err(Error::json("twogg.app /auth/me"))
+        let mut user: AppUser =
+            serde_json::from_value(user).map_err(Error::json("twogg.app /auth/me"))?;
+        user.avatar_url = user.avatar_url.and_then(image_url);
+        Ok(user)
     }
 
     pub async fn participations(&self) -> Result<Vec<Participation>> {
@@ -440,6 +443,18 @@ pub fn handoff_error(url: &str) -> Option<String> {
 
 fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
+}
+
+/// Bild-Adresse von twogg.app: absolute https-Adressen bleiben, Pfade wie `/storage/…` zeigen
+/// auf twogg.app, alles andere (z. B. `javascript:`) fällt weg.
+fn image_url(u: String) -> Option<String> {
+    if u.starts_with("https://") {
+        Some(u)
+    } else if u.starts_with('/') && !u.starts_with("//") {
+        Some(format!("https://twogg.app{u}"))
+    } else {
+        None
+    }
 }
 
 fn str_field(v: &Value, key: &str) -> Option<String> {
@@ -501,8 +516,8 @@ fn parse_event(v: &Value) -> Option<AppEvent> {
         minecraft_version: str_field(v, "minecraftVersion"),
         max_players: v["maxPlayers"].as_u64().map(|n| n as u32),
         team_size: v["pluginConfig"]["team_size"].as_u64().map(|n| n as u32),
-        logo_url: str_field(v, "logoUrl").filter(|u| u.starts_with("https://")),
-        banner_url: str_field(v, "bannerUrl").filter(|u| u.starts_with("https://")),
+        logo_url: str_field(v, "logoUrl").and_then(image_url),
+        banner_url: str_field(v, "bannerUrl").and_then(image_url),
         ended: !v["matchEndedAt"].is_null(),
         id,
     })
@@ -568,7 +583,7 @@ fn parse_friends(body: &Value) -> Vec<AppFriend> {
                 id: str_field(u, "id")?,
                 username: str_field(u, "username")?,
                 mc_username: str_field(u, "mcUsername"),
-                avatar_url: str_field(u, "avatarUrl").filter(|a| a.starts_with("https://")),
+                avatar_url: str_field(u, "avatarUrl").and_then(image_url),
             })
         })
         .collect()
@@ -617,6 +632,11 @@ mod tests {
         assert!(e.ended);
         assert_eq!(e.team_size, Some(2));
         assert_eq!(e.banner_url, None);
+        assert_eq!(
+            image_url("/storage/avatars/a.png".into()).as_deref(),
+            Some("https://twogg.app/storage/avatars/a.png")
+        );
+        assert_eq!(image_url("//evil.example/x.png".into()), None);
         assert_eq!(
             e.url,
             "https://twogg.app/events/94181fb6-d005-45f2-80d2-0216826ffd65"

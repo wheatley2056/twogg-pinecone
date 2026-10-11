@@ -219,6 +219,7 @@ fn main() {
             content::content_set_enabled,
             content::content_remove,
             content::content_add_local,
+            content::content_add_dropped,
             content::content_install,
             content::content_updates,
             content::content_update,

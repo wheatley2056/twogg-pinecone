@@ -1,6 +1,7 @@
 <script lang="ts">
   // Tab „Welten“: Welten der Instanz mit Spielmodus, letzter Änderung und Größe; sichern,
   // Ordner öffnen, löschen.
+  import { menu } from "../../lib/contextmenu.svelte";
   import { onMount } from "svelte";
   import { api, errorText, fileSrc } from "../../lib/api";
   import { i18n, t } from "../../lib/i18n.svelte";
@@ -59,7 +60,15 @@
   {:else}
     <div class="list">
       {#each worlds as w (w.folder)}
-        <div class="row">
+        <div class="row" use:menu={() => [
+          { label: t("worlds.openFolder"), icon: "folder", action: () => run(w.folder, () => api.worldOpenFolder(profile.id, w.folder)) },
+          { label: t("worlds.backup"), icon: "download", disabled: busy !== null, action: () => run(w.folder, async () => {
+            const path = await api.worldBackup(profile.id, w.folder);
+            message = t("worlds.backedUp", { path });
+          }) },
+          "-",
+          { label: t("worlds.delete"), icon: "trash", danger: true, disabled: locked || busy !== null, action: () => (deleting = w) },
+        ]}>
           {#if w.icon}
             <img class="icon" src={fileSrc(w.icon)} alt="" width="48" height="48" />
           {:else}

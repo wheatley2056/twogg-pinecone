@@ -101,7 +101,7 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8z" /></svg>
             {t("play.play")}
           </span>
-          <span class="pv-secondary">{t("events.chooseGuild")}</span>
+          <span class="pv-secondary">{t("events.details")}</span>
         </div>
       </div>
     </div>

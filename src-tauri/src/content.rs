@@ -85,6 +85,24 @@ pub async fn content_add_local(
         .map_err(err)
 }
 
+/// Hineingezogene Datei hinzufügen; die Art wird aus Endung und Inhalt erkannt.
+#[tauri::command]
+pub async fn content_add_dropped(
+    state: State<'_, AppState>,
+    id: String,
+    path: String,
+) -> CmdResult<String> {
+    let (_, dir) = profile_and_dir(&state, &id)?;
+    let path = Path::new(&path);
+    let kind = ContentKind::detect(path).map_err(err)?;
+    state
+        .launcher
+        .content()
+        .add_local(&id, &dir, kind, path)
+        .await
+        .map_err(err)
+}
+
 #[tauri::command]
 pub async fn content_install(
     state: State<'_, AppState>,

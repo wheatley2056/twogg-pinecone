@@ -1,5 +1,19 @@
 # Änderungen
 
+## 0.9.1
+
+- **Startseite neu:** aktuelles TwoGG-Event mit Banner von twogg.app, „Zuletzt gespielt“ mit
+  Spielen-Knopf und letzter Spielzeit, Neuigkeiten (zum Lesen anklicken), Community-Server mit
+  Spielerzahl und Beitreten, Freunde online.
+- **Inhalte hinzufügen** direkt in der Instanz: suchen, mit einem Klick hinzufügen, Dateien wählen
+  oder `.jar`/`.zip` ins Fenster ziehen (Mod, Ressourcenpaket oder Shader wird erkannt).
+- **Rechtsklick-Menü** für Instanzen, Inhalte, Welten, Screenshots, Events und Textfelder.
+- **Skin-Editor** im Pinecone-Design (Farben, Schriften, Ecken, Linien-Icons).
+- Bilder von twogg.app (Event-Banner, Logos, Profilbilder) werden angezeigt, auch von Discord.
+- Einstellungen-Symbol ist jetzt ein Zahnrad.
+- Behoben: Neue Instanz mit Motiv schlug mit „Symbol ist zu lang“ fehl.
+- „Gilde wählen“ entfällt; die Anmeldung läuft über den Link zu twogg.app.
+
 ## 0.9.0 – erste Beta
 
 Erste öffentliche Beta von TwoGG Pinecone für Windows und Linux.

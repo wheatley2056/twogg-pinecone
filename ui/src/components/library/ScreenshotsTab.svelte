@@ -1,6 +1,7 @@
 <script lang="ts">
   // Tab „Screenshots“: Galerie der Instanz nach Tagen, Vollbild mit Kopieren, Speichern,
   // Ordner, extern öffnen, Löschen. Neue Bilder erscheinen von selbst.
+  import { menu } from "../../lib/contextmenu.svelte";
   import { onDestroy, onMount } from "svelte";
   import { save } from "@tauri-apps/plugin-dialog";
   import { api, errorText, fileSrc } from "../../lib/api";
@@ -131,7 +132,15 @@
     <h3 class="section-label">{g.day}</h3>
     <div class="grid">
       {#each g.items as s (s.path)}
-        <button class="tile" onclick={() => (open = s)} use:lazyThumb={s.path} title={time(s)}>
+        <button class="tile" onclick={() => (open = s)} use:lazyThumb={s.path} title={time(s)} use:menu={() => [
+          { label: t("menu.view"), icon: "image", action: () => (open = s) },
+          { label: t("shots.copy"), icon: "copy", action: () => copy(s) },
+          { label: t("shots.saveAs"), icon: "download", action: () => saveAs(s) },
+          { label: t("shots.reveal"), icon: "folder", action: () => act(() => api.screenshotReveal(s.path)) },
+          { label: t("shots.openExternal"), icon: "external", action: () => act(() => api.openScreenshot(s.path)) },
+          "-",
+          { label: t("shots.delete"), icon: "trash", danger: true, action: () => (confirmDelete = s) },
+        ]}>
           {#if thumbs[s.path]}<img src={thumbs[s.path]} alt="" loading="lazy" />{:else}<span class="placeholder"></span>{/if}
           <span class="caption mono">{time(s)}</span>
         </button>

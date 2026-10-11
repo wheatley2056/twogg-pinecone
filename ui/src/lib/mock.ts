@@ -138,7 +138,8 @@ const APP_EVENTS: AppEvent[] = [
     maxPlayers: null, teamSize: null, logoUrl: null, bannerUrl: null, ended: false, url: "https://twogg.app/events" },
   { id: "ca7acfe0-fc10-44e4-a477-96b64c670631", title: "WINTERLAND: Icebreaker", summary: "", eventType: "ROLEPLAY", eventDate: "2026-11-28T17:00:00.000Z",
     registrationDeadline: null, registrationClosed: false, requiresApplication: true, minecraftVersion: "1.21.11", maxPlayers: 32, teamSize: 2,
-    logoUrl: null, bannerUrl: null, ended: false, url: "https://twogg.app/events/ca7acfe0-fc10-44e4-a477-96b64c670631" },
+    logoUrl: "https://twogg.app/storage/events/admin/ff908031-7da7-4cc1-b118-30bf4c4799cf.png",
+    bannerUrl: "https://twogg.app/storage/events/admin/26ca2e39-5a0d-4ff2-b06b-04e9a1002dec.gif", ended: false, url: "https://twogg.app/events/ca7acfe0-fc10-44e4-a477-96b64c670631" },
   { id: "94181fb6-d005-45f2-80d2-0216826ffd65", title: "LATEST 2026 RISE OF ATLANTIS",
     summary: "LATEST ist das jährliche Aushängeschild-Event von TwoGG: ein Minecraft-PvP-Survival im Varo-Format, bei dem ihr euch zu zweit gegen alle anderen Teams behauptet.",
     eventType: "TEAM", eventDate: "2026-10-03T17:00:00.000Z", registrationDeadline: "2026-10-03T16:45:00.000Z", registrationClosed: false, requiresApplication: false,
@@ -276,6 +277,7 @@ Object.assign(api, {
     void (content = content.map((c) => (c.key === key ? { ...c, enabled } : c))),
   contentRemove: async (_id: string, key: string) => void (content = content.filter((c) => c.key !== key)),
   contentAddLocal: async () => "mods/neu.jar",
+  contentAddDropped: async (_id: string, path: string) => (await wait(300), path.endsWith(".jar") ? "mods/" + path.split("/").pop() : "resourcepacks/" + path.split("/").pop()),
   contentInstall: async (_id: string, _kind: string, project: string) => {
     await wait(700);
     return { installed: [[project === "AANobbMI" ? "Sodium" : "Iris Shaders", "1.0"]], alreadyPresent: [], warnings: [] };
@@ -417,6 +419,7 @@ Object.assign(api, {
   screenshotReveal: async () => {},
   screenshotSaveAs: async () => {},
   onScreenshotsChanged: async () => () => {},
+  onFileDrop: async () => () => {},
   twoggPacks: async () => (await wait(300), [TWOGG_PACK]),
   twoggPack: async () => (await wait(300), { ...TWOGG_PACK, descriptionHtml: "<h2>Willkommen</h2><p>Alles für <strong>Horizons Unbound</strong>: Create, Farmwelt und mehr.</p>", versions: [TWOGG_PACK.latest, { ...TWOGG_PACK.latest, id: "v1", version: "1.9.0", channel: "release", publishedAt: now - 30 * 86400 }] }),
   twoggNews: async () => (await wait(300), [
