@@ -46,7 +46,7 @@ Crates: tokio, reqwest (rustls), serde/serde_json, sha1, zip, thiserror/anyhow, 
 8. **Screenshots + Skins**: Galerie mit Watcher, Skin-Upload/Bibliothek/Capes, dann Skin-Editor mit 3D-Vorschau.
 9. **Politur**: Logfile-Export, Self-Update, Installer/Bundles (MSI/NSIS, AppImage/deb).
 10. **Optional**: Forge/NeoForge, eigenes TwoGG-Server-Profil mit Auto-Update (z. B. Horizons Unbound).
-11. **Redesign**: Überarbeitung der gesamten Oberfläche, wenn der Funktionsumfang steht (siehe unten).
+11. **Redesign**: Neue Oberfläche nach dem Pinecone-Design-System (`docs/design/`), in Schritten 11a–11h (siehe unten).
 
 ## Feature-Module (Erweiterung)
 Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
@@ -98,12 +98,64 @@ Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
 - Themes über CSS-Variablen (hell/dunkel/System, Akzentfarbe, Presets), Hintergrundbild, Anordnung der Dashboard-Widgets, Profil-Icons/Farben, Sprache (de/en), alles in `settings.json` und als Theme-Datei exportierbar.
 
 **Redesign (Phase 11)**
-- Zum Schluss, damit es alle Funktionen aus 1–10 umfasst und nicht mehrfach angepasst werden muss.
-- Eigene visuelle Identität für TwoGG Pinecone statt der bisherigen Anlehnung an Modrinth App/CurseForge: Farbwelt, Typografie, Icons, Pixel-Art-Elemente passend zum Tannenzapfen-Logo, Animationen beim Spielstart.
-- Navigation und Informationsarchitektur neu prüfen (Start, Bibliothek, Entdecken, Profil, Sync-Packs, Einstellungen), Wege für häufige Aufgaben kürzen (Spielen, Mod hinzufügen, Pack teilen).
-- Grundlage als Design-System: CSS-Variablen/Tokens, gemeinsame Komponenten (Dialoge, Listen, Karten, Schalter), damit Themes und Personalisierung weiter funktionieren.
-- Barrierefreiheit (Kontraste, Tastaturbedienung, Fokus), kleine Fenstergrößen, hell/dunkel.
-- Ablauf: Entwürfe zuerst als klickbarer Prototyp mit Beispieldaten (Mock-Modus), Feedback aus der TwoGG-Community, dann Umsetzung Seite für Seite.
+
+Vorgaben: `docs/design/design-system.md` (Regeln, Tokens, Komponenten) und der Prototyp `docs/design/prototyp.html` mit fünf Screens (Spielen, Bibliothek/Instanz, Entdecken, Einstellungen › Darstellung, Marke; als PNG daneben). Bei Abweichungen gilt das Design-System. Kurzfassung: warmes Rinden-Braun, Harz-Amber nur für die Hauptaktion, Grün nur als Status, Schuppen-Schnitt statt Rundungen, Kanten statt Schatten, Pixelify Sans für Titel, Figtree für Text, JetBrains Mono für Versionen. Keine Emojis, keine Verläufe, kein linker Icon-Rail.
+
+*Neue Informationsarchitektur*
+
+| Bisher | Neu |
+|---|---|
+| Linke Icon-Leiste (Start, Bibliothek, Entdecken, Screenshots, Skins, Sync-Packs, Einstellungen) | Kopfleiste mit Tabs **Spielen · Bibliothek · Entdecken · Events · Skins**, rechts Downloads, Benachrichtigungen, Einstellungen |
+| Play-Button pro Profil | **Spielleiste** unten auf jedem Screen: Instanzwahl (öffnet nach oben), SPIELEN, Freunde, Konto |
+| Dashboard mit frei anordenbaren Widgets | Spielen-Seite: Event-Teaser (Hero), Event-Kalender, „Zuletzt gespielt“ mit TwoGG-Server-Schnellbeitritt |
+| Profilseite mit Tabs Inhalt/Log | Instanz-Detail in der Bibliothek: Header mit Meta-Chips, Unter-Tabs **Inhalt · Welten · Server · Screenshots · Logs · Einstellungen** |
+| Screenshots als eigene Seite | Tab in der Instanz; die Galerie über alle Profile bleibt über die Bibliothek erreichbar |
+| Sync-Packs als eigene Seite | Gruppe „Sync-Packs“ in der Bibliotheksliste; Schalter pro Instanz im Tab Inhalt |
+| Einstellungen als eine Seite | Einstellungen mit Nav: Allgemein, Darstellung, Java & Arbeitsspeicher, Konten, Downloads & Quellen, TwoGG-Verknüpfung |
+
+*Schritte* (jeweils eigener Commit, UI im Mock-Modus mit Playwright gegen die Referenz-PNGs bei 1280 × 800 geprüft)
+
+- **11a Fundament**
+  - Tokens aus Abschnitt 14 als CSS-Variablen; die alten Variablen (`--accent`, `--muted`, `--radius` …) werden ersetzt, nicht parallel gehalten.
+  - Schriften lokal einbinden (`@fontsource/figtree`, `@fontsource/pixelify-sans`, `@fontsource/jetbrains-mono`, OFL), kein Google-Fonts-Abruf zur Laufzeit.
+  - Themes **Rinde** (Standard), **Kiefer**, **Winterland** (hell) statt Hell/Dunkel/System; Akzente Harz, Nadel, Gletscher, Beere, Flechte, Text darauf immer `#1B1206`.
+  - Einstellungen erweitern: `theme.name`, `theme.accent` (Standard `#E9A23B`), Schalter Zapfenschuppen-Muster, Pixel-Überschriften, Animationen reduzieren. Alte `settings.json` werden migriert (dunkel → Rinde, hell → Winterland, System → je nach OS; altes Grün → Harz). Das Hintergrundbild entfällt.
+  - Gemeinsame Bausteine: Button (Harz, Split, Sekundär, Link, gestrichelt, Icon), Segment-Tabs, Unter-Tabs, Schalter (`aria-pressed`), Eingabefeld, Filter-Dropdown, Karte/Kachel mit Schnitt, Event-Badge, Meta-Chip, Tag, Fortschrittsbalken, Overlay-Tafel, Schuppenmuster, Logo/Wortmarke, Dialog-Rahmen.
+  - Icon-Satz auf 24er-Linien-Icons umstellen; Instanz-Motive (Wappen, Block, Haus, Regler, Wellen, Schneeflocke, Server, Blitz) mit den Farbcodes aus Abschnitt 3 als Profil-Icon wählbar, eigene Bilder bleiben möglich.
+  - Neues Pixel-Logo als App-Icon (`tauri icon` aus dem SVG), Favicon und Admin-Seite.
+- **11b Fensterrahmen**
+  - Eigene Kopfleiste (52 px) mit Tabs, Ziehfläche (`data-tauri-drag-region`) und Fenster-Buttons (`decorations: false`). Unter Linux per Einstellung zurück auf den System-Rahmen, weil eigene Rahmen dort je nach Fenstermanager haken.
+  - Spielleiste (88 px): Instanzwahl mit Suche und Gruppen, SPIELEN mit allen Zuständen (Installieren mit Fortschritt, Läuft → Stoppen, Update nötig, Konto fehlt), Konto-Menü nach oben (bisheriges AccountMenu).
+  - Standardgröße 1280 × 800, Mindestgröße etwa 1024 × 680. Kleinere Fenster: Seitenspalten schmaler, Kalender unter den Hero.
+  - Downloads-Panel (Warteschlange mit Fortschritt, Zähler am Icon) und Benachrichtigungen (Updates, Neuigkeiten, fertige Downloads) als Overlays unter der Kopfleiste.
+- **11c Spielen**
+  - Bühne mit Wald-Illustration (SVG nach Abschnitt 10), Event-Teaser links, Event-Kalender rechts oben, „Zuletzt gespielt“ mit 4 Instanzen und TwoGG-Server-Kachel (Status per Server List Ping, Schnellbeitritt).
+  - Ohne Event zeigt der Hero die neueste angeheftete Neuigkeit. Der Widget-Baukasten aus Phase 6/9 entfällt; Einzelbereiche lassen sich in den Einstellungen ausblenden.
+- **11d Bibliothek + Instanz**
+  - Liste links (280 px) mit Gruppen TwoGG Events, Eigene Instanzen, Sync-Packs, Filter, „Modpack importieren“ (gestrichelt), „+“ für neue Instanz.
+  - Header mit Schuppenmuster, Icon 96 px, Pixel-Titel, Meta-Chips (Loader + Version, RAM, Pack-Status „Synchron mit Event-Pack“), Aktionen Ordner, Exportieren, Menü (Teilen, Version wechseln, Pack-Update, Duplizieren, Löschen).
+  - Tab Inhalt als Tabelle Name · Status · Quelle · Aktiv mit Segment-Filter, Suche, „Updates prüfen“, „Inhalt hinzufügen“. Dateien aus einem TwoGG-Pack sind gesperrt (Schloss statt Schalter), Sync-Pack-Inhalte gekennzeichnet.
+  - Neu im Kern: **Welten** (Liste aus `saves/` mit Name, Spielmodus, letzte Änderung, Größe; Sichern, Ordner öffnen, Löschen) und **Server** (aus `servers.dat` mit Status und Schnellbeitritt). Logs und Screenshots aus den bisherigen Seiten.
+- **11e Entdecken**
+  - Segment-Tabs Modpacks, Mods, Ressourcenpakete, Shader, **Datenpakete** (neu: Modrinth-Typ `datapack`, Installation in eine gewählte Welt).
+  - Filter Loader, Version, Kategorie, **Quelle (Alle, Modrinth, CurseForge, TwoGG)**; „Alle“ fragt die Quellen parallel ab und mischt die Treffer. Sortieren. Rechts „Installieren in [Instanz]“.
+  - Streifen „TwoGG-Auswahl“ mit 3 Empfehlungen vom Server, Ergebnisraster mit 3 Spalten, Karten mit Holen / Installiert / Fortschritt.
+- **11f Einstellungen**
+  - Nav links (230 px), Seiten aus den bisherigen Einstellungen aufgeteilt.
+  - Darstellung wie im Prototyp mit Live-Vorschau. Neue Seite TwoGG-Verknüpfung (Server-Adresse, Neuigkeiten an/aus, später Konto-Verknüpfung mit twogg.app). Versionsfeld und Update-Kanal unten in der Nav.
+- **11g Events und Skins**
+  - Server: Ressource **Events** (Titel, Untertitel, Badge-Text, Motiv, Status geplant/läuft/beendet, Termin oder „Termin folgt“, Beschreibung, Links Anmeldung/Discord, zugehöriges TwoGG-Pack, Server-Adresse) und **Empfehlungen** (Verweis auf TwoGG-Pack oder Modrinth-/CurseForge-Projekt) in API und Admin-Seite.
+  - Launcher: Events-Seite (Liste, Detail mit Countdown, Anmeldung über twogg.app, Event-Pack installieren, Server beitreten). Gildenwahl läuft über twogg.app, solange es dafür keine API gibt.
+  - Skins-Seite im neuen Stil; Events und Skins sind im Prototyp noch nicht gestaltet, deshalb erst Entwurf im Mock-Modus zur Abnahme.
+- **11h Dialoge, Feinschliff, Barrierefreiheit**
+  - Alle Dialoge (Import, Teilen, Pack-Update, Versionswechsel, Login, Bestätigen …) auf den neuen Rahmen.
+  - Kontraste (4.5:1) in allen drei Themes und mit allen Akzenten prüfen, Tastaturbedienung und Fokusrahmen, `aria`-Rollen, „Animationen reduzieren“ und `prefers-reduced-motion`.
+  - Englische Texte nachziehen; deutsche UI in Du-Form.
+
+*Offene Punkte*
+- **Freunde in der Spielleiste**: Es gibt keine Datenquelle. Möglich wären die Xbox-Freundesliste (Social-API mit dem vorhandenen Xbox-Token, zeigt aber nicht, wer Minecraft spielt) oder Spieler auf dem TwoGG-Server. Bis zur Entscheidung zeigt die Stelle die Spielerzahl des TwoGG-Servers.
+- **Gilde** im Instanz-Header und „Gilde wählen“: brauchen eine Schnittstelle zu twogg.app; bis dahin nur Link zur Anmeldung.
+- **TwoGG-Server-Adresse und Event-Daten** kommen vom Pinecone-Server und werden nicht im Launcher fest eingetragen (Platzhalter `[SERVER-ADRESSE]`, solange nichts gepflegt ist).
 
 ## Risiken / offene Punkte
 - **Share-Dienst**: braucht einen kleinen Server (Hosting, Missbrauchsschutz, Limits). Offene Entscheidung: selbst hosten (z. B. bei TwoGG) oder zunächst nur Datei-Sharing. Empfehlung: Datei-Sharing und Deep-Links zuerst, Dienst danach.
@@ -112,6 +164,7 @@ Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
 - Forge/NeoForge-Installer sind der größte Einzelaufwand, deshalb nach hinten gestellt. Der Versionswechsel zwischen Loader-Familien (Fabric/Quilt ↔ Forge/NeoForge) hängt davon ab.
 - Versionswechsel: Viele Mods gibt es nicht für jede Version/jeden Loader; die Ersatzliste für Loader-Gegenstücke muss gepflegt werden. Welten nach einem Downgrade können kaputtgehen, deshalb immer Sicherung und klare Warnung.
 - Sync-Packs: Automatisches Installieren vor dem Start braucht Netzwerk; ohne Netz mit dem zuletzt installierten Stand starten.
+- Redesign: Eigener Fensterrahmen ist unter Linux (Wayland, Tiling-WMs) fehleranfällig, deshalb abschaltbar. Die Wald-Illustration und das Schuppenmuster als SVG halten, nicht als großes Bild, damit sie mit Themes und Akzenten mitgehen.
 - Mojang-Marke/EULA: Launcher darf keine Mojang-Assets weiterverbreiten, nur von deren Servern laden; Name/Logo nicht wie offiziell gestalten.
 
 ## Verifikation
@@ -122,6 +175,7 @@ Zusätzliche `core`-Module, jeweils mit eigenem Tauri-Command-Satz und UI-Seite:
 - Sync-Pack mit einem Ressourcenpaket und einem Mod an zwei Profilen unterschiedlicher Versionen aktivieren, jeweils passende Datei installiert; ausschalten entfernt nur diese Dateien, ein Pack-Update lässt sie unangetastet.
 - Login: Device-Code-Flow mit eigenem Account, Neustart ohne erneuten Login (Refresh).
 - GUI: `cargo tauri dev`, Spielstart per Klick, Fortschritt und Logs sichtbar; `cargo tauri build` erzeugt Installer.
+- Redesign: Mock-UI bei 1280 × 800 je Screen neben die Referenz aus `docs/design/` legen (Playwright-Screenshots), alle drei Themes und fünf Akzente durchklicken, Tastatur-Durchlauf ohne Maus, Kontrast-Check.
 - `cargo clippy` und `cargo test` grün in CI.
 
 ## Erster Umsetzungsschritt nach Freigabe
