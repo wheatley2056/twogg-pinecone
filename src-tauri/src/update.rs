@@ -65,7 +65,15 @@ pub async fn update_check(
         .map_err(err)?
         .build()
         .map_err(err)?;
-    let update = updater.check().await.map_err(err)?;
+    let update = updater.check().await.map_err(|e| match e {
+        // 404 auf latest.json: Es gibt noch kein veröffentlichtes Release (nur Entwürfe).
+        tauri_plugin_updater::Error::ReleaseNotFound => {
+            "Keine veröffentlichte Version gefunden. Der Update-Server hat noch kein Release \
+             oder ist gerade nicht erreichbar."
+                .to_string()
+        }
+        e => err(e),
+    })?;
     let info = update.as_ref().map(|u| UpdateInfo {
         version: u.version.clone(),
         current_version: u.current_version.clone(),

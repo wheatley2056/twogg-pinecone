@@ -1,5 +1,9 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- Verständliche Meldung, wenn beim Suchen nach Updates noch kein Release veröffentlicht ist.
+
 ## 0.9.1
 
 - **Startanimation:** Beim Öffnen erscheint das Pinecone-Logo als Splash-Screen, während der
