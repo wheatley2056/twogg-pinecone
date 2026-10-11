@@ -30,6 +30,8 @@ indicatif = "0.17"
 tempfile = "3"
 hickory-resolver = "0.26"
 base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+notify = "8"
 tauri = { version = "2.12", features = ["protocol-asset"] }
 tauri-build = { version = "2.5", features = [] }
 tauri-plugin-opener = "2.7"

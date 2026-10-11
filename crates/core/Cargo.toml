@@ -23,6 +23,7 @@ regex.workspace = true
 keyring.workspace = true
 hickory-resolver.workspace = true
 base64.workspace = true
+image.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

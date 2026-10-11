@@ -9,6 +9,7 @@ mod game;
 mod migrate;
 mod open;
 mod packs;
+mod screenshots;
 mod skins;
 mod syncpacks;
 
@@ -92,6 +93,7 @@ fn main() {
         .manage(state)
         .setup(|app| {
             dashboard::allow_assets(app.handle());
+            screenshots::start_watcher(app.handle());
             // Installer tragen `pinecone://` selbst ein; beim Entwickeln und für AppImages
             // registriert sich die App hier (Windows: Registry des Nutzers, Linux: .desktop-Datei).
             #[cfg(any(windows, target_os = "linux"))]
@@ -171,6 +173,11 @@ fn main() {
             syncpacks::syncpack_for_profile,
             syncpacks::syncpack_set_enabled,
             syncpacks::syncpack_sync,
+            screenshots::screenshots_list,
+            screenshots::screenshot_thumb,
+            screenshots::screenshot_delete,
+            screenshots::screenshot_reveal,
+            screenshots::screenshot_save_as,
             skins::skins_list,
             skins::skin_data,
             skins::skin_import_file,

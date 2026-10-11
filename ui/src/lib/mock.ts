@@ -70,6 +70,29 @@ const STEVE = (() => {
   g.fillStyle = "#ffffff"; g.fillRect(9, 12, 2, 1); g.fillRect(13, 12, 2, 1);
   return c.toDataURL("image/png");
 })();
+// Beispiel-Screenshots: farbige Verläufe als data:-URL (im Browser ohne Tauri).
+function shotImage(hue: number) {
+  const c = document.createElement("canvas");
+  c.width = 480;
+  c.height = 270;
+  const g = c.getContext("2d")!;
+  const grad = g.createLinearGradient(0, 0, 0, 270);
+  grad.addColorStop(0, `hsl(${hue} 70% 70%)`);
+  grad.addColorStop(0.6, `hsl(${hue + 20} 50% 45%)`);
+  grad.addColorStop(1, "hsl(110 40% 30%)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 480, 270);
+  g.fillStyle = "hsl(110 45% 28%)";
+  for (let x = 0; x < 480; x += 24) g.fillRect(x, 190 + ((x * 7) % 30), 24, 90);
+  return c.toDataURL("image/png");
+}
+let mockShots = [200, 30, 260, 180, 320, 90].map((hue, i) => ({
+  profileId: i % 2 ? "retro" : "fabric-test",
+  profileName: i % 2 ? "Retro" : "Fabric Test",
+  path: shotImage(hue),
+  modified: now - i * 7000 - (i > 3 ? 86400 : 0),
+  size: 1000,
+}));
 let mockSkins: SavedSkin[] = [
   { id: "1", name: "Tobi", model: "classic", created: now, updated: now },
   { id: "2", name: "Winter", model: "slim", created: now - 100, updated: now - 100 },
@@ -284,6 +307,12 @@ Object.assign(api, {
       : { installed: [], removed: ["Zoomify", "Fresh Animations"], present: [], unavailable: [], warnings: [] };
   },
   syncpackSync: async () => ({ installed: [], removed: [], present: [], unavailable: [], warnings: [] }),
+  screenshotsList: async () => mockShots,
+  screenshotThumb: async (path: string) => path,
+  screenshotDelete: async (path: string) => void (mockShots = mockShots.filter((s) => s.path !== path)),
+  screenshotReveal: async () => {},
+  screenshotSaveAs: async () => {},
+  onScreenshotsChanged: async () => () => {},
   skinsList: async () => mockSkins,
   skinData: async () => STEVE,
   skinImportFile: async () => addMockSkin("Datei-Skin"),

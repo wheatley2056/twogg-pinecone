@@ -399,3 +399,11 @@ export interface AccountSkin {
   model: SkinModel;
   capes: { id: string; alias: string | null; active: boolean; dataUrl: string | null }[];
 }
+
+export interface ScreenshotItem {
+  profileId: string;
+  profileName: string;
+  path: string;
+  modified: number;
+  size: number;
+}

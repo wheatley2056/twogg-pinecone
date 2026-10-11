@@ -18,8 +18,9 @@
   import Settings from "./components/Settings.svelte";
   import SyncPacks from "./components/SyncPacks.svelte";
   import Skins from "./components/Skins.svelte";
+  import Screenshots from "./components/Screenshots.svelte";
 
-  type View = "home" | "library" | "discover" | "syncpacks" | "skins" | "profile" | "settings";
+  type View = "home" | "library" | "discover" | "syncpacks" | "skins" | "screenshots" | "profile" | "settings";
 
   let info = $state<AppInfo | null>(null);
   let profiles = $state<Profile[]>([]);
@@ -118,6 +119,7 @@
     ["discover", "discover", () => t("nav.discover")],
     ["syncpacks", "layers", () => t("nav.syncpacks")],
     ["skins", "shirt", () => t("nav.skins")],
+    ["screenshots", "image", () => t("nav.screenshots")],
   ];
 </script>
 
@@ -185,6 +187,8 @@
           onPackInstalled={onImported}
         />
       {/key}
+    {:else if view === "screenshots"}
+      <Screenshots {profiles} />
     {:else if view === "skins"}
       <Skins {accounts} />
     {:else if view === "syncpacks"}

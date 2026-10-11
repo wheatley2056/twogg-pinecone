@@ -165,6 +165,32 @@ cargo run -p pinecone-cli -- sync option basics fov 0.25
 cargo run -p pinecone-cli -- sync enable Fabric basics      # bzw. disable, run, list --profile Fabric
 ```
 
+## Skins
+
+Unter „Skins“ liegt eine eigene Skin-Bibliothek (`<data-dir>/skins/`): Skins per Spielername von
+Mojang übernehmen, PNG importieren, umbenennen, Modell Classic/Slim wählen, als PNG speichern. Die
+3D-Vorschau (mit aktivem Cape) nutzt [skinview3d](https://github.com/bs-community/skinview3d) (MIT).
+Mit Microsoft-Account lässt sich ein Skin als Account-Skin setzen, das Cape wechseln oder ausblenden
+und der aktuelle Skin in die Bibliothek übernehmen. Minecraft akzeptiert nur 64×64 und 64×32.
+
+Der Skin-Editor ist der [MC Skin Editor](https://github.com/eheikes/mc-skin-editor) von Eric Heikes
+(Apache-2.0), unverändert eingebunden unter `ui/vendor/mc-skin-editor` und als eigene Seite im iframe
+geladen; Details und Aktualisieren siehe `ui/vendor/mc-skin-editor/VENDORED.md`.
+
+```sh
+cargo run -p pinecone-cli -- skin import jeb_          # oder eine PNG-Datei (--slim)
+cargo run -p pinecone-cli -- skin list
+cargo run -p pinecone-cli -- skin upload <id>          # als Skin des aktiven Microsoft-Accounts
+cargo run -p pinecone-cli -- skin cape                 # Capes anzeigen; mit <id> bzw. none wechseln
+```
+
+## Screenshots
+
+„Screenshots“ zeigt alle Screenshots aller Profile, nach Tagen gruppiert und nach Profil filterbar.
+Vorschaubilder entstehen bei Bedarf in `<data-dir>/cache/thumbs/`. Neue Screenshots erscheinen
+automatisch (Datei-Watcher auf den Screenshot-Ordnern). In der Großansicht: blättern mit ←/→,
+kopieren, speichern unter, im Ordner zeigen, öffnen, löschen.
+
 ## Modpacks teilen
 
 „Teilen …“ im Profilmenü bietet zwei Wege:

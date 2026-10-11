@@ -1,4 +1,4 @@
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
   Account,
@@ -42,6 +42,7 @@ import type {
   AccountSkin,
   SavedSkin,
   SkinModel,
+  ScreenshotItem,
 } from "./types";
 
 export const api = {
@@ -126,6 +127,12 @@ export const api = {
   syncpackSetEnabled: (profileId: string, id: string, enabled: boolean) =>
     invoke<SyncReport>("syncpack_set_enabled", { profileId, id, enabled }),
   syncpackSync: (profileId: string) => invoke<SyncReport>("syncpack_sync", { profileId }),
+  screenshotsList: () => invoke<ScreenshotItem[]>("screenshots_list"),
+  screenshotThumb: (path: string) => invoke<string>("screenshot_thumb", { path }),
+  screenshotDelete: (path: string) => invoke<void>("screenshot_delete", { path }),
+  screenshotReveal: (path: string) => invoke<void>("screenshot_reveal", { path }),
+  screenshotSaveAs: (path: string, target: string) => invoke<void>("screenshot_save_as", { path, target }),
+  onScreenshotsChanged: (handler: () => void) => listen("screenshots-changed", () => handler()),
   skinsList: () => invoke<SavedSkin[]>("skins_list"),
   skinData: (id: string) => invoke<string>("skin_data", { id }),
   skinImportFile: (path: string, model: SkinModel) => invoke<SavedSkin>("skin_import_file", { path, model }),
@@ -152,6 +159,11 @@ export const api = {
   importTheme: (path: string) => invoke<Settings>("import_theme", { path }),
   stopGame: (id: string) => invoke<void>("stop_game", { id }),
 };
+
+/** Lokale Datei für `<img src>`; `data:`-URLs (Mock-Modus) bleiben unverändert. */
+export function fileSrc(path: string): string {
+  return path.startsWith("data:") ? path : convertFileSrc(path);
+}
 
 /** Fehler aus Tauri-Befehlen kommen als Text; alles andere lesbar machen. */
 export function errorText(e: unknown): string {
