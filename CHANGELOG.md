@@ -12,6 +12,12 @@
 - **Instanz duplizieren:** Rechtsklick auf eine Instanz oder „…“ → „Duplizieren“. Mods, Configs und
   Einstellungen werden ohne neuen Download kopiert, Welten und Screenshots auf Wunsch. Die Kopie
   einer Event-Instanz ist eine normale Instanz ohne Pack-Bindung.
+- **Konto pro Instanz:** Unter Einstellungen der Instanz → Start → Konto startet eine Instanz immer
+  mit einem bestimmten Konto. Die Spielleiste zeigt dann „als <Name>“. Ist das Konto entfernt,
+  startet Pinecone nicht still mit einem anderen, sondern sagt Bescheid.
+- **Beim Spielstart:** Einstellungen → Allgemein: Launcher geöffnet lassen, minimieren, ausblenden
+  oder schließen. Ausgeblendet kommt er nach Spielende zurück, minimiert nach Wahl, nach einem
+  Absturz immer. „Schließen“ blendet nur aus, solange noch Downloads laufen.
 
 ## 0.9.7
 

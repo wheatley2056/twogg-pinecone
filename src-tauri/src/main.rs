@@ -179,6 +179,7 @@ fn main() {
             commands::update_profile,
             commands::delete_profile,
             commands::duplicate_profile,
+            commands::set_profile_account,
             commands::open_profile_folder,
             commands::list_accounts,
             commands::add_offline_account,

@@ -1,9 +1,12 @@
 <script lang="ts">
-  // Tab „Einstellungen“ der Instanz: Felder bearbeiten, Instanz löschen.
+  // Tab „Einstellungen“ der Instanz: Felder bearbeiten, Startkonto, Instanz löschen.
+  import { onMount } from "svelte";
   import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
-  import type { Profile } from "../../lib/types";
+  import type { Account, Profile } from "../../lib/types";
   import ConfirmDialog from "../ConfirmDialog.svelte";
+  import SettingRow from "../settings/SettingRow.svelte";
+  import Dropdown from "../ui/Dropdown.svelte";
   import InstanceForm from "./InstanceForm.svelte";
 
   interface Props {
@@ -16,6 +19,33 @@
 
   let confirmDelete = $state(false);
   let error = $state<string | null>(null);
+  let accounts = $state<Account[]>([]);
+  // svelte-ignore state_referenced_locally
+  let account = $state<string>(profile.account ?? "");
+
+  onMount(() => {
+    api.accounts().then((a) => (accounts = a)).catch(() => {});
+  });
+
+  // Gespeichertes Konto, das es nicht mehr gibt, bleibt als Eintrag sichtbar (AK-51.1).
+  const accountOptions = $derived([
+    { value: "", label: t("instance.accountActive") },
+    ...accounts.map((a) => ({ value: a.uuid, label: `${a.name} · ${a.kind === "microsoft" ? "Microsoft" : t("account.offlineShort")}` })),
+    ...(account && !accounts.some((a) => a.uuid === account) && accounts.length > 0 ? [{ value: account, label: t("instance.accountMissing") }] : []),
+  ]);
+
+  async function setAccount(value: string) {
+    const before = account;
+    account = value;
+    error = null;
+    try {
+      await api.setProfileAccount(profile.id, value || null);
+      onChanged();
+    } catch (e) {
+      account = before;
+      error = errorText(e);
+    }
+  }
 
   async function remove() {
     confirmDelete = false;
@@ -38,6 +68,13 @@
         </div>
       {/snippet}
     </InstanceForm>
+  </section>
+
+  <section class="block">
+    <h3 class="section-label">{t("instance.launch")}</h3>
+    <SettingRow title={t("instance.account")} hint={t("instance.accountHint")}>
+      <Dropdown label="" value={account} options={accountOptions} align="right" disabled={locked} onchange={setAccount} />
+    </SettingRow>
   </section>
 
   <section class="block danger-zone">

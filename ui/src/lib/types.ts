@@ -49,6 +49,8 @@ export interface Profile {
   backupOnLaunch: boolean;
   /** Automatische Backups je Welt, die behalten werden. */
   backupKeep: number;
+  /** UUID des festen Kontos; `null` = aktives Konto. */
+  account?: string | null;
 }
 
 export interface ProfileInput {
@@ -83,7 +85,7 @@ export interface JavaInstallation {
   managed: boolean;
 }
 
-export type Stage = "sync" | "loader" | "version" | "java" | "assets";
+export type Stage = "backup" | "sync" | "loader" | "version" | "java" | "assets";
 
 export type LaunchEvent =
   | { type: "stage"; stage: Stage }
@@ -143,6 +145,10 @@ export interface Settings {
   widgets: { id: WidgetId; visible: boolean }[];
   language: "de" | "en";
   jvm: JvmSettings;
+  /** Fenster nach dem Spielstart. */
+  launchBehavior: "keep" | "minimize" | "hide" | "close";
+  /** Nach Spielende wieder anzeigen (bei „minimieren“). */
+  showAfterExit: boolean;
 }
 
 /** JVM-Presets in den Einstellungen: eigene und geänderte eingebaute (gleiche ID). */

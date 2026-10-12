@@ -10,6 +10,7 @@
   import { runOf, startGame, stopGame } from "./lib/runs.svelte";
   import type { MenuEntry } from "./lib/contextmenu.svelte";
   import { loadSettings, settings } from "./lib/settings.svelte";
+  import { appWindow } from "./lib/window";
   import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
   import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType, SyncPack } from "./lib/types";
   import DiscoverPage from "./components/pages/DiscoverPage.svelte";
@@ -195,10 +196,47 @@
     homeKey++;
   }
 
+  /** Wie das Fenster nach dem letzten Start verändert wurde (F-52); `null` = gar nicht. */
+  let windowAway: "minimize" | "hide" | null = null;
+
+  /** Fenster nach dem Spielstart minimieren, ausblenden oder den Launcher schließen. */
+  function afterStart() {
+    const behavior = settings.current?.launchBehavior ?? "keep";
+    // Laufen noch Downloads oder Vorbereitungen, wird nicht geschlossen, sondern ausgeblendet.
+    const busy = installs.length > 0 || profiles.some((p) => runOf(p.id).status === "preparing");
+    if (behavior === "close" && !busy) {
+      appWindow.close();
+    } else if (behavior === "hide" || behavior === "close") {
+      windowAway = "hide";
+      appWindow.hide();
+    } else if (behavior === "minimize") {
+      windowAway = "minimize";
+      appWindow.minimize();
+    }
+  }
+
+  /** Nach Spielende: ausgeblendet immer, minimiert nach Einstellung, bei Absturz immer zurück. */
+  function afterExit(id: string) {
+    if (!windowAway) return;
+    const crashed = runOf(id).error !== null;
+    if (windowAway === "hide" || crashed || (settings.current?.showAfterExit ?? true)) {
+      windowAway = null;
+      appWindow.restore();
+    }
+  }
+
   /** Starten aus Spielleiste, Startseite oder Server-Schnellbeitritt. */
   function play(id: string, server?: string) {
     select(id);
-    startGame(id, () => onGameExit(id), server ?? null);
+    startGame(
+      id,
+      () => {
+        onGameExit(id);
+        afterExit(id);
+      },
+      server ?? null,
+      afterStart,
+    );
   }
 
   /** Instanz, die gerade dupliziert wird (Dialog offen). */

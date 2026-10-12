@@ -25,6 +25,8 @@ let settings: Settings = {
   widgets: (["recent", "news", "packs", "servers", "screenshots", "playtime"] as const).map((id) => ({ id, visible: true })),
   language: "de",
   jvm: { defaultPreset: "aikar", presets: [] },
+  launchBehavior: "keep",
+  showAfterExit: true,
 };
 // Gekürzte Flag-Listen; die echten stehen in crates/core/src/jvm.rs.
 const JVM_BUILTIN: JvmPreset[] = [
@@ -186,6 +188,8 @@ Object.assign(api, {
   worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
   worldDelete: async () => {},
   worldOpenFolder: async () => {},
+  setProfileAccount: async (id: string, account: string | null) =>
+    void (profiles = profiles.map((p) => (p.id === id ? { ...p, account } : p))),
   duplicateProfile: async (id: string, name: string) => {
     await wait(700);
     const source = profiles.find((p) => p.id === id)!;

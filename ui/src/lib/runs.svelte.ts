@@ -49,8 +49,9 @@ function appendLines(run: RunState, lines: string[]) {
   if (run.lines.length > MAX_LINES) run.lines.splice(0, run.lines.length - MAX_LINES);
 }
 
-/** Startet ein Profil, optional direkt auf einen Server. `onExit` folgt nach Spielende bzw. Fehler. */
-export async function startGame(id: string, onExit: () => void, server: string | null = null) {
+/** Startet ein Profil, optional direkt auf einen Server. `onStarted` folgt, sobald das Spiel läuft,
+ *  `onExit` nach Spielende bzw. Fehler. */
+export async function startGame(id: string, onExit: () => void, server: string | null = null, onStarted?: () => void) {
   const run = ensureRun(id);
   Object.assign(run, { status: "preparing", stage: null, done: 0, files: 0, bytesDone: 0, bytes: 0, error: null, exitCode: null, stopping: false, server });
   run.lines = [];
@@ -71,6 +72,7 @@ export async function startGame(id: string, onExit: () => void, server: string |
         break;
       case "started":
         run.status = "running";
+        onStarted?.();
         break;
       case "log":
         appendLines(run, e.lines);

@@ -268,6 +268,24 @@ pub async fn duplicate_profile(
     Ok(ProfileDto::new(copy, false))
 }
 
+/// Festes Konto einer Instanz setzen (F-51); `None` = aktives Konto.
+#[tauri::command]
+pub fn set_profile_account(
+    state: State<'_, AppState>,
+    id: String,
+    account: Option<String>,
+) -> CmdResult<()> {
+    if let Some(uuid) = &account
+        && state.accounts.load().map_err(err)?.find(uuid).is_none()
+    {
+        return Err("Unbekanntes Konto".into());
+    }
+    let profiles = state.launcher.profiles();
+    let mut profile = profiles.get(&id).map_err(err)?;
+    profile.account = account;
+    profiles.save(&profile).map_err(err)
+}
+
 #[tauri::command]
 pub fn delete_profile(state: State<'_, AppState>, id: String) -> CmdResult<()> {
     if is_running(&state, &id) {
