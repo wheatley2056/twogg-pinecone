@@ -9,6 +9,9 @@
 - **Automatisch vor jedem Start sichern:** pro Instanz einschaltbar. Gesichert werden nur Welten,
   die sich seit dem letzten Backup geändert haben; Pinecone behält die letzten N automatischen
   Backups (Standard 5), manuelle bleiben immer.
+- **Instanz duplizieren:** Rechtsklick auf eine Instanz oder „…“ → „Duplizieren“. Mods, Configs und
+  Einstellungen werden ohne neuen Download kopiert, Welten und Screenshots auf Wunsch. Die Kopie
+  einer Event-Instanz ist eine normale Instanz ohne Pack-Bindung.
 
 ## 0.9.7
 

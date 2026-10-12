@@ -199,6 +199,8 @@ export const api = {
   worlds: (id: string) => invoke<World[]>("worlds_list", { id }),
   worldBackup: (id: string, folder: string) => invoke<string>("world_backup", { id, folder }),
   worldDelete: (id: string, folder: string) => invoke<void>("world_delete", { id, folder }),
+  duplicateProfile: (id: string, name: string, options: { worlds: boolean; screenshots: boolean }) =>
+    invoke<Profile>("duplicate_profile", { id, name, options }),
   worldBackups: (id: string) => invoke<WorldBackup[]>("world_backups", { id }),
   /** Gibt den Pfad der Sicherung des vorherigen Stands zurück, falls die Welt noch existierte. */
   worldRestore: (id: string, file: string) => invoke<string | null>("world_restore", { id, file }),

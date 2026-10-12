@@ -1,5 +1,6 @@
 //! Profile (Instanzen): je ein Ordner `instances/<id>/` mit `profile.json` und eigenem `.minecraft`.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -48,6 +49,14 @@ pub struct Profile {
     /// So viele automatische Backups je Welt behalten; ohne Angabe [`DEFAULT_BACKUP_KEEP`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub backup_keep: Option<u32>,
+}
+
+/// Was beim Duplizieren zusätzlich zum Spielordner mitkopiert wird.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateOptions {
+    pub worlds: bool,
+    pub screenshots: bool,
 }
 
 /// Automatische Welt-Backups je Welt, wenn das Profil nichts anderes sagt.
@@ -210,6 +219,60 @@ impl ProfileStore {
         std::fs::rename(&tmp, &path).map_err(Error::io(&path))
     }
 
+    /// Kopiert ein Profil samt Mods, Configs und Einstellungen unter neuem Namen. Logs,
+    /// Absturzberichte und Pack-Snapshots bleiben weg, Welten und Screenshots nach Wahl.
+    /// Eine TwoGG-Event-Instanz wird zur normalen Instanz: Die Pack-Bindung entfällt, ihre
+    /// Dateien gelten als eigene. Bei einem Fehler wird die halbe Kopie entfernt.
+    pub fn duplicate(&self, source: &str, name: &str, opts: DuplicateOptions) -> Result<Profile> {
+        let original = self.get(source)?;
+        let mut copy = original.clone();
+        copy.name = name.to_string();
+        let copy = self.create(copy)?;
+        let result = self.copy_instance(&original.id, &copy.id, opts);
+        if let Err(e) = result {
+            let _ = std::fs::remove_dir_all(self.paths.instance_dir(&copy.id));
+            return Err(e);
+        }
+        Ok(copy)
+    }
+
+    fn copy_instance(&self, from: &str, to: &str, opts: DuplicateOptions) -> Result<()> {
+        // Instanzordner: alles außer profile.json (schon angelegt), Spielordner und Snapshots.
+        let src = self.paths.instance_dir(from);
+        let dst = self.paths.instance_dir(to);
+        let top = HashSet::from(["profile.json", ".minecraft", "snapshots"]);
+        crate::migrate::copy_dir(&src, &dst, &top, true)?;
+
+        let mut skip = HashSet::from(["logs", "crash-reports", "session.lock"]);
+        if !opts.worlds {
+            skip.insert("saves");
+        }
+        if !opts.screenshots {
+            skip.insert("screenshots");
+        }
+        crate::migrate::copy_dir(&self.game_dir(from), &self.game_dir(to), &skip, true)?;
+
+        let lock_path = dst.join("pack.lock.json");
+        if let Ok(bytes) = std::fs::read(&lock_path) {
+            let mut lock: crate::content::ContentLock = serde_json::from_slice(&bytes)
+                .map_err(Error::json(lock_path.display().to_string()))?;
+            if lock
+                .pack
+                .as_ref()
+                .is_some_and(|p| matches!(p.source, crate::modpack::PackSource::Twogg { .. }))
+            {
+                lock.pack = None;
+                for entry in lock.files.values_mut() {
+                    entry.from_pack = false;
+                }
+                let json =
+                    serde_json::to_vec_pretty(&lock).map_err(Error::json("pack.lock.json"))?;
+                std::fs::write(&lock_path, json).map_err(Error::io(&lock_path))?;
+            }
+        }
+        Ok(())
+    }
+
     /// Löscht das Profil samt Spielordner (Welten, Mods, Einstellungen!).
     pub fn delete(&self, selector: &str) -> Result<Profile> {
         let profile = self.get(selector)?;
@@ -286,5 +349,109 @@ mod tests {
         let store = ProfileStore::new(Paths::new(dir.path()));
         assert!(store.create(Profile::new("   ", "26.3")).is_err());
         assert!(store.create(Profile::new("x".repeat(65), "26.3")).is_err());
+    }
+
+    #[test]
+    fn duplicates_without_worlds_and_event_binding() {
+        use crate::content::{ContentKind, ContentLock, LockEntry, Source};
+        use crate::modpack::{PackInfo, PackSource};
+        let dir = tempfile::tempdir().unwrap();
+        let store = ProfileStore::new(Paths::new(dir.path()));
+        let mut p = Profile::new("Avalon", "1.21.11");
+        p.memory_mb = Some(6144);
+        let original = store.create(p).unwrap();
+        let game = store.game_dir(&original.id);
+        for (rel, data) in [
+            ("mods/a.jar", "jar"),
+            ("config/c.toml", "cfg"),
+            ("options.txt", "fov:90"),
+            ("saves/Welt/level.dat", "lvl"),
+            ("screenshots/s.png", "png"),
+            ("logs/latest.log", "log"),
+        ] {
+            let path = game.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, data).unwrap();
+        }
+        let inst = dir.path().join("instances").join(&original.id);
+        std::fs::create_dir_all(inst.join("snapshots/1")).unwrap();
+        std::fs::write(inst.join("icon.png"), "icon").unwrap();
+        let mut lock = ContentLock::default();
+        lock.files.insert(
+            "mods/a.jar".into(),
+            LockEntry {
+                kind: ContentKind::Mod,
+                source: Source::Local,
+                name: "A".into(),
+                version: None,
+                sha1: "x".into(),
+                size: 3,
+                icon_url: None,
+                from_pack: true,
+                channel: None,
+                sync: None,
+            },
+        );
+        lock.pack = Some(PackInfo {
+            name: "Avalon".into(),
+            version: "6.4.0".into(),
+            source: PackSource::Twogg {
+                pack_id: "avalon".into(),
+                version_id: "v1".into(),
+            },
+            files: Default::default(),
+        });
+        std::fs::write(
+            inst.join("pack.lock.json"),
+            serde_json::to_vec(&lock).unwrap(),
+        )
+        .unwrap();
+
+        let copy = store
+            .duplicate("Avalon", "Avalon (Kopie)", DuplicateOptions::default())
+            .unwrap();
+        assert_eq!(copy.id, "avalon-kopie");
+        assert_eq!(copy.memory_mb, Some(6144));
+        let copy_game = store.game_dir(&copy.id);
+        assert!(copy_game.join("mods/a.jar").is_file());
+        assert!(copy_game.join("config/c.toml").is_file());
+        assert!(copy_game.join("options.txt").is_file());
+        assert!(!copy_game.join("saves").exists(), "Welten nur auf Wunsch");
+        assert!(!copy_game.join("screenshots").exists());
+        assert!(!copy_game.join("logs").exists());
+        let copy_inst = dir.path().join("instances").join(&copy.id);
+        assert!(copy_inst.join("icon.png").is_file());
+        assert!(!copy_inst.join("snapshots").exists());
+        let lock: ContentLock =
+            serde_json::from_slice(&std::fs::read(copy_inst.join("pack.lock.json")).unwrap())
+                .unwrap();
+        assert!(lock.pack.is_none(), "Event-Bindung entfällt");
+        assert!(!lock.files["mods/a.jar"].from_pack);
+        // Das Original bleibt unverändert.
+        let orig: ContentLock =
+            serde_json::from_slice(&std::fs::read(inst.join("pack.lock.json")).unwrap()).unwrap();
+        assert!(orig.pack.is_some());
+
+        let with_worlds = store
+            .duplicate(
+                "avalon",
+                "Avalon 2",
+                DuplicateOptions {
+                    worlds: true,
+                    screenshots: true,
+                },
+            )
+            .unwrap();
+        let g = store.game_dir(&with_worlds.id);
+        assert!(g.join("saves/Welt/level.dat").is_file());
+        assert!(g.join("screenshots/s.png").is_file());
+
+        // Gleicher Name ist verboten und hinterlässt nichts.
+        assert!(
+            store
+                .duplicate("avalon", "Avalon 2", DuplicateOptions::default())
+                .is_err()
+        );
+        assert_eq!(store.list().unwrap().len(), 3);
     }
 }
