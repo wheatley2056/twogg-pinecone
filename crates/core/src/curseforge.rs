@@ -1,4 +1,5 @@
-//! CurseForge-API v1 (braucht einen API-Key von console.curseforge.com).
+//! CurseForge-API v1. Release-Builds fragen über den Proxy des Pinecone-Servers, der den
+//! API-Schlüssel hält (die CurseForge-API-Bedingungen verbieten, ihn weiterzugeben).
 
 use std::time::Duration;
 
@@ -13,11 +14,13 @@ pub const MINECRAFT: u32 = 432;
 /// Hosts, von denen CurseForge Dateien ausliefert.
 pub const DOWNLOAD_HOSTS: [&str; 2] = ["edge.forgecdn.net", "mediafilez.forgecdn.net"];
 
-/// API-Key: Laufzeit-Variable vor eingebautem Wert beim Kompilieren.
+/// Eigener API-Schlüssel aus `PINECONE_CURSEFORGE_API_KEY` (nur Laufzeit).
 pub fn api_key_from_env() -> Option<String> {
+    // Nur zur Laufzeit (Entwicklung, eigene Builds): Release-Builds enthalten keinen Schlüssel,
+    // denn die CurseForge-API-Bedingungen verbieten die Weitergabe. Sie fragen über den
+    // Pinecone-Server (`CurseForge::via_server`).
     std::env::var("PINECONE_CURSEFORGE_API_KEY")
         .ok()
-        .or_else(|| option_env!("PINECONE_CURSEFORGE_API_KEY").map(str::to_string))
         .filter(|k| !k.trim().is_empty())
 }
 
@@ -200,12 +203,28 @@ pub struct CfSearch {
 pub struct CurseForge {
     http: reqwest::Client,
     base: String,
-    key: String,
+    /// `None`: über den Proxy des Pinecone-Servers, der den Schlüssel hält.
+    key: Option<String>,
 }
 
 impl CurseForge {
     pub fn new(key: impl Into<String>) -> Result<Self> {
         Self::with_base(API, key)
+    }
+
+    /// Über den Pinecone-Server (`<server>/api/v1/curseforge`), ohne eigenen Schlüssel.
+    pub fn via_server(server: &str) -> Result<Self> {
+        let mut cf = Self::with_base(
+            format!("{}/api/v1/curseforge", server.trim_end_matches('/')),
+            "",
+        )?;
+        cf.key = None;
+        Ok(cf)
+    }
+
+    /// Spricht CurseForge direkt an (eigener Schlüssel) statt über den Pinecone-Server.
+    pub fn direct(&self) -> bool {
+        self.key.is_some()
     }
 
     pub fn with_base(base: impl Into<String>, key: impl Into<String>) -> Result<Self> {
@@ -221,7 +240,7 @@ impl CurseForge {
         Ok(Self {
             http,
             base: base.into(),
-            key: key.into(),
+            key: Some(key.into()),
         })
     }
 
@@ -230,8 +249,11 @@ impl CurseForge {
         req: reqwest::RequestBuilder,
         url: &str,
     ) -> Result<T> {
+        let req = match &self.key {
+            Some(key) => req.header("x-api-key", key),
+            None => req.header("x-pinecone-client", format!("pinecone/{LAUNCHER_VERSION}")),
+        };
         let resp = req
-            .header("x-api-key", &self.key)
             .header("accept", "application/json")
             .send()
             .await
@@ -239,10 +261,25 @@ impl CurseForge {
                 url: url.into(),
                 source,
             })?;
-        if resp.status() == reqwest::StatusCode::FORBIDDEN {
+        if resp.status() == reqwest::StatusCode::FORBIDDEN && self.key.is_some() {
             return Err(Error::Invalid(
                 "CurseForge lehnt den API-Key ab (403)".into(),
             ));
+        }
+        if self.key.is_none() {
+            match resp.status() {
+                reqwest::StatusCode::SERVICE_UNAVAILABLE | reqwest::StatusCode::BAD_GATEWAY => {
+                    return Err(Error::Invalid(
+                        "CurseForge ist gerade nicht verfügbar (Pinecone-Server)".into(),
+                    ));
+                }
+                reqwest::StatusCode::TOO_MANY_REQUESTS => {
+                    return Err(Error::Invalid(
+                        "Zu viele CurseForge-Anfragen, bitte kurz warten".into(),
+                    ));
+                }
+                _ => {}
+            }
         }
         resp.error_for_status()
             .map_err(|source| Error::Http {

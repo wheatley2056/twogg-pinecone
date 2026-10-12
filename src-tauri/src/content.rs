@@ -246,9 +246,11 @@ pub async fn modrinth_categories(state: State<'_, AppState>) -> CmdResult<Vec<Ca
 }
 
 fn cf(state: &AppState) -> CmdResult<&CurseForge> {
-    state.launcher.content().curseforge().ok_or_else(|| {
-        "CurseForge ist nicht eingerichtet (PINECONE_CURSEFORGE_API_KEY fehlt)".to_string()
-    })
+    state
+        .launcher
+        .content()
+        .curseforge()
+        .ok_or_else(|| "CurseForge ist nicht verfügbar".to_string())
 }
 
 /// CurseForge-Klasse; Datenpakete führt Pinecone nur über Modrinth.

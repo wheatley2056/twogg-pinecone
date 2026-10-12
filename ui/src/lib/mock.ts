@@ -198,7 +198,12 @@ Object.assign(api, {
           { id: "r3", projectType: "modpack", source: "modrinth", projectId: "x", title: "WINTERLAND-Shader", subtitle: "Schneelicht für das Winter-Event", iconUrl: null, motif: "snowflake" },
         ]
       : [],
-  serverInfo: async () => ({ gameServer: { name: "TwoGG Server", address: "mc.twogg.de" } }),
+  serverInfo: async () => ({
+    gameServer: { name: "TwoGG Server", address: "mc.twogg.de" },
+    curseforge: true,
+    legal: { imprintUrl: "https://twogg.app/impressum", privacyUrl: "https://twogg.app/datenschutz", contactEmail: "kontakt@twogg.de" },
+  }),
+  friendsDeleteData: async () => {},
   friends: async () => mockFriends,
   friendsPresence: async () => {},
   friendRequest: async (name: string) => (mockFriends.outgoing!.push({ uuid: name, name }), "requested"),

@@ -20,13 +20,32 @@ pub fn err(e: impl std::fmt::Display) -> String {
 }
 
 #[tauri::command]
-pub fn app_info(state: State<'_, AppState>) -> AppInfo {
-    AppInfo {
+pub async fn app_info(state: State<'_, AppState>) -> CmdResult<AppInfo> {
+    Ok(AppInfo {
         version: env!("CARGO_PKG_VERSION"),
         data_dir: state.launcher.paths().root().display().to_string(),
         msa_configured: state.msa.is_some(),
-        curseforge_configured: state.launcher.content().curseforge().is_some(),
+        curseforge_configured: curseforge_available(&state).await,
         updates_configured: crate::update::configured(),
+    })
+}
+
+/// CurseForge ist nutzbar: eigener Schlüssel (Entwicklung) oder der Pinecone-Server meldet
+/// seinen Proxy als eingerichtet. Ohne Antwort binnen 3 s gilt CurseForge als nicht verfügbar.
+async fn curseforge_available(state: &AppState) -> bool {
+    match state.launcher.content().curseforge() {
+        None => false,
+        Some(cf) if cf.direct() => true,
+        Some(_) => {
+            let Some(server) = state.launcher.packs().twogg() else {
+                return false;
+            };
+            tokio::time::timeout(std::time::Duration::from_secs(3), server.info())
+                .await
+                .ok()
+                .and_then(|r| r.ok())
+                .is_some_and(|info| info.curseforge)
+        }
     }
 }
 

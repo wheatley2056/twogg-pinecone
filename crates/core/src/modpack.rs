@@ -707,9 +707,7 @@ impl PackManager {
     /// CurseForge-Pack: Dateien über die API auflösen; gesperrte kommen in `missing`.
     async fn read_curseforge(&self, path: &Path) -> Result<PackArchive> {
         let cf = self.curseforge.as_ref().ok_or_else(|| {
-            Error::Invalid(
-                "CurseForge-Modpacks brauchen einen API-Key (PINECONE_CURSEFORGE_API_KEY)".into(),
-            )
+            Error::Invalid("CurseForge-Modpacks sind gerade nicht verfügbar".into())
         })?;
         let (manifest, overrides) = {
             let file = std::fs::File::open(path).map_err(Error::io(path))?;

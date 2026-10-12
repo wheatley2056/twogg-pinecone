@@ -577,6 +577,9 @@ export interface FriendsState {
 
 export interface ServerInfo {
   gameServer: { name: string; address: string } | null;
+  /** CurseForge über den Proxy des Pinecone-Servers verfügbar. */
+  curseforge: boolean;
+  legal: { imprintUrl: string | null; privacyUrl: string | null; contactEmail: string | null };
 }
 
 export interface World {
