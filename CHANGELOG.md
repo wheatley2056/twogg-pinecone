@@ -1,5 +1,15 @@
 # Änderungen
 
+## 0.9.6
+
+- **CurseForge über den Pinecone-Server.** Der Launcher enthält keinen CurseForge-Schlüssel mehr,
+  Suche und Installation laufen über den Pinecone-Server. Ist dort CurseForge nicht eingerichtet,
+  blendet Pinecone die Quelle aus.
+- **Über Pinecone:** Unter Einstellungen → Allgemein stehen Version, Lizenz, Impressum,
+  Datenschutz, Kontakt und der Hinweis, dass Pinecone kein offizielles Minecraft-Produkt ist.
+- **Freunde-Daten löschen:** Unter Einstellungen → Konten entfernt „Meine Freunde-Daten löschen“
+  Profil, Freunde und Anfragen vom Pinecone-Server.
+
 ## 0.9.5
 
 - **Sync-Packs: Steuerung und Optionen.** Tastenbelegungen und Spieleinstellungen lassen sich aus

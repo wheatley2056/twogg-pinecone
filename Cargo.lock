@@ -3383,7 +3383,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pinecone-app"
-version = "0.9.5"
+version = "0.9.6"
 dependencies = [
  "notify",
  "pinecone-core",
@@ -3406,7 +3406,7 @@ dependencies = [
 
 [[package]]
 name = "pinecone-cli"
-version = "0.9.5"
+version = "0.9.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -3419,7 +3419,7 @@ dependencies = [
 
 [[package]]
 name = "pinecone-core"
-version = "0.9.5"
+version = "0.9.6"
 dependencies = [
  "base64 0.22.1",
  "directories",
