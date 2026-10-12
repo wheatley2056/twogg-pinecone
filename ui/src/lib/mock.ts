@@ -193,6 +193,9 @@ Object.assign(api, {
   instanceExport: async () => void (await wait(900)),
   instanceExportSize: async (_id: string, o: { worlds: boolean; screenshots: boolean }) =>
     48_000_000 + (o.worlds ? 412_000_000 : 0) + (o.screenshots ? 22_000_000 : 0),
+  logSharePreview: async () =>
+    "[12:00:01] [main/INFO]: Loading Minecraft 1.21.11 with Fabric Loader 0.16.5\n[12:00:02] [main/INFO]: Game directory /home/<user>/.local/share/twogg-pinecone/instances/fabric-test/.minecraft\n[12:00:03] [Render thread/INFO]: Connecting to <ip>, 25565",
+  logShareUpload: async () => (await wait(800), "https://mclo.gs/AbC123x"),
   setProfileGroup: async (id: string, group: string | null) =>
     void (profiles = profiles.map((p) => (p.id === id ? { ...p, group } : p))),
   setProfileHooks: async (id: string, preLaunch: string, wrapper: string, postExit: string) => {
@@ -290,7 +293,8 @@ Object.assign(api, {
   },
   deleteProfile: async (id: string) => void (profiles = profiles.filter((p) => p.id !== id)),
   openProfileFolder: async () => {},
-  lastLog: async () => [],
+  lastLog: async (id: string) =>
+    id === "fabric-test" ? ["[12:00:01] [main/INFO]: Loading Minecraft 1.21.11 with Fabric Loader 0.16.5", "[12:00:09] [Render thread/INFO]: Stopping!"] : [],
   accounts: async () => accounts,
   addOfflineAccount: async (name: string) => {
     const a: Account = { uuid: crypto.randomUUID(), name, kind: "offline", active: true };
