@@ -4,6 +4,7 @@
 mod commands;
 mod content;
 mod dashboard;
+mod discord;
 mod dto;
 mod friends;
 mod game;
@@ -30,6 +31,8 @@ use tokio::sync::Notify;
 
 pub struct AppState {
     pub launcher: Launcher,
+    /// Discord-Status (F-41).
+    pub discord: discord::Presence,
     pub accounts: AccountStore<KeyringStore>,
     pub msa: Option<MsaClient>,
     /// Laufende Spiele: Profil-ID → Signal zum Beenden.
@@ -114,6 +117,7 @@ fn main() {
     let state = AppState {
         accounts: AccountStore::new(paths.accounts_file(), KeyringStore),
         launcher: Launcher::new(paths, downloader).expect("HTTP-Client"),
+        discord: discord::Presence::new(),
         msa,
         running: Mutex::default(),
         login: Mutex::default(),

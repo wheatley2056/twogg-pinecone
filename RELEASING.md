@@ -15,6 +15,10 @@ npx tauri signer generate -w ~/.tauri/pinecone.key
   (Settings → Secrets and variables → Actions → Variables).
 - Optional: `PINECONE_MSA_CLIENT_ID` (Azure-App, siehe README) als Secret; sie wird in die
   Release-Builds einkompiliert.
+- Optional: `PINECONE_DISCORD_CLIENT_ID` als **Variable** (nicht Secret, die ID ist öffentlich) für den
+  Discord-Status. Im [Discord-Entwicklerportal](https://discord.com/developers/applications) eine
+  Anwendung „TwoGG Pinecone“ anlegen, die Application-ID übernehmen und unter *Rich Presence → Art
+  Assets* ein Bild mit dem Namen `pinecone` hochladen. Ohne ID ist der Schalter ausgeblendet.
 - **Kein** `PINECONE_CURSEFORGE_API_KEY`: Die CurseForge-API-Bedingungen verbieten, den Schlüssel
   weiterzugeben. Er liegt nur auf dem Pinecone-Server, der Launcher fragt über dessen Proxy. Ein
   altes Secret dieses Namens bitte in den GitHub-Einstellungen löschen.

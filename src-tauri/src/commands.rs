@@ -27,6 +27,7 @@ pub async fn app_info(state: State<'_, AppState>) -> CmdResult<AppInfo> {
         msa_configured: state.msa.is_some(),
         curseforge_configured: curseforge_available(&state).await,
         updates_configured: crate::update::configured(),
+        discord_configured: state.discord.configured(),
     })
 }
 

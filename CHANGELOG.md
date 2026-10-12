@@ -11,6 +11,8 @@
 - **Sync-Packs teilen:** „Teilen“ im Sync-Pack erstellt einen Link `pinecone://sync/<code>` (30 Tage
   gültig) mit Projekten, Optionen und Tasten. Eigene Dateien werden nie geteilt. Wer den Link
   öffnet, sieht vorher alle Werte und übernimmt das Pack als eigenes.
+- **Discord-Status:** Einstellungen → Allgemein → „Discord-Status“ (standardmäßig aus) zeigt in
+  Discord „Spielt <Instanz>“ mit Version und Spielzeit. Die Serveradresse wird nie übertragen.
 
 ## 0.9.8
 

@@ -189,6 +189,21 @@ pub async fn launch(
     let mut child = command.spawn_logged(&log).await.map_err(err)?;
     let started = now_secs();
     let _ = on_event.send(LaunchEvent::Started { pid: child.id() });
+    // Discord-Status (F-41): nur Name, Version, Startzeit – nie die Serveradresse.
+    if state
+        .launcher
+        .settings()
+        .load()
+        .is_ok_and(|s| s.discord_presence)
+    {
+        let version = match &profile.loader {
+            Some(l) => format!("{} {}", l.kind.name(), profile.minecraft),
+            None => format!("Minecraft {}", profile.minecraft),
+        };
+        state
+            .discord
+            .playing(&profile.id, &profile.name, &version, started);
+    }
 
     tauri::async_runtime::spawn(async move {
         let exited = Arc::new(AtomicBool::new(false));
@@ -205,6 +220,7 @@ pub async fn launch(
         let _ = tail.await;
         // Spielzeit und letzten Server verbuchen, auch nach Abstürzen.
         let output = tokio::fs::read_to_string(&log).await.unwrap_or_default();
+        guard.app.state::<AppState>().discord.stopped(&guard.id);
         let launcher = &guard.app.state::<AppState>().launcher;
         if let Err(e) = launcher.finish_session(&guard.id, started, &output) {
             tracing::warn!("Spielzeit nicht gespeichert: {e}");

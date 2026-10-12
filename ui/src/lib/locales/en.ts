@@ -818,6 +818,8 @@ const en: Record<MessageKey, string> = {
   "syncShare.projects": "Projects",
   "syncShare.openHint": "The sync pack is added as your own and is not enabled in any instance yet.",
   "syncShare.take": "Add",
+  "settings.discord": "Discord status",
+  "settings.discordHint": "Shows “Playing …” with instance name and version in your Discord profile while you play. The server address is never sent. If Discord is not running, nothing happens.",
   "duplicate.menu": "Duplicate",
   "duplicate.title": "Duplicate instance",
   "duplicate.name": "Name of the copy",

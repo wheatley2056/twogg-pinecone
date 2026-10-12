@@ -9,6 +9,8 @@ export interface AppInfo {
   msaConfigured: boolean;
   updatesConfigured: boolean;
   curseforgeConfigured: boolean;
+  /** Discord-Status möglich (Application-ID eingebaut). */
+  discordConfigured: boolean;
 }
 
 export interface VersionInfo {
@@ -160,6 +162,8 @@ export interface Settings {
   librarySort: "recent" | "name" | "playtime";
   /** Eingeklappte Gruppen der Bibliothek. */
   collapsedGroups: string[];
+  /** Discord-Status „Spielt …“ (F-41). */
+  discordPresence: boolean;
 }
 
 /** JVM-Presets in den Einstellungen: eigene und geänderte eingebaute (gleiche ID). */
