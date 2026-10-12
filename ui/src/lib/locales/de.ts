@@ -816,6 +816,8 @@ const de = {
   "syncShare.projects": "Projekte",
   "syncShare.openHint": "Das Sync-Pack wird als eigenes angelegt und ist zunächst in keiner Instanz eingeschaltet.",
   "syncShare.take": "Übernehmen",
+  "settings.discord": "Discord-Status",
+  "settings.discordHint": "Zeigt in deinem Discord-Profil „Spielt …“ mit Instanzname und Version, solange du spielst. Die Serveradresse wird nie übertragen. Läuft Discord nicht, passiert nichts.",
   "duplicate.menu": "Duplizieren",
   "duplicate.title": "Instanz duplizieren",
   "duplicate.name": "Name der Kopie",

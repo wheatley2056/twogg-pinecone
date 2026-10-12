@@ -175,6 +175,9 @@ pub struct Settings {
     /// Eingeklappte Gruppen der Bibliothek (`twogg`, `own` oder eigener Gruppenname).
     #[serde(default)]
     pub collapsed_groups: Vec<String>,
+    /// Discord-Status „Spielt …“ (F-41), standardmäßig aus.
+    #[serde(default)]
+    pub discord_presence: bool,
 }
 
 fn default_true() -> bool {
@@ -209,6 +212,7 @@ impl Default for Settings {
             show_after_exit: true,
             library_sort: LibrarySort::Recent,
             collapsed_groups: Vec::new(),
+            discord_presence: false,
         }
     }
 }

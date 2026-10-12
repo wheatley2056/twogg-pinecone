@@ -193,6 +193,9 @@ pub fn save_settings(
 ) -> CmdResult<Settings> {
     let saved = state.launcher.settings().save(&settings).map_err(err)?;
     apply_frame(&app, &saved);
+    if !saved.discord_presence {
+        state.discord.clear();
+    }
     Ok(saved)
 }
 

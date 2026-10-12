@@ -14,6 +14,8 @@ pub struct AppInfo {
     pub msa_configured: bool,
     pub curseforge_configured: bool,
     pub updates_configured: bool,
+    /// Discord-Status möglich (Application-ID eingebaut).
+    pub discord_configured: bool,
 }
 
 #[derive(Serialize)]

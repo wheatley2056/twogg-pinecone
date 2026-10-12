@@ -94,6 +94,11 @@
           <Switch checked={s.showAfterExit} label={t("settings.showAfterExit")} onchange={(on) => change((x) => (x.showAfterExit = on))} />
         </SettingRow>
       {/if}
+      {#if info?.discordConfigured}
+        <SettingRow title={t("settings.discord")} hint={t("settings.discordHint")}>
+          <Switch checked={s.discordPresence} label={t("settings.discord")} onchange={(on) => change((x) => (x.discordPresence = on))} />
+        </SettingRow>
+      {/if}
       <SettingRow title={t("settings.dataDir")} hint={info?.dataDir ?? "?"} />
     </div>
   </section>

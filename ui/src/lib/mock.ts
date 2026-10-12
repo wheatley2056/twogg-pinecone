@@ -29,6 +29,7 @@ let settings: Settings = {
   showAfterExit: true,
   librarySort: "recent",
   collapsedGroups: [],
+  discordPresence: false,
 };
 // Gekürzte Flag-Listen; die echten stehen in crates/core/src/jvm.rs.
 const JVM_BUILTIN: JvmPreset[] = [
@@ -296,7 +297,7 @@ Object.assign(api, {
     loginHandlers.push(h);
     return () => {};
   },
-  appInfo: async () => ({ version: "0.9.0", dataDir: "/home/beispiel/.local/share/twogg-pinecone", msaConfigured: false, curseforgeConfigured: true, updatesConfigured: true }),
+  appInfo: async () => ({ version: "0.9.0", dataDir: "/home/beispiel/.local/share/twogg-pinecone", msaConfigured: false, curseforgeConfigured: true, updatesConfigured: true, discordConfigured: true }),
   versions: async (snapshots: boolean) => [
     ...(snapshots ? [{ id: "26.4-snapshot-3", kind: "snapshot", releaseTime: "2026-10-08" }] : []),
     ...["26.3", "26.2", "26.1.2", "1.21.1", "1.20.1", "1.12.2", "1.8.9"].map((id) => ({ id, kind: "release", releaseTime: "" })),
