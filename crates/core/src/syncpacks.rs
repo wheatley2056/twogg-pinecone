@@ -94,6 +94,61 @@ pub struct SyncPack {
     pub auto: AutoRule,
 }
 
+/// Geteiltes Sync-Pack (F-58): Projekte, Optionen und Tasten, nie eigene Dateien (die könnten
+/// beliebige Inhalte in den Spielordner bringen).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedPack {
+    pub name: String,
+    #[serde(default)]
+    pub mode: SyncMode,
+    #[serde(default)]
+    pub entries: Vec<SyncEntry>,
+    #[serde(default)]
+    pub options: BTreeMap<String, String>,
+}
+
+impl SharedPack {
+    /// Was von einem Sync-Pack geteilt wird.
+    pub fn from_pack(pack: &SyncPack) -> Self {
+        Self {
+            name: pack.name.clone(),
+            mode: pack.mode,
+            entries: pack
+                .entries
+                .iter()
+                .filter(|e| !matches!(e, SyncEntry::File { .. }))
+                .cloned()
+                .collect(),
+            options: pack.options.clone(),
+        }
+    }
+
+    /// Liest geteilte Daten; eigene Dateien werden verworfen, auch wenn jemand sie ergänzt hat.
+    pub fn parse(data: &serde_json::Value) -> Result<Self> {
+        let mut shared: SharedPack = serde_json::from_value(data.clone())
+            .map_err(|e| Error::Invalid(format!("Geteiltes Sync-Pack ist ungültig: {e}")))?;
+        shared
+            .entries
+            .retain(|e| !matches!(e, SyncEntry::File { .. }));
+        shared.name = shared
+            .name
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(48)
+            .collect();
+        Ok(shared)
+    }
+
+    /// Anzahl der Dateien, die beim Teilen weggelassen werden.
+    pub fn skipped_files(pack: &SyncPack) -> usize {
+        pack.entries
+            .iter()
+            .filter(|e| matches!(e, SyncEntry::File { .. }))
+            .count()
+    }
+}
+
 /// Was ein Sync-Pack in einem Profil eingespielt hat.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct Applied {
@@ -213,6 +268,19 @@ impl SyncManager {
             auto: AutoRule::default(),
         };
         self.save(&pack)?;
+        Ok(pack)
+    }
+
+    /// Legt aus einem geteilten Sync-Pack ein eigenes an (ohne Automatik; der Nutzer schaltet es
+    /// selbst ein). Optionen werden wie beim Speichern geprüft.
+    pub fn import_shared(&self, shared: &SharedPack) -> Result<SyncPack> {
+        let mut pack = self.create(&shared.name, shared.mode)?;
+        pack.entries = shared.entries.clone();
+        pack.options = shared.options.clone();
+        if let Err(e) = self.save(&pack) {
+            let _ = self.delete(&pack.id);
+            return Err(e);
+        }
         Ok(pack)
     }
 

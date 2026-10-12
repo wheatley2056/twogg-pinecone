@@ -302,3 +302,46 @@ async fn first_enable_replaces_generated_config_and_options() {
         "{text}"
     );
 }
+
+#[tokio::test]
+async fn shared_packs_never_carry_files() {
+    use pinecone_core::syncpacks::SharedPack;
+    let (_server, dir, launcher) = setup().await;
+    let sync = launcher.syncpacks();
+    let mut pack = sync.create("Event-Tasten", SyncMode::Sync).unwrap();
+    let src = dir.path().join("cfg.json");
+    std::fs::write(&src, "{}").unwrap();
+    sync.add_file(&pack.id, &src, "config/x.json")
+        .await
+        .unwrap();
+    pack = sync.get(&pack.id).unwrap();
+    pack.options
+        .insert("key_key.jump".into(), "key.keyboard.space".into());
+    sync.save(&pack).unwrap();
+
+    let shared = SharedPack::from_pack(&sync.get(&pack.id).unwrap());
+    assert_eq!(SharedPack::skipped_files(&sync.get(&pack.id).unwrap()), 1);
+    assert!(
+        shared.entries.is_empty(),
+        "eigene Dateien werden nicht geteilt"
+    );
+    let json = serde_json::to_value(&shared).unwrap();
+
+    // Jemand schmuggelt eine Datei in die geteilten Daten: wird verworfen.
+    let mut evil = json.clone();
+    evil["entries"] = serde_json::json!([{ "type": "file", "path": "mods/evil.jar", "sha1": "x" }]);
+    let parsed = SharedPack::parse(&evil).unwrap();
+    assert!(parsed.entries.is_empty());
+    let imported = sync.import_shared(&parsed).unwrap();
+    assert_eq!(imported.name, "Event-Tasten");
+    assert_ne!(imported.id, pack.id, "eigene ID neben dem Original");
+    assert_eq!(imported.options["key_key.jump"], "key.keyboard.space");
+    assert!(!imported.auto.enabled);
+
+    // Ungültige Optionen: nichts bleibt übrig.
+    let before = sync.list().unwrap().len();
+    let mut bad = parsed.clone();
+    bad.options.insert("a:b".into(), "1".into());
+    assert!(sync.import_shared(&bad).is_err());
+    assert_eq!(sync.list().unwrap().len(), before);
+}

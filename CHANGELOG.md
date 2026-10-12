@@ -8,6 +8,9 @@
 - **Einladungen:** Wer über Pinecone auf einem Server ist, kann online Freunde mit „Einladen“
   dazuholen. Der Freund bekommt eine Benachrichtigung; „Beitreten“ nimmt eine passende Instanz oder
   installiert erst das Pack und tritt dann bei. Abgelehnte Einladungen sieht der Absender.
+- **Sync-Packs teilen:** „Teilen“ im Sync-Pack erstellt einen Link `pinecone://sync/<code>` (30 Tage
+  gültig) mit Projekten, Optionen und Tasten. Eigene Dateien werden nie geteilt. Wer den Link
+  öffnet, sieht vorher alle Werte und übernimmt das Pack als eigenes.
 
 ## 0.9.8
 

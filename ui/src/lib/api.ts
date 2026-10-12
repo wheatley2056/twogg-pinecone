@@ -26,6 +26,7 @@ import type {
   ServerStatus,
   JvmPreset,
   Settings,
+  SharedSyncPack,
   Dashboard,
   VersionInfo,
   Category,
@@ -230,6 +231,9 @@ export const api = {
   friendInvite: (to: string, server: string, pack: string | null, instance: string | null) =>
     invoke<void>("friends_invite", { to, server, pack, instance }),
   friendInviteAnswer: (id: string, accept: boolean) => invoke<void>("friends_invite_answer", { id, accept }),
+  syncpackShare: (id: string) => invoke<{ link: string; skippedFiles: number }>("syncpack_share", { id }),
+  syncpackSharePreview: (code: string) => invoke<SharedSyncPack>("syncpack_share_preview", { code }),
+  syncpackShareImport: (code: string) => invoke<SyncPack>("syncpack_share_import", { code }),
   friendAccept: (uuid: string) => invoke<void>("friends_accept", { uuid }),
   friendDecline: (uuid: string) => invoke<void>("friends_decline", { uuid }),
   friendRemove: (uuid: string) => invoke<void>("friends_remove", { uuid }),

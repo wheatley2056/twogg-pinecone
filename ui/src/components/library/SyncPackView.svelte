@@ -22,6 +22,27 @@
   }
   let { pack, profiles, onChanged }: Props = $props();
 
+  // Teilen (F-58): Link `pinecone://sync/<code>` ohne eigene Dateien.
+  let sharing = $state(false);
+  let shareLink = $state<string | null>(null);
+  let shareSkipped = $state(0);
+  let shareCopied = $state(false);
+
+  async function share() {
+    sharing = true;
+    error = null;
+    try {
+      const r = await api.syncpackShare(pack.id);
+      shareLink = r.link;
+      shareSkipped = r.skippedFiles;
+      shareCopied = false;
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      sharing = false;
+    }
+  }
+
   let draft = $state<SyncPack>(structuredClone($state.snapshot(untrack(() => pack))) as SyncPack);
   let dirty = $state(false);
   let busy = $state(false);
@@ -185,6 +206,9 @@
   </div>
   <div class="actions">
     {#if dirty}<span class="unsaved">{t("sync.unsaved")}</span>{/if}
+    <button class="ghost" disabled={dirty || busy || sharing} title={dirty ? t("syncShare.saveFirst") : t("syncShare.hint")} onclick={share}>
+      <Icon name="share" size={16} />{sharing ? t("common.loading") : t("syncShare.button")}
+    </button>
     <button class="ghost" disabled={!dirty || busy} onclick={() => ((draft = structuredClone($state.snapshot(pack)) as SyncPack), (dirty = false))}>{t("sync.discard")}</button>
     <button class="primary cut" disabled={!dirty || busy || !draft.name.trim()} onclick={save}>{t("common.save")}</button>
   </div>
@@ -192,6 +216,15 @@
 
 <div class="body">
   {#if error}<p class="error">{error}</p>{/if}
+  {#if shareLink}
+    <div class="share-row">
+      <span>{t("syncShare.linkHint")}{shareSkipped > 0 ? ` ${t("syncShare.skipped", { n: shareSkipped })}` : ""}</span>
+      <input value={shareLink} readonly aria-label={t("syncShare.button")} onfocus={(e) => e.currentTarget.select()} />
+      <button class="small" onclick={() => navigator.clipboard.writeText(shareLink ?? "").then(() => (shareCopied = true)).catch(() => {})}>
+        {shareCopied ? t("share.copied") : t("share.copy")}
+      </button>
+    </div>
+  {/if}
 
   <section>
     <h3 class="section-label">{t("sync.mode")}</h3>
@@ -632,5 +665,23 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .share-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--surface);
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+
+  .share-row input {
+    flex: 1;
+    min-width: 220px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--surface-2);
   }
 </style>
