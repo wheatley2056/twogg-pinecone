@@ -562,6 +562,17 @@ Sie liegen nicht bei twogg.app, gehören aber zum Vertrag des Launchers. Fehler 
 | `DELETE /api/v1/me` (umgesetzt, Server-PR #4) | Bearer Freunde-Sitzung | `204` – Spielerprofil, Sitzungen, Anfragen, Freundschaften gelöscht | `401` Sitzung ungültig, `5xx` |
 | `GET\|POST /api/v1/curseforge/v1/...` (umgesetzt, Server-PR #4) | Kopfzeile `X-Pinecone-Client`; `GET mods/search` (Query wie CurseForge, `gameId` fest 432), `GET mods/{id}/files`, `POST mods/files` `{fileIds}`, `POST mods` `{modIds}` (je ≤ 500 IDs) | Antwort von CurseForge unverändert, `Cache-Control: no-store` | `400` zu viele IDs, `403` ohne Client-Kopfzeile, `429` mehr als 240/min je IP, `502` CurseForge lehnt den Schlüssel ab oder ist nicht erreichbar, `503` kein Schlüssel eingerichtet |
 | `GET /api/v1/info` (erweitert, Server-PR #4) | – | zusätzlich `curseforge: bool` und `legal: {imprintUrl, privacyUrl, contactEmail}` | `5xx` |
+| `GET\|PUT /api/v1/lobby/{eventId}` (v2) | Bearer Freunde-Sitzung; `PUT {ready: bool}`; `GET ?members=<uuid,…>` (≤ 100) | `GET 200 {members: [{uuid, state: offline\|launcher\|ready\|playing}]}`, `PUT 204` | `400` zu viele UUIDs, `401`, `429` mehr als 1 Abruf je 30 s | 
+| `POST /api/v1/invites` (v2) | Bearer; `{to: uuid, server: {address}, pack?: {link}}` | `201 {id, expiresAt}`; Empfänger erhält sie in `GET /api/v1/friends` unter `invites[]` | `400`, `401`, `403` kein Freund, `429` > 10/min |
+| `POST /api/v1/invites/{id}/answer` (v2) | Bearer; `{accept: bool}` | `204` | `401`, `404` abgelaufen |
+| `GET /api/v1/friends/code` · `POST /api/v1/friends/code` (v2) | Bearer | `200 {code}` (POST erzeugt neu) | `401` |
+| `POST /api/v1/friends/requests` (erweitert, v2) | zusätzlich `{code}` statt `{name}` | wie bisher | `404` Code unbekannt, `429` > 10 Fehlversuche/h je IP |
+| `POST /api/v1/sync-shares` · `GET /api/v1/sync-shares/{code}` (v2) | Bearer zum Anlegen; Body Sync-Pack ohne eigene Dateien (≤ 64 KB) | `201 {code, expiresAt}` · `200 <Sync-Pack>` | `400` zu groß/ungültig, `401`, `404` abgelaufen |
+| `POST /api/v1/gallery` · `DELETE /api/v1/gallery/{id}` · `GET /api/v1/events/{id}/gallery` (v2) | Bearer; Multipart `image` (PNG/JPEG ≤ 8 MB), `eventId` | `201 {id, status: pending}` · `204` · `200 {images: [{id, url, mcName}]}` (nur freigegebene) | `400` Format, `401`, `413`, `429` > 20 je Event und Spieler |
+| `GET /api/v1/info` (erweitert, v2) | – | zusätzlich `banner?: {id, level, text, link?, until}` und `minLauncherVersion?` | `5xx` |
+| `GET /api/v1/packs/{id}` (erweitert, v2) | – | Versionen tragen `withdrawn?: {reason}`; zurückgezogene fehlen in Listen und `latest` | wie bisher |
+| `POST /api/admin/versions/{id}/server-pack` · `POST /api/admin/versions/{id}/withdraw` (v2) | Admin | `200` ZIP · `204` | `401`, `403` Rolle, `404` |
+| `/api/admin/accounts`, `/api/admin/audit` (v2) | Admin-Rolle | CRUD Konten · Liste Protokoll | `401`, `403` |
 | `POST /api/admin/packs/{id}/versions` (erweitert) | Multipart: `file` (.mrpack), `manifest` (JSON), `signature` (Base64), `channel` | `201` Version | `400` Manifest passt nicht zum .mrpack (Version, Loader, SHA-512), `400` Signatur ungültig, `401`, `413` zu groß |
 
 ## 7. Was auf twogg.app-Seite neu gebaut werden muss
@@ -581,6 +592,9 @@ Laut Aufgabe ist twogg.app eine Next.js-/Node-App. Die genaue Struktur ist ohne 
 | T-9 | Rate-Limiting und Logging | je Token und IP. Logs ohne Tokens | alle |
 | T-10 | Kontoeinstellungen auf twogg.app | Seite „Verbundene Apps“ mit Pinecone, Zeitpunkt, „Zugriff entziehen“. Minecraft-Verknüpfung anzeigen und lösen | F-07, DSGVO |
 | T-11 | Datenschutzerklärung | Abschnitt Pinecone (§9) | DSGVO |
+| T-12 (v2) | `GET /api/v1/events/{id}/results` | Veröffentlichte Ergebnisse: `published`, `teams[] {teamId, name, rank, score}`, `guilds[] {…}`, optional `me {rank, score, stats}`. Scope `events:read`, ETag. `404` bis zur Veröffentlichung | F-43, F-47 |
+| T-13 (v2) | `GET /api/v1/guilds/{id}` | Name, Farbe/Wappen, Mitglieder `{mcUuid, mcName, displayName}`, Events der Gilde. Nur für Mitglieder (`403` sonst) | F-45 |
+| T-14 (v2) | `GET /api/v1/me/participations` erweitert | Je Teilnahme die Teammitglieder mit `mcUuid` (nur wenn verknüpft), damit die Lobby (F-44) sie der Präsenz des Pinecone-Servers zuordnen kann | F-44 |
 
 Die Bibliothekswahl für T-1 trifft das twogg.app-Team. Kandidaten wären etwa `oidc-provider` für Node [ungeprüft: Eignung nicht geprüft].
 
@@ -616,6 +630,10 @@ Die Bibliothekswahl für T-1 trifft das twogg.app-Team. Kandidaten wären etwa `
 | OAuth-Refresh-Tokens (gehasht), Zustimmungen | twogg.app | Verknüpfung | Art. 6 (1) b | Widerruf, nach Ablauf, Kontolöschung |
 | Server-Logs mit IP | twogg.app, Pinecone-Server | Sicherheit, Rate-Limit | Art. 6 (1) f (berechtigtes Interesse) | [AUFBEWAHRUNGSFRIST], Vorschlag 14 Tage |
 | Freunde, Präsenz, letzte Aktivität | Pinecone-Server (SQLite) | Freundesliste | Art. 6 (1) b, Sichtbarkeit abschaltbar | „Meine Freunde-Daten löschen“ unter Einstellungen › Konten (`DELETE /api/v1/me`, umgesetzt); automatische Löschung inaktiver Profile nach 365 Tagen (`PINECONE_PLAYER_RETENTION_DAYS`, umgesetzt) |
+| v2: Bereit-Status (F-44), Einladungen (F-56), Freundescode (F-57) | Pinecone-Server | Lobby, Einladungen, Freunde | Art. 6 (1) b | Bereit-Status ≤ 2 h, Einladungen ≤ 15 min, Code bis zum Neu-Erzeugen; „Meine Freunde-Daten löschen“ löscht alles |
+| v2: Galerie-Bilder mit Minecraft-Name (F-46) | Pinecone-Server | Event-Galerie | Art. 6 (1) a (Einwilligung je Upload) [PRÜFEN] | Löschen durch Spieler jederzeit, Orga-Team kann ablehnen |
+| v2: Geteilte Sync-Packs (F-58) | Pinecone-Server | Teilen-Link | Art. 6 (1) b | 30 Tage |
+| v2: Nutzungsstatistik (F-59) | Pinecone-Server | Admin-Dashboard | keine personenbezogenen Daten (nur Tageszähler) [PRÜFEN] | 2 Jahre |
 | CurseForge-Anfragen (Suchbegriffe, IDs) | Pinecone-Server, nur durchgereicht | CurseForge-Inhalte | Art. 6 (1) b | werden nicht gespeichert; IP nur im Arbeitsspeicher für die Ratenbegrenzung |
 | Spielzeit, Instanzen, Logs | nur Gerät | Funktionen | – (verlässt das Gerät nicht) | Deinstallation / Ordner löschen |
 | Diagnose-ZIP | Gerät, vom Nutzer weitergegeben | Support | Einwilligung durch aktives Versenden | Nutzer |

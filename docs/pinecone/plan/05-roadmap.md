@@ -36,7 +36,11 @@ MVP-A  Echte Event-Packs ──┐      MVP-B  twogg.app v1 (braucht T-1…T-8)
                            ▼
 v1.x  Allgemeiner Launcher (Abnahme + Lücken) → 1.x
                            ▼
-später  macOS, Discord RPC, Import aus Fremd-Launchern, SSE
+v2-A Komfort ──► v2-B Social ─┐   v2-D Admin (parallel)
+                              ▼
+                 v2-C Events (braucht T-12…T-14)  → 2.0
+                           ▼
+später  macOS, Import aus Fremd-Launchern, SSE
 ```
 
 ## 4. Phase 0 – Abnahme des Bestands
@@ -150,18 +154,30 @@ später  macOS, Discord RPC, Import aus Fremd-Launchern, SSE
 
 **Summe v1.x:** 14–26 PT
 
-## 7. Später (nicht eingeplant)
+## 7. v2 – Komfort, Social, Community, Orga
+
+**Fertig, wenn:** Alle AK von F-41 und F-43 bis F-63 sind „Ja“. Reihenfolge: v2-A zuerst (keine externen Abhängigkeiten), v2-B und v2-D parallel, v2-C sobald twogg.app T-12 bis T-14 liefert (setzt Q-01 voraus).
+
+| Block | Funktionen | Aufgaben | Abhängigkeit | Aufwand |
+|---|---|---|---|---|
+| v2-A Komfort | F-48, F-49, F-50, F-51, F-52, F-53, F-54, F-55 | rein lokal: `core/worlds` (Restore, Rotation), `core/profiles` (Duplizieren, `group`, `account`, Befehle), `tauri/game` (Startverhalten, Wrapper), Log-Upload mit Redaktion aus `core/diagnostics` | v1.x | 10–16 PT |
+| v2-B Social | F-41, F-56, F-57, F-58 | Discord-IPC, Server: `invites`, Freundescodes, `sync-shares`; Launcher: Einladungs-Benachrichtigung und Annehmen-Ablauf | v1-6 (F-17) | 7–12 PT |
+| v2-C Events | F-43, F-44, F-45, F-46, F-47 | Ergebnisse, Lobby (Server-Endpunkt `lobby`), Gilden-Seite, Galerie mit Freigabe, Archiv mit Welt-Download | MVP-B, T-12 bis T-14, Q-15 | 12–20 PT + twogg.app |
+| v2-D Admin | F-59, F-60, F-61, F-62, F-63 | Tageszähler, Banner/Mindestversion in `/info`, Server-Pack aus `.mrpack` (`env.server`), Zurückziehen, Admin-Konten mit Rollen und Protokoll | – | 9–15 PT |
+
+**Summe v2:** 38–63 PT (ohne Arbeit auf twogg.app-Seite)
+
+## 8. Später (nicht eingeplant)
 
 | Funktion / Thema | Voraussetzung | Grobe Spanne |
 |---|---|---|
-| F-41 Discord Rich Presence | Entscheidung, ob gewünscht | 2–4 PT |
 | F-42 Import aus anderen Launchern | Ordnerformate prüfen (U-08) | 6–12 PT |
 | macOS-Auslieferung | Apple-Developer-Account (99 $/Jahr), Testgerät, Notarisierung | 5–10 PT + Wartezeit |
 | SSE-Kanal `/api/v1/me/stream` | Bedarf belegt (Q-04), twogg.app-Hosting geeignet | Launcher 2–3 PT, twogg.app unbekannt |
 | Teilen-Dienst `pinecone://pack/<code>` | Hosting-Entscheidung | 4–8 PT |
 | Hintergrunddienst/Tray für Event-Hinweise bei geschlossenem Launcher | Q-09 | 3–6 PT |
 
-## 8. Abhängigkeiten außerhalb des Codes
+## 9. Abhängigkeiten außerhalb des Codes
 
 | Abhängigkeit | Benötigt für | Wer | Stand |
 |---|---|---|---|
@@ -170,14 +186,16 @@ später  macOS, Discord RPC, Import aus Fremd-Launchern, SSE
 | Ed25519-Schlüssel und Ablage | MVP-A | Orga-Team | offen (Q-07) |
 | Code-Signing (Azure Artifact Signing oder OV-Zertifikat) | MVP-D | [VERANTWORTLICHE PERSON] | offen (U-06) |
 | CurseForge | v1-2 | [VERANTWORTLICHE PERSON] | Proxy umgesetzt; Schlüssel beantragen und auf dem Server setzen, Rückfrage Lockfile (Q-06) |
+| twogg.app T-12 bis T-14 | v2-C | twogg.app-Team | offen |
 | Datenschutzerklärung | MVP-D | Verantwortliche Stelle TwoGG | Entwurf liegt vor, juristisch prüfen und veröffentlichen (Q-08) |
 
-## 9. Zuordnung aller Funktionen zu Phasen
+## 10. Zuordnung aller Funktionen zu Phasen
 
 | Phase | Funktionen |
 |---|---|
 | Phase 0 + MVP | F-01, F-02, F-04, F-05, F-06, F-07, F-08, F-09, F-10, F-11, F-12, F-13, F-14, F-15, F-16, F-18, F-33, F-34, F-35, F-37, F-38 |
 | v1.x | F-03, F-17, F-19, F-20, F-21, F-22, F-23, F-24, F-25, F-26, F-27, F-28, F-29, F-30, F-31, F-32, F-36, F-39, F-40 |
-| später | F-41, F-42 |
+| v2 | F-41, F-43, F-44, F-45, F-46, F-47, F-48, F-49, F-50, F-51, F-52, F-53, F-54, F-55, F-56, F-57, F-58, F-59, F-60, F-61, F-62, F-63 |
+| später | F-42 |
 
 Die genaue Phase je Funktion (z. B. „MVP-B“) steht in `07`.

@@ -2,10 +2,11 @@
 
 ## Einordnung
 
-- **IDs** `F-01` bis `F-42` sind stabil. `07` ordnet jede ID genau einmal einem Screen, Modul, Endpunkt und einer Phase zu.
+- **IDs** `F-01` bis `F-63` sind stabil. `F-43` bis `F-63` sind der Plan v2 (Abschnitte E–H, Stand 12.10.2026). `07` ordnet jede ID genau einmal einem Screen, Modul, Endpunkt und einer Phase zu.
 - **Priorität**
   - **MVP**: nötig für „TwoGG-Events spielen“.
   - **v1.x**: allgemeiner Launcher-Umfang.
+  - **v2**: nach 1.0, eingeplant in `05` §7 (Blöcke v2-A bis v2-D).
   - **später**: nach v1, nicht eingeplant.
 - **Ist-Stand** ist der Code von 0.9.5: *vorhanden*, *teilweise* oder *fehlt*. Bei *teilweise* steht dabei, welches Akzeptanzkriterium noch nicht erfüllt ist.
 - **Akzeptanzkriterien (AK)** lassen sich mit Ja/Nein prüfen. Eine Funktion gilt als fertig, wenn alle AK „Ja“ ergeben.
@@ -807,7 +808,7 @@ Ob die Freundesliste mit den twogg.app-Freunden zusammengeführt wird, ist offen
 
 - **Nutzerziel:** Meine Discord-Freunde sehen, dass ich ein TwoGG-Event spiele.
 - **Verhalten:** Wenn aktiviert, meldet Pinecone der lokalen Discord-App „Spielt REVIVAL: Avalon“ bzw. den Instanznamen ohne Serveradresse.
-- **Priorität:** später
+- **Priorität:** v2 (Block v2-B, vorgezogen aus „später“)
 - **Ist-Stand:** fehlt
 - **Akzeptanzkriterien:**
   - AK-41.1 Rich Presence ist standardmäßig aus.
@@ -833,3 +834,330 @@ Ob die Freundesliste mit den twogg.app-Freunden zusammengeführt wird, ist offen
   - *Konflikt:* Gleiche Instanznamen bekommen ein Suffix.
 
 Die Ordnerformate der anderen Launcher sind nicht geprüft und gelten als [ungeprüft] (U-08 in `06`).
+
+## E. Events und Community (Plan v2)
+
+Die Funktionen dieses Abschnitts brauchen Daten von twogg.app, die es im Vertrag (`04` §4) noch nicht gibt (T-12 bis T-14 in `04` §7). Sie folgen auf MVP-B.
+
+### F-43 Ergebnisse und Ranglisten
+
+- **Nutzerziel:** Nach einem Event sehe ich im Launcher, wie mein Team und meine Gilde abgeschnitten haben.
+- **Verhalten:** Die Event-Seite eines beendeten Events zeigt einen Bereich „Ergebnisse“ mit der Platzierung aller Teams bzw. Gilden. Das eigene Team ist hervorgehoben. Hat twogg.app persönliche Werte (z. B. Punkte), stehen sie darunter. Die Daten kommen von twogg.app (`GET /api/v1/events/{id}/results`, T-12).
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-43.1 Ergebnisse erscheinen erst, wenn twogg.app sie als veröffentlicht meldet.
+  - AK-43.2 Das eigene Team bzw. die eigene Gilde ist hervorgehoben und ohne Scrollen sichtbar.
+  - AK-43.3 Ohne Ergebnisse zeigt der Bereich „Noch keine Ergebnisse“ statt eines Fehlers.
+- **Randfälle:**
+  - *Offline:* zuletzt geladene Ergebnisse aus dem Event-Cache (F-08) mit Hinweis „Stand von …“.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Ändert das Orga-Team Ergebnisse nachträglich, gilt beim nächsten Abruf der neue Stand (ETag).
+
+### F-44 Team-Lobby
+
+- **Nutzerziel:** Vor dem Eventstart sehe ich, wer aus meinem Team schon da ist, und wir starten gemeinsam.
+- **Verhalten:** Ab 30 Minuten vor Beginn zeigt die Event-Seite eine Lobby: alle Teammitglieder (aus twogg.app, T-5) mit Status „offline“, „Launcher offen“, „bereit“ oder „im Spiel“. Den Online-Status liefert die Präsenz des Pinecone-Servers (F-17), den Bereit-Status ein neuer Endpunkt am Pinecone-Server. Ein Knopf „Bereit“ setzt den eigenen Status. Öffnet der Server, bekommt jedes bereite Mitglied den Hinweis „Jetzt beitreten“ (F-13).
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-44.1 Teammitglieder ohne Pinecone erscheinen als „ohne Pinecone“, nicht als Fehler.
+  - AK-44.2 Der Bereit-Status verfällt nach dem Eventstart bzw. nach 2 Stunden.
+  - AK-44.3 Wer „Für Freunde unsichtbar“ ist (AK-17.4), erscheint im eigenen Team trotzdem mit Status; die Einstellung gilt nur für Freunde außerhalb des Teams.
+  - AK-44.4 Die Lobby fragt höchstens alle 30 Sekunden ab.
+- **Randfälle:**
+  - *Offline:* Die Lobby zeigt nur das eigene Team aus dem Cache, ohne Status.
+  - *Abbruch:* „Bereit“ lässt sich zurücknehmen.
+  - *Konflikt:* Wechselt jemand das Team auf twogg.app, gilt das neue Team beim nächsten Abruf.
+
+### F-45 Gilden-Seite
+
+- **Nutzerziel:** Ich sehe meine Gilde mit Mitgliedern und ihren Events.
+- **Verhalten:** Der Gilden-Button der Event-Seite öffnet eine eigene Seite: Name, Wappen/Farbe, Mitglieder (mit Pinecone-Präsenz, wenn befreundet), vergangene und kommende Events der Gilde und ihre Platzierungen (F-43). Daten von twogg.app (T-13).
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-45.1 Die Seite ist nur für Mitglieder der Gilde sichtbar, solange twogg.app nichts anderes freigibt.
+  - AK-45.2 Ein Mitglied lässt sich direkt als Freund anfragen (F-17).
+- **Randfälle:**
+  - *Offline:* Cache-Stand mit Hinweis.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Hängt von Q-13 ab (Gilde als eigenes Feld oder Team-Typ).
+
+### F-46 Event-Galerie
+
+- **Nutzerziel:** Ich teile meine besten Screenshots eines Events mit der Community.
+- **Verhalten:** In den Screenshots einer Event-Instanz (F-29) gibt es „In Event-Galerie teilen“. Pinecone lädt das Bild mit Minecraft-Name und Event-ID an den Pinecone-Server. Das Orga-Team gibt Bilder im Admin frei. Freigegebene Bilder erscheinen auf der Event-Seite im Launcher und auf der Pack-Seite des Servers.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-46.1 Hochladen braucht eine Freunde-Sitzung (Minecraft-Identität geprüft) und eine Bestätigung pro Bild.
+  - AK-46.2 Nicht freigegebene Bilder sieht nur das Orga-Team.
+  - AK-46.3 Der Spieler kann eigene Bilder jederzeit löschen. „Meine Freunde-Daten löschen“ löscht sie mit.
+  - AK-46.4 Höchstens 20 Bilder je Spieler und Event, höchstens 8 MB je Bild; Metadaten (EXIF o. Ä.) werden entfernt.
+- **Randfälle:**
+  - *Offline:* Der Knopf ist deaktiviert.
+  - *Abbruch:* Ein abgebrochener Upload hinterlässt nichts auf dem Server.
+  - *Konflikt:* Dasselbe Bild zweimal (gleicher Hash) wird nur einmal gespeichert.
+
+### F-47 Event-Archiv
+
+- **Nutzerziel:** Ich schaue mir vergangene Events an und spiele die Welt nach.
+- **Verhalten:** Die Events-Seite hat einen Bereich „Vergangene Events“ mit Datum, Pack-Version, Ergebnissen (F-43) und Galerie (F-46). Hat das Orga-Team eine Welt veröffentlicht (Admin, Pinecone-Server), installiert „Welt herunterladen“ sie als Einzelspieler-Instanz mit derselben Pack-Version.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-47.1 Die Archiv-Instanz ist eine normale Instanz ohne Pflicht-Mods (keine Event-Sperre nach F-11).
+  - AK-47.2 Der Welt-Download nutzt die Download-Links des Servers (HMAC, Rate-Limit) und prüft SHA-512.
+- **Randfälle:**
+  - *Offline:* Archivliste aus dem Cache, Download deaktiviert.
+  - *Abbruch:* Die halbe Instanz wird entfernt.
+  - *Konflikt:* Existiert die Archiv-Instanz schon, fragt Pinecone „Ersetzen oder zweite Kopie?“.
+
+## F. Launcher-Komfort (Plan v2)
+
+Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken gegenüber Prism Launcher und Modrinth App.
+
+### F-48 Welt-Backups wiederherstellen und automatisch anlegen
+
+- **Nutzerziel:** Geht eine Welt kaputt, hole ich mir einen älteren Stand zurück.
+- **Verhalten:** Die Welten-Ansicht (F-28) zeigt je Welt die vorhandenen Backups (heute nur Anlegen über `core/worlds::backup`). „Wiederherstellen“ ersetzt die Welt durch das Backup; vorher legt Pinecone ein Backup des aktuellen Stands an. Pro Instanz lässt sich „Vor jedem Start sichern“ einschalten; Pinecone behält die letzten N Backups (Standard 5).
+- **Priorität:** v2
+- **Ist-Stand:** teilweise (Backup anlegen vorhanden, Wiederherstellen und Automatik fehlen)
+- **Akzeptanzkriterien:**
+  - AK-48.1 Wiederherstellen ist gesperrt, solange die Instanz läuft.
+  - AK-48.2 Vor dem Wiederherstellen entsteht immer ein Sicherheits-Backup.
+  - AK-48.3 Die Rotation löscht nur automatisch angelegte Backups, nie manuelle.
+  - AK-48.4 Ein beschädigtes ZIP wird erkannt, bevor die aktuelle Welt angefasst wird.
+- **Randfälle:**
+  - *Offline:* funktioniert vollständig.
+  - *Abbruch:* Das Entpacken läuft in einen Temp-Ordner; erst danach wird getauscht.
+  - *Konflikt:* Zu wenig Speicherplatz → Abbruch vor Beginn mit Hinweis.
+
+### F-49 Instanz duplizieren
+
+- **Nutzerziel:** Ich probiere Mods aus, ohne meine laufende Instanz zu gefährden.
+- **Verhalten:** Kontextmenü der Instanz → „Duplizieren“. Dialog: Name, „Welten mitkopieren“ (Standard aus), „Screenshots mitkopieren“ (Standard aus). Pack-Bindung (Modrinth/CurseForge/TwoGG) bleibt erhalten, bei Event-Instanzen wird sie entfernt (Kopie ist eine normale Instanz).
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-49.1 Die Kopie startet ohne erneuten Download von Mods.
+  - AK-49.2 Spielzeit und „zuletzt gespielt“ beginnen bei null.
+- **Randfälle:**
+  - *Offline:* funktioniert.
+  - *Abbruch:* Die halbe Kopie wird entfernt.
+  - *Konflikt:* Gleicher Name bekommt ein Suffix „(2)“.
+
+### F-50 Instanz-Gruppen und Sortierung
+
+- **Nutzerziel:** Bei vielen Instanzen finde ich schnell die richtige.
+- **Verhalten:** In der Bibliothek lassen sich Gruppen anlegen (z. B. „Events“, „Modded“, „Vanilla“) und Instanzen per Drag & Drop oder Kontextmenü zuordnen. Gruppen sind einklappbar. Sortierung: Name, zuletzt gespielt, Spielzeit, Erstelldatum. Event-Instanzen landen automatisch in „Events“, solange der Nutzer sie nicht verschiebt.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-50.1 Gruppen und Sortierung bleiben nach Neustart erhalten.
+  - AK-50.2 Drag & Drop hat eine Tastatur-Alternative (Kontextmenü „Verschieben nach“, AK-38.2).
+  - AK-50.3 Löschen einer Gruppe löscht keine Instanzen.
+- **Randfälle:**
+  - *Offline:* entfällt.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Eine Instanz gehört zu genau einer Gruppe oder keiner.
+
+### F-51 Konto pro Instanz
+
+- **Nutzerziel:** Meine Event-Instanz startet immer mit meinem Hauptkonto, die Test-Instanz mit dem Zweitkonto.
+- **Verhalten:** Instanz-Einstellungen → „Konto“: „Aktives Konto“ (Standard) oder ein bestimmtes Konto. Die Spielleiste zeigt das Konto, mit dem gestartet wird. Neues Feld `account` am `Profile` (`core/profiles`).
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-51.1 Ist das gewählte Konto entfernt oder abgelaufen, fragt Pinecone vor dem Start statt still ein anderes zu nehmen.
+  - AK-51.2 Event-Instanzen warnen, wenn das gewählte Konto nicht die bei twogg.app verknüpfte UUID hat.
+- **Randfälle:**
+  - *Offline:* Offline-Konten funktionieren wie bisher.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* entfällt.
+
+### F-52 Verhalten beim Spielstart
+
+- **Nutzerziel:** Der Launcher soll mir beim Spielen nicht im Weg sein.
+- **Verhalten:** Einstellungen → Allgemein → „Beim Spielstart“: geöffnet lassen (Standard), minimieren, ausblenden (in Tray bzw. Taskleiste), schließen. „Nach Spielende wieder anzeigen“ holt den Launcher zurück, außer bei „schließen“.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-52.1 Bei „schließen“ läuft das Spiel weiter; Spielzeit wird beim nächsten Start aus dem Log nachgetragen oder entfällt mit Hinweis.
+  - AK-52.2 Bei einem Absturz erscheint der Launcher immer wieder (F-35), auch bei „ausblenden“.
+- **Randfälle:**
+  - *Offline:* entfällt.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Laufen Downloads, wird nicht geschlossen, sondern ausgeblendet.
+
+### F-53 Log teilen
+
+- **Nutzerziel:** Ich schicke einem Helfer im Discord einen Link zu meinem Log statt einer Datei.
+- **Verhalten:** In der Log-Ansicht (F-35) und im Absturz-Dialog: „Log teilen“. Pinecone entfernt Tokens, Pfade mit Benutzernamen und IP-Adressen (gleiche Redaktion wie `core/diagnostics`), zeigt den bereinigten Text zur Kontrolle und lädt ihn nach Bestätigung zu mclo.gs hoch. Der Link wird kopiert.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-53.1 Kein Upload ohne Bestätigung im Dialog; der Dialog nennt den Dienst (mclo.gs).
+  - AK-53.2 Der Redaktions-Test von `core/diagnostics` gilt auch für den Upload.
+  - AK-53.3 Logs über 10 MB werden auf die letzten 25 000 Zeilen gekürzt (Grenze des Dienstes prüfen, U-19).
+- **Randfälle:**
+  - *Offline:* Knopf deaktiviert, „Als Datei speichern“ bleibt.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Lehnt mclo.gs ab (429/5xx), zeigt Pinecone den Fehler und bietet „Als Datei speichern“ an.
+
+### F-54 Vollständiger Instanz-Export und -Import
+
+- **Nutzerziel:** Ich ziehe eine Instanz komplett auf einen anderen PC um, mit Welten und Einstellungen.
+- **Verhalten:** Kontextmenü → „Exportieren“ → „Vollständig (.pinecone.zip)“ neben dem vorhandenen `.mrpack` (F-25). Auswahl der Ordner (Welten, Configs, Screenshots, Resourcepacks, Shaderpacks, `options.txt`). Import über Bibliothek → „Importieren“ oder Doppelklick (Dateizuordnung, F-39).
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-54.1 Der Export enthält nie Konten, Tokens oder Pinecone-Einstellungen außerhalb der Instanz.
+  - AK-54.2 Event-Instanzen lassen sich exportieren, importiert werden sie aber als normale Instanz.
+  - AK-54.3 Der Import prüft Pfade im ZIP (kein `..`, keine absoluten Pfade).
+- **Randfälle:**
+  - *Offline:* funktioniert.
+  - *Abbruch:* Halbe Datei bzw. halbe Instanz wird entfernt.
+  - *Konflikt:* Gleicher Name bekommt ein Suffix.
+
+### F-55 Start-Befehle und Wrapper
+
+- **Nutzerziel:** Ich starte Minecraft unter Linux mit `gamemoderun` oder auf dem Laptop mit der dedizierten Grafikkarte.
+- **Verhalten:** Instanz-Einstellungen → „Erweitert“: Befehl vor dem Start, Wrapper-Befehl, Befehl nach dem Ende. Platzhalter `$INST_DIR`, `$INST_NAME`, `$MC_VERSION`. Global vorbelegbar unter Einstellungen → Java.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-55.1 Scheitert der Befehl vor dem Start (Exit-Code ≠ 0), startet das Spiel nicht und die Ausgabe erscheint im Log.
+  - AK-55.2 Befehle kommen nie aus Modpacks, Sync-Packs oder Event-Manifesten, nur aus der Eingabe des Nutzers.
+  - AK-55.3 Der Wrapper wird ohne Shell ausgeführt (Argumente getrennt), damit Pfade mit Leerzeichen funktionieren.
+- **Randfälle:**
+  - *Offline:* entfällt.
+  - *Abbruch:* „Stoppen“ beendet auch den Befehl vor dem Start.
+  - *Konflikt:* entfällt.
+
+## G. Freunde und Social (Plan v2)
+
+Baut auf F-17 und dem Pinecone-Server auf. F-41 Discord Rich Presence wird in diesen Block vorgezogen.
+
+### F-56 Einladungen
+
+- **Nutzerziel:** Ich lade einen Freund mit einem Klick in meine Welt bzw. auf meinen Server ein, auch wenn er das Modpack noch nicht hat.
+- **Verhalten:** Während ich spiele, zeigt die Freundesliste bei jedem Freund „Einladen“. Die Einladung enthält Server (Adresse aus der Präsenz) und Pack-Bezug (Teilen-Link nach F-25: `pinecone://twogg/<pack>` oder `pinecone://modrinth/<projekt>`). Der Empfänger bekommt eine Benachrichtigung (F-37): „Annehmen“ installiert fehlendes Pack bzw. nutzt eine passende vorhandene Instanz und tritt bei (Quick Play). Server: Tabelle `invites`, `POST /api/v1/invites`, Abruf zusammen mit der Präsenz.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt (Freund beitreten ohne Einladung ist vorhanden)
+- **Akzeptanzkriterien:**
+  - AK-56.1 Einladungen sind nur zwischen Freunden möglich und verfallen nach 15 Minuten.
+  - AK-56.2 Höchstens 10 Einladungen je Spieler und Minute (Server-Rate-Limit).
+  - AK-56.3 Einladungen in lokale Einzelspielerwelten (LAN) zeigen „nicht möglich“ statt einer falschen Adresse.
+  - AK-56.4 Eine Einladung zu einem Event-Server wird nur angezeigt, wenn der Empfänger für das Event freigegeben ist (sonst Hinweis).
+- **Randfälle:**
+  - *Offline:* Einladen deaktiviert.
+  - *Abbruch:* Abgelehnte Einladungen bekommt der Absender als „abgelehnt“ angezeigt.
+  - *Konflikt:* Mehrere Einladungen: die neueste je Absender gilt.
+
+### F-57 Freund per Code hinzufügen
+
+- **Nutzerziel:** Ich füge einen Freund hinzu, ohne seinen Minecraft-Namen genau zu kennen.
+- **Verhalten:** Jeder Spieler hat einen kurzen Freundescode (z. B. `PINE-7K3Q`) und einen Link `pinecone://friend/<code>`. Eingabe oder Klick schickt eine Anfrage. Der Code lässt sich neu erzeugen.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt (Anfrage per Spielername vorhanden)
+- **Akzeptanzkriterien:**
+  - AK-57.1 Codes sind nicht erratbar (≥ 40 bit Zufall) und werden bei „neu erzeugen“ sofort ungültig.
+  - AK-57.2 Falsche Codes werden je IP begrenzt (gegen Durchprobieren).
+- **Randfälle:**
+  - *Offline:* deaktiviert.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Eigener Code → Hinweis „Das bist du“.
+
+### F-58 Sync-Packs teilen
+
+- **Nutzerziel:** Ich gebe meinen Freunden meine Tastenbelegung und Einstellungen für das Event-Pack.
+- **Verhalten:** Sync-Pack (F-31) → „Teilen“ erzeugt einen Link `pinecone://sync/<code>` (Ablage am Pinecone-Server, 30 Tage). Öffnen zeigt eine Vorschau und legt das Sync-Pack an.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-58.1 Geteilt werden Projekte (Modrinth/CurseForge-IDs) sowie `options.txt`-Werte und Tasten. Eigene Dateien des Sync-Packs werden nicht geteilt.
+  - AK-58.2 Die Vorschau zeigt alle Werte, bevor etwas übernommen wird.
+- **Randfälle:**
+  - *Offline:* deaktiviert.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Gleichnamiges Sync-Pack bekommt ein Suffix.
+
+## H. Admin und Server (Plan v2)
+
+Funktionen für das Orga-Team in der Admin-Oberfläche des Pinecone-Servers (`pinecone.twogg.app/admin`).
+
+### F-59 Nutzungsstatistik
+
+- **Nutzerziel:** Das Orga-Team sieht, welche Packs und Launcher-Versionen genutzt werden.
+- **Verhalten:** Das Admin-Dashboard zeigt (heute nur Summen aus `stats` in `src/admin.rs`) zusätzlich: Downloads je Pack und Version über die Zeit (Tageswerte), Verteilung der Launcher-Versionen (aus `X-Pinecone-Client`, Tageszähler), aktive Freunde-Profile je Tag. Gespeichert werden nur Tageszähler, keine IPs, UUIDs oder Einzelereignisse.
+- **Priorität:** v2
+- **Ist-Stand:** teilweise (Gesamtsummen vorhanden)
+- **Akzeptanzkriterien:**
+  - AK-59.1 Aus der Statistik lässt sich kein einzelner Spieler ableiten (nur Zähler je Tag).
+  - AK-59.2 Tageszähler älter als 2 Jahre werden gelöscht.
+- **Randfälle:**
+  - *Offline:* entfällt.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* entfällt.
+
+### F-60 Banner und Mindestversion
+
+- **Nutzerziel:** Das Orga-Team erreicht alle Launcher sofort, z. B. bei Server-Wartung oder einer kaputten Version.
+- **Verhalten:** Im Admin unter Einstellungen: Banner (Text, Stufe Info/Warnung, Zeitraum, optional Link) und `minLauncherVersion`. `/api/v1/info` liefert beides. Der Launcher zeigt das Banner oben auf der Startseite (schließbar je Banner-ID) und bei zu alter Version eine Tafel „Update nötig“ mit Knopf (F-34).
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-60.1 Ein geschlossenes Banner erscheint nicht wieder, ein geändertes (neue ID) schon.
+  - AK-60.2 Unter `minLauncherVersion` bleiben Bibliothek und Einzelspieler nutzbar; gesperrt werden nur Event-Beitritt und TwoGG-Packs.
+- **Randfälle:**
+  - *Offline:* kein Banner, keine Sperre.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Abgelaufene Banner liefert der Server nicht mehr aus.
+
+### F-61 Server-Pack erzeugen
+
+- **Nutzerziel:** Das Orga-Team bekommt aus einer Pack-Version direkt die Dateien für den Event-Server.
+- **Verhalten:** Im Admin bei einer Pack-Version: „Server-Pack erzeugen“. Der Server liest das `.mrpack`, nimmt nur Dateien mit `env.server` ≠ `unsupported`, legt `overrides` und `server-overrides` dazu und fügt einen Hinweis zum Loader-Installer (Version aus dem Pack) bei. Ergebnis: ZIP zum Download im Admin.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-61.1 Client-only Mods (`env.server = unsupported`) fehlen im Server-Pack.
+  - AK-61.2 Jede Datei wird gegen den SHA-512 des `.mrpack` geprüft.
+  - AK-61.3 Das Server-Pack ist nur für Admins abrufbar, nicht öffentlich.
+- **Randfälle:**
+  - *Offline:* entfällt.
+  - *Abbruch:* Eine abgebrochene Erzeugung hinterlässt keine Datei.
+  - *Konflikt:* Fehlt `env` im Pack, gilt die Datei als „Server: ja“ mit Warnung in der Liste.
+
+Abgrenzung zum Nicht-Ziel „Kein Hosting oder Verwalten der Minecraft-Server“ (`00`): F-61 erzeugt nur Dateien. Hochladen, Starten und Betreiben des Eventservers bleiben außerhalb von Pinecone.
+
+### F-62 Pack-Version zurückziehen
+
+- **Nutzerziel:** Eine fehlerhafte Pack-Version erreicht keine weiteren Spieler, und wer sie hat, erfährt davon.
+- **Verhalten:** Im Admin: Version → „Zurückziehen“ mit Grund. Die Version verschwindet aus Listen und Update-Prüfung. Launcher mit dieser Version zeigen „Diese Version wurde zurückgezogen: <Grund>“ und bieten die neueste nicht zurückgezogene Version an (Update nach F-12/F-24).
+- **Priorität:** v2
+- **Ist-Stand:** fehlt
+- **Akzeptanzkriterien:**
+  - AK-62.1 Eine zurückgezogene Version lässt sich wiederherstellen.
+  - AK-62.2 Ist sie die einzige Version, warnt der Admin vor dem Zurückziehen.
+- **Randfälle:**
+  - *Offline:* Hinweis erst beim nächsten Abruf.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Ist die Version an ein laufendes Event gebunden, verlangt der Admin eine zweite Bestätigung.
+
+### F-63 Admin-Konten, Rollen und Protokoll
+
+- **Nutzerziel:** Mehrere Leute im Orga-Team arbeiten im Admin, und man sieht, wer was geändert hat.
+- **Verhalten:** Admin-Konten mit Rollen „Admin“ (alles) und „Redakteur“ (Neuigkeiten, Empfehlungen, Galerie-Freigabe, keine Einstellungen und Konten). Ein Protokoll zeigt Zeitpunkt, Konto, Aktion und Objekt jeder Änderung.
+- **Priorität:** v2
+- **Ist-Stand:** fehlt (ein gemeinsamer Admin-Zugang)
+- **Akzeptanzkriterien:**
+  - AK-63.1 Der bisherige Zugang wird beim Update als erstes Admin-Konto übernommen.
+  - AK-63.2 Das Protokoll lässt sich nicht im Admin bearbeiten oder löschen; Einträge älter als 1 Jahr werden automatisch gelöscht.
+  - AK-63.3 Der letzte Admin kann sich nicht selbst herabstufen oder löschen.
+- **Randfälle:**
+  - *Offline:* entfällt.
+  - *Abbruch:* entfällt.
+  - *Konflikt:* Gleichzeitige Änderungen am selben Objekt: die spätere gewinnt, beide stehen im Protokoll.

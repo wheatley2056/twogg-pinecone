@@ -73,6 +73,14 @@ Eine Diagnose-ZIP (Einstellungen › Allgemein) erstellst du selbst und gibst si
 - Der Server speichert die Anfragen nicht.
 - Die Dateien selbst lädt der Launcher direkt von den Servern von CurseForge.
 
+**d) Geplante Funktionen (Plan v2, noch nicht umgesetzt – erst aufnehmen, wenn sie veröffentlicht werden)**
+
+- *Team-Lobby, Einladungen, Freundescode:* Bereit-Status (höchstens 2 Stunden), Einladungen (15 Minuten) und dein Freundescode werden auf dem Pinecone-Server gespeichert und mit „Meine Freunde-Daten löschen“ entfernt. **[PRÜFEN]**
+- *Event-Galerie:* Lädst du einen Screenshot hoch, speichern wir das Bild (ohne Metadaten) mit deinem Minecraft-Namen und dem Event. Das Orga-Team prüft es vor der Veröffentlichung. Du kannst es jederzeit löschen. Rechtsgrundlage: Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). **[PRÜFEN]**
+- *Log teilen:* Nur auf deinen Klick wird ein bereinigtes Log an mclo.gs (Aternos GmbH) übertragen. **[PRÜFEN: Anbieter, Speicherdauer, Datenschutzerklärung von mclo.gs]**
+- *Geteilte Sync-Packs:* Teilst du ein Sync-Pack, speichern wir es 30 Tage.
+- *Statistik:* Der Server zählt Downloads und Launcher-Versionen als Tageszähler ohne IP-Adresse oder Spieler-ID.
+
 ### 5. Dienste, die der Launcher direkt anspricht
 
 Bei diesen Diensten sieht der jeweilige Anbieter deine IP-Adresse. Es gelten deren Datenschutzerklärungen. **[PRÜFEN: Drittlandübermittlung, insbesondere USA]**
@@ -85,6 +93,7 @@ Bei diesen Diensten sieht der jeweilige Anbieter deine IP-Adresse. Es gelten der
 | Modrinth | Suche und Download von Inhalten | Rinth, Inc. |
 | CurseForge-CDN | Download von Dateien | Overwolf |
 | GitHub | Prüfung auf Launcher-Updates | GitHub (Microsoft) |
+| Discord (lokal, nur wenn eingeschaltet, Plan v2) | Anzeige „Spielt …“ in deinem Discord-Profil | Discord Inc. – die Übertragung läuft über die Discord-App auf deinem Gerät |
 | twogg.app | Events, dein Anmeldestatus (nur wenn du dein TwoGG-Konto verknüpfst) | TwoGG, siehe Datenschutzerklärung von twogg.app [URL] |
 
 Schriften sind im Launcher enthalten. Es entsteht keine Verbindung zu Google Fonts.

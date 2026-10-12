@@ -212,6 +212,8 @@ Nicht verteilbare Dateien werden weiter nie von Fremdquellen geladen (AK-22.2).
 | U-16 | `downloadUrl = null` bei verbotener Verteilung, Rate-Limits der CurseForge-API | `06` H-02 | Nicht in offizieller Doku |
 | U-17 | Markenrechtliche Lage des Namens „Pinecone“ | `06` H-04 | Keine Markenrecherche |
 | U-18 | Lizenzen der drei Schriften | `06` §2 | Nicht je Schrift nachgesehen |
+| U-19 | API, Größenlimits, Aufbewahrung und Nutzungsbedingungen von mclo.gs | `01` F-53 | Nicht nachgelesen |
+| U-20 | Format der Discord-RPC-Schnittstelle unter Windows/Linux (Named Pipe/Unix-Socket) | `01` F-41 | Nicht geprüft |
 
 ## 5. Offene Fragen
 
@@ -230,6 +232,11 @@ Nicht verteilbare Dateien werden weiter nie von Fremdquellen geladen (AK-22.2).
 | Q-11 | Fehler- bzw. Gefahrenfarbe: ins Design-System aufnehmen oder `--danger` aus dem Code entfernen? | Das Design-System kennt keine Fehlerfarbe, der Code nutzt `--danger` | Design-Verantwortliche | `03` §1 |
 | Q-12 | Ist die in Releases verwendete Azure-App-ID für die Minecraft-Services freigegeben? | **Beantragt, Freigabe steht aus (Stand 12.10.2026).** Bis dahin funktioniert der Microsoft-Login mit dieser App-ID nicht | [VERANTWORTLICHE PERSON] | F-01, H-01 |
 | Q-13 | Ist die Gilde in REVIVAL: Avalon ein eigenes Datenfeld oder ein Team mit Typ „Gilde“? | Datenmodell unbekannt (Q-01) | twogg.app-Team | F-09, `Participation.guild` |
+| Q-15 | Event-Galerie (F-46): Wer moderiert, nach welchen Regeln, und wie werden Bildrechte und Einwilligung (auch Minderjähriger, abgebildete Spielernamen) geregelt? | Hochgeladene Bilder sind nutzergenerierte Inhalte mit Personenbezug (Minecraft-Name) | Orga-Team, Verantwortliche Stelle | F-46, F-47, `04` §9 |
+| Q-16 | Ist die aggregierte Nutzungsstatistik (F-59) mit dem Nicht-Ziel „keine Telemetrie ohne Zustimmung“ vereinbar? Vorschlag: nur Zähler aus ohnehin gestellten Anfragen (Downloads, `X-Pinecone-Client`), keine zusätzlichen Aufrufe, keine IDs | Abgrenzung Statistik vs. Telemetrie | Orga-Team, Verantwortliche Stelle | F-59, `00` Nicht-Ziele |
+| Q-17 | Log-Upload zu mclo.gs (F-53): Ist ein Drittdienst gewollt, oder soll der Pinecone-Server Logs selbst kurzzeitig hosten? | Datenschutz (Drittanbieter) gegen Betriebsaufwand | Orga-Team | F-53 |
+| Q-18 | Welche Welten von vergangenen Events dürfen veröffentlicht werden (F-47), und wer klärt Rechte an Bauten der Teilnehmer? | Bauten sind Werke der Spieler | Orga-Team | F-47 |
+| Q-19 | Admin-Konten (F-63): Login weiter per Passwort oder über twogg.app/Discord? | Heute ein gemeinsames Passwort (`PINECONE_ADMIN_PASSWORD`-Hash) | Orga-Team | F-63 |
 | Q-14 | Server-Adressen: Wo werden `[SERVER-ADRESSE]` (Community-Server) und die Eventserver gepflegt, und wer darf sie ändern? | Heute Admin des Pinecone-Servers bzw. twogg.app `/join`. Zuständigkeit nicht schriftlich festgelegt | Orga-Team | F-13, F-16 |
 
 ## 6. Abweichungen der Design-Referenz von festen Entscheidungen

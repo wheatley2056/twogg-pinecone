@@ -293,6 +293,31 @@ Beide Screens bestehen nur aus Bausteinen aus Design §9 und Tokens aus §14. Si
 - *Fehler:* „Anwenden“ scheitert, dann erscheint eine Tafel mit dem Grund (Ratenbegrenzung oder Netzwerk).
 - *offline:* „Anwenden“, „Von Spielername“ und „Von meinem Konto“ sind deaktiviert. Die Bibliothek funktioniert.
 
+### 3.3 Plan v2: neue Bereiche in bestehenden Screens
+
+Die v2-Funktionen bekommen keine eigenen Hauptseiten, sondern Bereiche in vorhandenen Screens. Es gelten die Regeln aus §1 und die Bausteine aus §9 des Design-Systems.
+
+| Funktion | Ort | Bausteine und Verhalten |
+|---|---|---|
+| F-43 Ergebnisse | §3.1 Events, Detail eines beendeten Events, unter dem Hero | Tabelle Platz/Team/Punkte, eigene Zeile `--surface-active` + Harz-Kante. Zustände: *leer* „Noch keine Ergebnisse“, *offline* Stand-Hinweis |
+| F-44 Team-Lobby | §3.1 Events, ersetzt ab T−30 min den Countdown-Block | Liste der Teammitglieder mit Kopf-Render und Status-Punkt (wie Freundesliste), Primärknopf „Bereit“ / „Nicht mehr bereit“. Bei Serveröffnung Tafel „Jetzt beitreten“ |
+| F-45 Gilden-Seite | Unterseite von §3.1 (Gilden-Button) | Kopf mit Gildenname und -farbe, Reiter Mitglieder / Events. Mitglied-Kontextmenü „Als Freund anfragen“ |
+| F-46 Galerie | §2.3 Instanz → Screenshots (Kontextmenü „In Event-Galerie teilen“), §3.1 Event-Detail (Raster) | Bestätigungsdialog mit Vorschau, Event-Name und Hinweis „wird vom Orga-Team geprüft“. Eigene Bilder mit Status „wartet“/„freigegeben“ und „Löschen“ |
+| F-47 Archiv | §3.1 Events, Segment „Kommend | Vergangen“ | Karte wie Event-Karte, gedämpft. Knopf „Welt herunterladen“ nur, wenn veröffentlicht |
+| F-48 Welt-Backups | §2.3 Instanz → Welten, Zeile aufklappbar | Backup-Liste mit Datum, Größe, „automatisch“-Chip. „Wiederherstellen“ mit Bestätigungsdialog. Instanz-Einstellungen: Schalter „Vor jedem Start sichern“, Zahl „Behalten“ |
+| F-49 Duplizieren | §2.3 Kontextmenü der Instanz | Dialog Name + zwei Schalter (Welten, Screenshots), Fortschritt im Downloads-Panel (§2.8) |
+| F-50 Gruppen | §2.3 Bibliotheksliste | Einklappbare Gruppenköpfe (Label-Stil Mono 11, Anzahl), Sortier-Dropdown rechts neben der Suche, Kontextmenü „Verschieben nach“ |
+| F-51 Konto pro Instanz | §2.3 Instanz → Einstellungen; §2.1 Spielleiste | Dropdown „Konto“ mit „Aktives Konto“ zuerst. Spielleiste zeigt Kopf des Startkontos |
+| F-52 Startverhalten | §2.7 Einstellungen → Allgemein | Segment „Geöffnet lassen | Minimieren | Ausblenden | Schließen“, Schalter „Nach Spielende wieder anzeigen“ |
+| F-53 Log teilen | §2.3 Instanz → Logs; Absturz-Dialog (§4.7) | Sekundärknopf „Log teilen“ → Dialog mit bereinigtem Text (Mono 12, scrollbar), Hinweis auf mclo.gs, Primärknopf „Hochladen und Link kopieren“ |
+| F-54 Voll-Export | §2.3 Kontextmenü „Exportieren ▸ Vollständig“ | Dialog mit Ordner-Checkliste und geschätzter Größe |
+| F-55 Start-Befehle | §2.3 Instanz → Einstellungen → „Erweitert“ (eingeklappt) | drei Textfelder Mono 12, Platzhalter-Hilfe darunter |
+| F-56 Einladungen | §2.1 Freundesliste (Popover), §2.8 Benachrichtigungen | Knopf „Einladen“ je Freund während des Spiels; Benachrichtigung mit „Annehmen“/„Ablehnen“ und Pack-Name |
+| F-57 Freundescode | §2.1 Freundesliste, Kopf | eigener Code in Mono mit „Kopieren“ und „Neu erzeugen“; Eingabefeld akzeptiert Name oder Code |
+| F-58 Sync-Pack teilen | Sync-Pack-Ansicht | Knopf „Teilen“ → Link-Dialog wie `ShareDialog.svelte`; Öffnen eines Links → Vorschau-Tafel (§2.9) |
+| F-60 Banner | §2.2 Spielen, oberhalb der Neuigkeiten | Hinweisleiste Info/Warnung, schließbar. „Update nötig“ als Tafel (§2.9) |
+| F-59, F-61 bis F-63 | Admin-Oberfläche des Pinecone-Servers (React-Admin) | Dashboard-Diagramme (F-59), Aktion „Server-Pack erzeugen“ und „Zurückziehen“ an der Version (F-61, F-62), Ressourcen „Konten“ und „Protokoll“ (F-63), Galerie-Freigabe (F-46) |
+
 ## 4. Kernabläufe
 
 Jeder Ablauf nennt die betroffenen Funktionen. „System“ meint Pinecone.
@@ -388,7 +413,7 @@ Jeder Ablauf nennt die betroffenen Funktionen. „System“ meint Pinecone.
     2. Exit-Code prüfen.
     3. Bei Absturz geht es weiter mit Ablauf §4.7.
 
-### 4.7 Absturz (F-35, F-36, F-37)
+### 4.7 Absturz (F-35, F-36, F-37, F-53)
 
 1. Das Spiel endet mit einem Exit-Code ungleich 0, oder ein neuer Eintrag erscheint in `crash-reports/`.
 2. System analysiert Crash-Report und Log (`crash_info`): fehlende Abhängigkeit, Java-Version, Speicher, doppelte Mod-ID oder „unbekannt“.

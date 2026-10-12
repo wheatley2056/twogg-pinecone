@@ -18,11 +18,11 @@ Die Roadmap (`05`) plant nur die Lücken. Bereits Gebautes wird nicht neu geplan
 | Datei | Inhalt |
 |---|---|
 | `00-uebersicht.md` | Vision, Zielgruppe, Nicht-Ziele, Alleinstellungsmerkmale |
-| `01-funktionen.md` | Funktionskatalog `F-01` bis `F-42` mit Akzeptanzkriterien |
+| `01-funktionen.md` | Funktionskatalog `F-01` bis `F-63` mit Akzeptanzkriterien (`F-43` bis `F-63`: Plan v2) |
 | `02-architektur.md` | Tauri-2-Aufbau, Module, IPC, Daten, Downloads, Sicherheit, Releases |
 | `03-ui-und-ablaeufe.md` | Screens mit Zuständen, Kernabläufe, Events- und Skins-Seite |
 | `04-twogg-app-anbindung.md` | Zuständigkeiten, OAuth 2.0 + PKCE, API-Vertrag, Event-Pack-Manifest, DSGVO |
-| `05-roadmap.md` | Phasen MVP → v1 → später mit Abhängigkeiten und Aufwandsspannen |
+| `05-roadmap.md` | Phasen MVP → v1 → v2 → später mit Abhängigkeiten und Aufwandsspannen |
 | `06-risiken-und-offene-fragen.md` | Externe Hürden mit Quellen, Risiken, `[ungeprüft]`-Sammlung, offene Fragen |
 | `07-rueckverfolgung.md` | Funktion → Screen → Modul → Endpunkt → Phase |
 | `anhang-datenschutzerklaerung-entwurf.md` | Entwurf der Datenschutzerklärung (juristisch zu prüfen) |
