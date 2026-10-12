@@ -43,6 +43,9 @@ pub struct Profile {
     /// Kurzes Symbol (ein Emoji oder bis zu zwei Zeichen).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// UUID des Kontos, mit dem diese Instanz startet; ohne Angabe das aktive Konto.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account: Option<String>,
     /// Geänderte Welten vor jedem Start automatisch sichern.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub backup_on_launch: bool,
@@ -76,6 +79,7 @@ impl Profile {
             resolution: None,
             color: None,
             icon: None,
+            account: None,
             backup_on_launch: false,
             backup_keep: None,
         }

@@ -27,6 +27,19 @@ pub enum Language {
     En,
 }
 
+/// Was der Launcher nach dem Spielstart mit seinem Fenster macht.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LaunchBehavior {
+    #[default]
+    Keep,
+    Minimize,
+    /// Fenster ausblenden; es kommt nach Spielende zurück.
+    Hide,
+    /// Launcher beenden; das Spiel läuft weiter, die Spielzeit dieser Sitzung entfällt.
+    Close,
+}
+
 /// Welche Launcher-Versionen das Selbst-Update anbietet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -142,6 +155,15 @@ pub struct Settings {
     /// JVM-Presets (Aikar's Flags usw.) und globaler Standard.
     #[serde(default)]
     pub jvm: crate::jvm::JvmSettings,
+    #[serde(default)]
+    pub launch_behavior: LaunchBehavior,
+    /// Nach Spielende das Fenster wieder anzeigen (bei „minimieren“).
+    #[serde(default = "default_true")]
+    pub show_after_exit: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_splash() -> bool {
@@ -168,6 +190,8 @@ impl Default for Settings {
             widgets: default_widgets(),
             language: Language::default(),
             jvm: crate::jvm::JvmSettings::default(),
+            launch_behavior: LaunchBehavior::Keep,
+            show_after_exit: true,
         }
     }
 }

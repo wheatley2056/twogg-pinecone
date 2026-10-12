@@ -53,6 +53,8 @@ pub struct ProfileDto {
     pub last_played: Option<u64>,
     pub backup_on_launch: bool,
     pub backup_keep: u32,
+    /// UUID des festen Kontos der Instanz; `None` = aktives Konto.
+    pub account: Option<String>,
 }
 
 impl ProfileDto {
@@ -68,6 +70,7 @@ impl ProfileDto {
             java: p.java.map(|j| j.display().to_string()),
             color: p.color,
             icon: p.icon,
+            account: p.account,
             backup_on_launch: p.backup_on_launch,
             backup_keep: p
                 .backup_keep

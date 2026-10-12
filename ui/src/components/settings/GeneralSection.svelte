@@ -75,6 +75,25 @@
       <SettingRow title={t("settings.systemFrame")} hint={t("settings.systemFrameHint")}>
         <Switch checked={s.systemFrame} label={t("settings.systemFrame")} onchange={(on) => change((x) => (x.systemFrame = on))} />
       </SettingRow>
+      <SettingRow title={t("settings.launchBehavior")} hint={t(`settings.launchBehaviorHint.${s.launchBehavior}`)}>
+        <Dropdown
+          label=""
+          value={s.launchBehavior}
+          options={[
+            { value: "keep", label: t("settings.launchKeep") },
+            { value: "minimize", label: t("settings.launchMinimize") },
+            { value: "hide", label: t("settings.launchHide") },
+            { value: "close", label: t("settings.launchClose") },
+          ]}
+          align="right"
+          onchange={(v) => change((x) => (x.launchBehavior = v))}
+        />
+      </SettingRow>
+      {#if s.launchBehavior === "minimize"}
+        <SettingRow title={t("settings.showAfterExit")} hint={t("settings.showAfterExitHint")}>
+          <Switch checked={s.showAfterExit} label={t("settings.showAfterExit")} onchange={(on) => change((x) => (x.showAfterExit = on))} />
+        </SettingRow>
+      {/if}
       <SettingRow title={t("settings.dataDir")} hint={info?.dataDir ?? "?"} />
     </div>
   </section>

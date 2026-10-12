@@ -88,9 +88,15 @@ pub async fn launch(
         .await
         .map_err(err)?;
     }
+    // Festes Konto der Instanz (F-51); fehlt es, wird nicht still ein anderes genommen.
+    if let Some(uuid) = &profile.account
+        && state.accounts.load().map_err(err)?.find(uuid).is_none()
+    {
+        return Err("Das Konto dieser Instanz ist nicht mehr angemeldet. Wähle unter Einstellungen der Instanz ein anderes Konto oder „Aktives Konto“.".into());
+    }
     let account = state
         .accounts
-        .session(None, state.msa.as_ref())
+        .session(profile.account.as_deref(), state.msa.as_ref())
         .await
         .map_err(err)?;
     tracing::info!(

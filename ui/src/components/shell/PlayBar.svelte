@@ -30,7 +30,9 @@
   let accountMenu: ReturnType<typeof AccountMenu> | undefined = $state();
 
   const run = $derived(selected ? runOf(selected.id) : null);
-  const hasAccount = $derived(accounts.some((a) => a.active));
+  // Festes Konto der Instanz (F-51) hat Vorrang vor dem aktiven.
+  const fixedAccount = $derived(selected?.account ? (accounts.find((a) => a.uuid === selected.account) ?? null) : null);
+  const hasAccount = $derived(!!selected?.account || accounts.some((a) => a.active));
   const progress = $derived(run && run.files > 0 ? Math.round((run.done / run.files) * 100) : null);
 
   const groups = $derived.by(() => {
@@ -143,7 +145,11 @@
         <span class="meter" style:width="{progress ?? 8}%"></span>
       {/if}
     </button>
-    {#if run?.error}<span class="play-error" role="alert">{run.error}</span>{/if}
+    {#if run?.error}
+      <span class="play-error" role="alert">{run.error}</span>
+    {:else if fixedAccount && !fixedAccount.active}
+      <span class="play-as">{t("play.as", { name: fixedAccount.name })}</span>
+    {/if}
   </div>
 
   <div class="right">
@@ -366,6 +372,18 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .play-as {
+
+    position: absolute;
+    top: calc(100% + 4px);
+    max-width: 420px;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
   }
 
   .right {
