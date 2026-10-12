@@ -235,7 +235,7 @@ pub struct ContentManager {
 }
 
 fn curseforge_missing() -> Error {
-    Error::Invalid("CurseForge ist nicht eingerichtet (PINECONE_CURSEFORGE_API_KEY fehlt)".into())
+    Error::Invalid("CurseForge ist nicht verfügbar".into())
 }
 
 /// CurseForge-Freigabestufe (1 Release, 2 Beta, 3 Alpha) als Kanal.

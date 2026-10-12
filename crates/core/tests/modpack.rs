@@ -502,8 +502,8 @@ async fn imports_curseforge_pack_with_blocked_file() {
                 "hashes": [{ "value": sha1(&body), "algo": 1 }], "gameVersions": ["1.21.1"], "dependencies": [] })
     };
     server
-        .on("POST", "/v1/mods/files", 200, json!({ "data": [file(11, 1, "a1.jar", false), file(22, 2, "b.jar", true), file(33, 3, "alt.jar", false)] }).to_string())
-        .on("POST", "/v1/mods", 200, json!({ "data": [
+        .on("POST", "/api/v1/curseforge/v1/mods/files", 200, json!({ "data": [file(11, 1, "a1.jar", false), file(22, 2, "b.jar", true), file(33, 3, "alt.jar", false)] }).to_string())
+        .on("POST", "/api/v1/curseforge/v1/mods", 200, json!({ "data": [
             { "id": 1, "name": "Mod A", "slug": "mod-a", "classId": 6 },
             { "id": 2, "name": "Mod B", "slug": "mod-b", "classId": 6, "links": { "websiteUrl": "https://www.curseforge.com/minecraft/mc-mods/mod-b" } },
             { "id": 3, "name": "Paket", "slug": "paket", "classId": 12 } ] }).to_string());
@@ -522,16 +522,15 @@ async fn imports_curseforge_pack_with_blocked_file() {
     zip.write_all(b"cf").unwrap();
     zip.finish().unwrap();
 
-    // Ohne API-Key: klare Meldung.
+    // Ohne CurseForge: klare Meldung.
     let err = packs
         .import(&zip_path, PackSource::File, None)
         .await
         .unwrap_err();
-    assert!(err.to_string().contains("API-Key"), "{err}");
+    assert!(err.to_string().contains("nicht verfügbar"), "{err}");
 
-    let packs = packs.with_curseforge(Some(
-        CurseForge::with_base(&server.base, "test-key").unwrap(),
-    ));
+    // Wie in Release-Builds: über den Proxy des Pinecone-Servers, ohne eigenen Schlüssel.
+    let packs = packs.with_curseforge(Some(CurseForge::via_server(&server.base).unwrap()));
     let result = packs
         .import(&zip_path, PackSource::File, None)
         .await
@@ -555,10 +554,15 @@ async fn imports_curseforge_pack_with_blocked_file() {
         result.missing[0].url,
         "https://www.curseforge.com/minecraft/mc-mods/mod-b/files/22"
     );
-    let req = &server.requests("/v1/mods/files")[0];
-    assert_eq!(
-        req.headers.get("x-api-key").map(String::as_str),
-        Some("test-key")
+    let req = &server.requests("/api/v1/curseforge/v1/mods/files")[0];
+    // Kein Schlüssel im Launcher; der Server erkennt ihn an der Launcher-Kennung.
+    assert_eq!(req.headers.get("x-api-key"), None);
+    assert!(
+        req.headers
+            .get("x-pinecone-client")
+            .is_some_and(|c| c.starts_with("pinecone/")),
+        "{:?}",
+        req.headers
     );
     assert!(
         !req.body.contains("99"),

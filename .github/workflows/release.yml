@@ -6,7 +6,8 @@ name: Release
 #
 # Secrets und Variable kommen aus der Umgebung „TAURI“ (oder dem Repository).
 # Benötigte Secrets:  TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-# Optionale Secrets:  PINECONE_MSA_CLIENT_ID, PINECONE_CURSEFORGE_API_KEY
+# Optionale Secrets:  PINECONE_MSA_CLIENT_ID
+# CurseForge läuft über den Pinecone-Server; der API-Schlüssel gehört nicht in den Launcher.
 # Variable:           PINECONE_UPDATE_PUBKEY (öffentlicher Schlüssel, Inhalt der .pub-Datei)
 
 on:
@@ -84,7 +85,6 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # Werden beim Bauen einkompiliert (siehe README).
           PINECONE_MSA_CLIENT_ID: ${{ secrets.PINECONE_MSA_CLIENT_ID }}
-          PINECONE_CURSEFORGE_API_KEY: ${{ secrets.PINECONE_CURSEFORGE_API_KEY }}
           PINECONE_UPDATE_PUBKEY: ${{ vars.PINECONE_UPDATE_PUBKEY }}
           # Wo installierte Launcher nach Updates suchen: standardmäßig die Releases dieses Repos
           # (Kanal Release = ohne Pre-release, Beta = alle); mit der Variable PINECONE_UPDATE_URL

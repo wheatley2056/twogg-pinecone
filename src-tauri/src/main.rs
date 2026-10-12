@@ -208,6 +208,7 @@ fn main() {
             friends::friends_accept,
             friends::friends_decline,
             friends::friends_remove,
+            friends::friends_delete_data,
             friends::twogg_server_info,
             friends::twogg_recommendations,
             twogg_app::twogg_app_events,

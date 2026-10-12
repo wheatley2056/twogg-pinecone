@@ -61,10 +61,12 @@ pub struct Launcher {
 
 impl Launcher {
     pub fn new(paths: Paths, downloader: Downloader) -> Result<Self> {
-        let curseforge = curseforge::api_key_from_env()
-            .map(CurseForge::new)
-            .transpose()?;
-        Self::with_services(paths, downloader, Modrinth::new()?, curseforge)
+        // Eigener Schlüssel nur in der Entwicklung; sonst über den Pinecone-Server.
+        let curseforge = match curseforge::api_key_from_env() {
+            Some(key) => CurseForge::new(key)?,
+            None => CurseForge::via_server(&crate::twogg::server_url())?,
+        };
+        Self::with_services(paths, downloader, Modrinth::new()?, Some(curseforge))
     }
 
     /// Mit eigenen API-Clients (z. B. gegen einen Mock-Server in Tests).

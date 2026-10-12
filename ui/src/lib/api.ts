@@ -202,6 +202,7 @@ export const api = {
   savedServers: (id: string) => invoke<SavedServer[]>("servers_list", { id }),
   recommendations: (projectType: ProjectType) => invoke<Recommendation[]>("twogg_recommendations", { projectType }),
   serverInfo: () => invoke<ServerInfo>("twogg_server_info"),
+  friendsDeleteData: () => invoke<void>("friends_delete_data"),
   friends: () => invoke<FriendsState>("friends_list"),
   friendsPresence: (activity: FriendActivity) => invoke<void>("friends_presence", { activity }),
   friendRequest: (name: string) => invoke<"requested" | "friends">("friends_request", { name }),

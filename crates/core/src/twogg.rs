@@ -106,6 +106,23 @@ pub struct DownloadLink {
 pub struct ServerInfo {
     #[serde(default)]
     pub game_server: Option<GameServer>,
+    /// CurseForge über den Proxy des Servers verfügbar.
+    #[serde(default)]
+    pub curseforge: bool,
+    /// Impressum, Datenschutz, Kontakt (in der Admin-Seite gepflegt).
+    #[serde(default)]
+    pub legal: Legal,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Legal {
+    #[serde(default)]
+    pub imprint_url: Option<String>,
+    #[serde(default)]
+    pub privacy_url: Option<String>,
+    #[serde(default)]
+    pub contact_email: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -327,6 +344,13 @@ impl TwoggClient {
     pub async fn friend_remove(&self, token: &str, uuid: &str) -> Result<()> {
         let uuid = checked_uuid(uuid)?;
         let url = format!("{}/api/v1/friends/{uuid}", self.base);
+        self.send_empty(self.http.delete(&url).bearer_auth(token), &url)
+            .await
+    }
+
+    /// Eigenes Spielerprofil samt Freundschaften auf dem Server löschen.
+    pub async fn delete_player(&self, token: &str) -> Result<()> {
+        let url = format!("{}/api/v1/me", self.base);
         self.send_empty(self.http.delete(&url).bearer_auth(token), &url)
             .await
     }

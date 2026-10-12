@@ -13,8 +13,11 @@ npx tauri signer generate -w ~/.tauri/pinecone.key
   ohne ihn lassen sich keine Updates mehr ausliefern.
 - Inhalt von `~/.tauri/pinecone.key.pub` → GitHub-Variable `PINECONE_UPDATE_PUBKEY`
   (Settings → Secrets and variables → Actions → Variables).
-- Optional: `PINECONE_MSA_CLIENT_ID` (Azure-App, siehe README) und `PINECONE_CURSEFORGE_API_KEY`
-  als Secrets; sie werden in die Release-Builds einkompiliert.
+- Optional: `PINECONE_MSA_CLIENT_ID` (Azure-App, siehe README) als Secret; sie wird in die
+  Release-Builds einkompiliert.
+- **Kein** `PINECONE_CURSEFORGE_API_KEY`: Die CurseForge-API-Bedingungen verbieten, den Schlüssel
+  weiterzugeben. Er liegt nur auf dem Pinecone-Server, der Launcher fragt über dessen Proxy. Ein
+  altes Secret dieses Namens bitte in den GitHub-Einstellungen löschen.
 
 ## Neue Version
 

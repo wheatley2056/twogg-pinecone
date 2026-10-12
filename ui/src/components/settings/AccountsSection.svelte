@@ -13,6 +13,8 @@
   let error = $state<string | null>(null);
   let loggingIn = $state(false);
   let removing = $state<Account | null>(null);
+  let deletingFriends = $state(false);
+  let friendsNotice = $state<string | null>(null);
   const valid = $derived(/^[A-Za-z0-9_]{1,16}$/.test(offlineName));
 
   async function run(action: () => Promise<unknown>) {
@@ -67,6 +69,33 @@
   {#if offlineName && !valid}<p class="hint">{t("account.nameRule")}</p>{/if}
   {#if error}<p class="error">{error}</p>{/if}
 </section>
+
+<section>
+  <h3 class="section-label">{t("friends.dataTitle")}</h3>
+  <p class="hint">{t("friends.dataHint")}</p>
+  <div class="add">
+    <button class="ghost danger" onclick={() => (deletingFriends = true)}>{t("friends.dataDelete")}</button>
+  </div>
+  {#if friendsNotice}<p class="hint">{friendsNotice}</p>{/if}
+</section>
+
+{#if deletingFriends}
+  <ConfirmDialog
+    title={t("friends.dataDeleteTitle")}
+    confirmLabel={t("friends.dataDelete")}
+    onCancel={() => (deletingFriends = false)}
+    onConfirm={async () => {
+      deletingFriends = false;
+      friendsNotice = null;
+      await run(async () => {
+        await api.friendsDeleteData();
+        friendsNotice = t("friends.dataDeleted");
+      });
+    }}
+  >
+    <p>{t("friends.dataDeleteText")}</p>
+  </ConfirmDialog>
+{/if}
 
 {#if loggingIn}
   <LoginDialog

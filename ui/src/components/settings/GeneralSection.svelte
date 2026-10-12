@@ -1,11 +1,14 @@
 <script lang="ts">
-  // Einstellungen › Allgemein: Sprache, Fensterrahmen, App-Updates, Diagnose, Datenordner.
+  // Einstellungen › Allgemein: Sprache, Fensterrahmen, App-Updates, Diagnose, Datenordner,
+  // Über Pinecone (Pflichthinweis zu Minecraft, Impressum, Datenschutz, Lizenz).
+  import { onMount } from "svelte";
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import { api, errorText } from "../../lib/api";
   import { exportDiagnostics } from "../../lib/diagnostics";
   import { t } from "../../lib/i18n.svelte";
   import { settings, updateSettings } from "../../lib/settings.svelte";
   import { checkUpdates, installUpdate, updates } from "../../lib/updates.svelte";
-  import type { AppInfo, Settings } from "../../lib/types";
+  import type { AppInfo, ServerInfo, Settings } from "../../lib/types";
   import Dropdown from "../ui/Dropdown.svelte";
   import Segmented from "../ui/Segmented.svelte";
   import Switch from "../ui/Switch.svelte";
@@ -17,6 +20,16 @@
   let notice = $state<string | null>(null);
   let diagBusy = $state(false);
   const s = $derived(settings.current);
+  let legal = $state<ServerInfo["legal"] | null>(null);
+
+  onMount(() => {
+    api
+      .serverInfo()
+      .then((i) => (legal = i.legal ?? null))
+      .catch(() => {});
+  });
+
+  const open = (url: string) => openUrl(url).catch((e: unknown) => (error = errorText(e)));
 
   async function change(fn: (x: Settings) => void) {
     error = null;
@@ -121,9 +134,46 @@
   {#if notice}<p class="notice">{notice}</p>{/if}
 </section>
 
+<section>
+  <h3 class="section-label">{t("about.title")}</h3>
+  <div class="rows">
+    <SettingRow title={t("about.name", { version: info?.version ?? "?" })} hint={t("about.license")} />
+    <p class="disclaimer">{t("about.disclaimer")}</p>
+    {#if legal?.imprintUrl || legal?.privacyUrl || legal?.contactEmail}
+      <div class="links">
+        {#if legal.imprintUrl}<button class="link" onclick={() => open(legal!.imprintUrl!)}>{t("about.imprint")}</button>{/if}
+        {#if legal.privacyUrl}<button class="link" onclick={() => open(legal!.privacyUrl!)}>{t("about.privacy")}</button>{/if}
+        {#if legal.contactEmail}<button class="link" onclick={() => open(`mailto:${legal!.contactEmail}`)}>{legal.contactEmail}</button>{/if}
+      </div>
+    {/if}
+  </div>
+</section>
+
 {#if error}<p class="error">{error}</p>{/if}
 
 <style>
+  .disclaimer {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  .links {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .link {
+    min-height: 0;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
   .head h1 {
     font-weight: 600;
     font-size: 30px;

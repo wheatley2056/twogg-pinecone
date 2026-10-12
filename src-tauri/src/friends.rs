@@ -125,6 +125,20 @@ pub async fn friends_remove(state: State<'_, AppState>, uuid: String) -> CmdResu
     with_session!(&state, |token| c.friend_remove(&token, &uuid))
 }
 
+/// Eigenes Spielerprofil auf dem Pinecone-Server löschen (Freunde, Anfragen, Status) und die
+/// Sitzung vergessen. Beim nächsten Öffnen der Freundesliste entsteht ein neues, leeres Profil.
+#[tauri::command]
+pub async fn friends_delete_data(state: State<'_, AppState>) -> CmdResult<()> {
+    let c = client(&state)?;
+    with_session!(&state, |token| c.delete_player(&token))?;
+    if let Some(active) = state.accounts.load().map_err(err)?.active_account() {
+        KeyringStore
+            .delete(&key(&active.uuid.simple().to_string()))
+            .map_err(err)?;
+    }
+    Ok(())
+}
+
 /// TwoGG-Auswahl für eine Inhaltsart (leer, wenn der Server nicht erreichbar ist).
 #[tauri::command]
 pub async fn twogg_recommendations(

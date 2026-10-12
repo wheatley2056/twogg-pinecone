@@ -230,10 +230,14 @@ reserviert.
 
 ## CurseForge
 
-Suche und Installation über CurseForge brauchen einen API-Key von https://console.curseforge.com,
-gesetzt als `PINECONE_CURSEFORGE_API_KEY` (beim Bauen gesetzt, wird er einkompiliert). Dateien, deren
+Pinecone fragt CurseForge über den Pinecone-Server (`<server>/api/v1/curseforge/...`). Der
+API-Schlüssel liegt nur dort, denn die
+[CurseForge-API-Bedingungen](https://support.curseforge.com/en/support/solutions/articles/9000207405)
+verbieten, ihn weiterzugeben, und auch, API-Daten zu speichern oder zu cachen. Hat der Server keinen
+Schlüssel, blendet Pinecone CurseForge aus. Zum Entwickeln lässt sich zur Laufzeit ein eigener
+Schlüssel mit `PINECONE_CURSEFORGE_API_KEY` setzen; er wird nicht mehr einkompiliert. Dateien, deren
 Autoren Downloads über andere Launcher gesperrt haben, meldet Pinecone mit Link zum manuellen
-Herunterladen.
+Herunterladen und lädt sie nie von anderswo.
 
 ## TwoGG: Server, Events und Freunde
 
