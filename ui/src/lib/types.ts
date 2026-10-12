@@ -51,6 +51,10 @@ export interface Profile {
   backupKeep: number;
   /** UUID des festen Kontos; `null` = aktives Konto. */
   account?: string | null;
+  /** Start-Befehle (F-55). */
+  preLaunch?: string | null;
+  wrapper?: string | null;
+  postExit?: string | null;
 }
 
 export interface ProfileInput {
@@ -85,7 +89,7 @@ export interface JavaInstallation {
   managed: boolean;
 }
 
-export type Stage = "backup" | "sync" | "loader" | "version" | "java" | "assets";
+export type Stage = "backup" | "prelaunch" | "sync" | "loader" | "version" | "java" | "assets";
 
 export type LaunchEvent =
   | { type: "stage"; stage: Stage }

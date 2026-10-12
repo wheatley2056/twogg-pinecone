@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use pinecone_core::download::Progress;
+use pinecone_core::hooks::{self, HookContext};
 use pinecone_core::launcher::{PrepareEvent, Stage};
 use pinecone_core::servers::ServerAddress;
 use pinecone_core::stats::now_secs;
@@ -143,13 +144,48 @@ pub async fn launch(
         };
         let _ = on_event.send(event);
     };
-    let command = state
+    let mut command = state
         .launcher
         .prepare(&profile, account, false, quick_play, &mut on_prepare)
         .await
         .map_err(err)?;
 
-    let log = console_log(&state.launcher.game_dir(&profile));
+    // Start-Befehle der Instanz (F-55): nur aus der Eingabe des Nutzers.
+    let game_dir = state.launcher.game_dir(&profile);
+    let hook_ctx = HookContext {
+        inst_dir: game_dir.display().to_string(),
+        inst_name: profile.name.clone(),
+        inst_id: profile.id.clone(),
+        mc_version: profile.minecraft.clone(),
+    };
+    let user_hook = |cmd: &Option<String>| -> CmdResult<Option<Vec<String>>> {
+        cmd.as_deref()
+            .map(|c| hooks::prepare(c, &hook_ctx))
+            .transpose()
+            .map(Option::flatten)
+            .map_err(err)
+    };
+    if let Some(words) = user_hook(&profile.pre_launch)? {
+        let _ = on_event.send(LaunchEvent::Stage { stage: "prelaunch" });
+        let out = hooks::run(&words, &game_dir, &hook_ctx)
+            .await
+            .map_err(err)?;
+        if !out.lines.is_empty() {
+            let _ = on_event.send(LaunchEvent::Log { lines: out.lines });
+        }
+        if !out.success {
+            return Err(format!(
+                "Der Befehl vor dem Start ist fehlgeschlagen (Exit-Code {}). Die Ausgabe steht im Log.",
+                out.code.map_or("?".into(), |c| c.to_string())
+            ));
+        }
+    }
+    if let Some(words) = user_hook(&profile.wrapper)? {
+        command.wrap(words);
+    }
+    let post_exit = user_hook(&profile.post_exit)?;
+
+    let log = console_log(&game_dir);
     let mut child = command.spawn_logged(&log).await.map_err(err)?;
     let started = now_secs();
     let _ = on_event.send(LaunchEvent::Started { pid: child.id() });
@@ -177,6 +213,15 @@ pub async fn launch(
             Ok(s) => (s.code(), s.success()),
             Err(_) => (None, false),
         };
+        if let Some(words) = post_exit {
+            match hooks::run(&words, &game_dir, &hook_ctx).await {
+                Ok(out) if !out.lines.is_empty() => {
+                    let _ = on_event.send(LaunchEvent::Log { lines: out.lines });
+                }
+                Ok(_) => {}
+                Err(e) => tracing::warn!("Befehl nach dem Ende: {e}"),
+            }
+        }
         let _ = on_event.send(LaunchEvent::Exited { code, success });
         drop(guard);
     });

@@ -199,6 +199,8 @@ export const api = {
   worlds: (id: string) => invoke<World[]>("worlds_list", { id }),
   worldBackup: (id: string, folder: string) => invoke<string>("world_backup", { id, folder }),
   worldDelete: (id: string, folder: string) => invoke<void>("world_delete", { id, folder }),
+  setProfileHooks: (id: string, preLaunch: string, wrapper: string, postExit: string) =>
+    invoke<void>("set_profile_hooks", { id, preLaunch, wrapper, postExit }),
   setProfileAccount: (id: string, account: string | null) => invoke<void>("set_profile_account", { id, account }),
   duplicateProfile: (id: string, name: string, options: { worlds: boolean; screenshots: boolean }) =>
     invoke<Profile>("duplicate_profile", { id, name, options }),

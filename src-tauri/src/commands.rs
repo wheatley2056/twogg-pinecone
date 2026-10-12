@@ -286,6 +286,33 @@ pub fn set_profile_account(
     profiles.save(&profile).map_err(err)
 }
 
+/// Start-Befehle einer Instanz setzen (F-55). Leere Felder entfernen den Befehl; Befehle mit
+/// offenen Anführungszeichen werden abgelehnt.
+#[tauri::command]
+pub fn set_profile_hooks(
+    state: State<'_, AppState>,
+    id: String,
+    pre_launch: Option<String>,
+    wrapper: Option<String>,
+    post_exit: Option<String>,
+) -> CmdResult<()> {
+    let clean = |c: Option<String>| -> CmdResult<Option<String>> {
+        match c.map(|c| c.trim().to_string()).filter(|c| !c.is_empty()) {
+            Some(c) => {
+                pinecone_core::hooks::split(&c).map_err(err)?;
+                Ok(Some(c))
+            }
+            None => Ok(None),
+        }
+    };
+    let profiles = state.launcher.profiles();
+    let mut profile = profiles.get(&id).map_err(err)?;
+    profile.pre_launch = clean(pre_launch)?;
+    profile.wrapper = clean(wrapper)?;
+    profile.post_exit = clean(post_exit)?;
+    profiles.save(&profile).map_err(err)
+}
+
 #[tauri::command]
 pub fn delete_profile(state: State<'_, AppState>, id: String) -> CmdResult<()> {
     if is_running(&state, &id) {
