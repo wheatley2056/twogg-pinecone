@@ -8,7 +8,7 @@
 
 **Grundlage dieses Vertrags:**
 
-- Das twogg.app-Repository lag für diesen Plan **nicht** vor; der Platzhalter `[PFAD ZUM TWOGG.APP-REPO]` war nicht aufgelöst.
+- Das twogg.app-Repository liegt unter `https://git.core01.twogg.de/TwoGG/twogg-app.git`. Die Netzwerkfreigabe der Arbeitsumgebung blockiert den Host bisher, der Code wurde daher noch **nicht** gelesen (Q-01).
 - Der Vertrag baut deshalb auf den Endpunkten und Feldern auf, die Pinecone 0.9.5 heute von `https://api.twogg.app` liest (`crates/core/src/twogg_app.rs`, Tabelle §3).
 - Alles darüber hinaus ist als **neu** markiert. Die Zuordnung zu echten twogg.app-Datenmodellen ist offen (Q-01 in `06`).
 - Beobachtet: `twogg.app` antwortet mit `server: cloudflare` und `via: 1.1 Caddy`, ist also nicht bei Vercel gehostet. Laufzeit und Framework des API-Hosts `api.twogg.app` sind nicht geprüft [ungeprüft, U-09].
@@ -559,7 +559,9 @@ Sie liegen nicht bei twogg.app, gehören aber zum Vertrag des Launchers. Fehler 
 |---|---|---|---|
 | `GET /api/v1/packs/{id}/versions/{v}/manifest` | Pfad `id`, `v`; Kopfzeile `X-Pinecone-Client: pinecone/*` | `200 { "manifest": <Manifest §6.1>, "signature": "<base64>" }` | `403` ohne Client-Kopfzeile, `404` Pack/Version unbekannt oder ohne Manifest, `429` Rate-Limit (wie Download-Links), `5xx` |
 | `GET /api/v1/packs/{id}/manifest/latest?channel=release` | Pfad `id`, Query `channel` (`release`/`beta`/`alpha`) | `200` wie oben für die neueste Version des Kanals | `403`, `404`, `429`, `5xx` |
-| `DELETE /api/v1/me` | Bearer Freunde-Sitzung | `204` – Spielerprofil, Sitzungen, Anfragen, Freundschaften gelöscht | `401` Sitzung ungültig, `5xx` |
+| `DELETE /api/v1/me` (umgesetzt, Server-PR #4) | Bearer Freunde-Sitzung | `204` – Spielerprofil, Sitzungen, Anfragen, Freundschaften gelöscht | `401` Sitzung ungültig, `5xx` |
+| `GET\|POST /api/v1/curseforge/v1/...` (umgesetzt, Server-PR #4) | Kopfzeile `X-Pinecone-Client`; `GET mods/search` (Query wie CurseForge, `gameId` fest 432), `GET mods/{id}/files`, `POST mods/files` `{fileIds}`, `POST mods` `{modIds}` (je ≤ 500 IDs) | Antwort von CurseForge unverändert, `Cache-Control: no-store` | `400` zu viele IDs, `403` ohne Client-Kopfzeile, `429` mehr als 240/min je IP, `502` CurseForge lehnt den Schlüssel ab oder ist nicht erreichbar, `503` kein Schlüssel eingerichtet |
+| `GET /api/v1/info` (erweitert, Server-PR #4) | – | zusätzlich `curseforge: bool` und `legal: {imprintUrl, privacyUrl, contactEmail}` | `5xx` |
 | `POST /api/admin/packs/{id}/versions` (erweitert) | Multipart: `file` (.mrpack), `manifest` (JSON), `signature` (Base64), `channel` | `201` Version | `400` Manifest passt nicht zum .mrpack (Version, Loader, SHA-512), `400` Signatur ungültig, `401`, `413` zu groß |
 
 ## 7. Was auf twogg.app-Seite neu gebaut werden muss
@@ -613,7 +615,8 @@ Die Bibliothekswahl für T-1 trifft das twogg.app-Team. Kandidaten wären etwa `
 | TwoGG-Konto ↔ Minecraft-UUID, Name, Prüfzeitpunkt | twogg.app | Eventzugang, Freigabe | Art. 6 (1) b (Teilnahme an Events) | Lösen in Pinecone oder twogg.app; Kontolöschung auf twogg.app |
 | OAuth-Refresh-Tokens (gehasht), Zustimmungen | twogg.app | Verknüpfung | Art. 6 (1) b | Widerruf, nach Ablauf, Kontolöschung |
 | Server-Logs mit IP | twogg.app, Pinecone-Server | Sicherheit, Rate-Limit | Art. 6 (1) f (berechtigtes Interesse) | [AUFBEWAHRUNGSFRIST], Vorschlag 14 Tage |
-| Freunde, Präsenz, letzte Aktivität | Pinecone-Server (SQLite) | Freundesliste | Art. 6 (1) b, Sichtbarkeit abschaltbar | „Freunde-Daten löschen“ (neu, Endpunkt `DELETE /api/v1/me` am Pinecone-Server); automatische Löschung inaktiver Profile nach [FRIST] |
+| Freunde, Präsenz, letzte Aktivität | Pinecone-Server (SQLite) | Freundesliste | Art. 6 (1) b, Sichtbarkeit abschaltbar | „Meine Freunde-Daten löschen“ unter Einstellungen › Konten (`DELETE /api/v1/me`, umgesetzt); automatische Löschung inaktiver Profile nach 365 Tagen (`PINECONE_PLAYER_RETENTION_DAYS`, umgesetzt) |
+| CurseForge-Anfragen (Suchbegriffe, IDs) | Pinecone-Server, nur durchgereicht | CurseForge-Inhalte | Art. 6 (1) b | werden nicht gespeichert; IP nur im Arbeitsspeicher für die Ratenbegrenzung |
 | Spielzeit, Instanzen, Logs | nur Gerät | Funktionen | – (verlässt das Gerät nicht) | Deinstallation / Ordner löschen |
 | Diagnose-ZIP | Gerät, vom Nutzer weitergegeben | Support | Einwilligung durch aktives Versenden | Nutzer |
 
@@ -621,7 +624,7 @@ Die Bibliothekswahl für T-1 trifft das twogg.app-Team. Kandidaten wären etwa `
 
 ### 9.2 Pflichten
 
-- **Informationspflicht** (Art. 13): Pinecone verlinkt in Einstellungen › Allgemein und im Erststart auf eine Datenschutzerklärung [URL DATENSCHUTZ]. Sie beschreibt Launcher, Pinecone-Server und den twogg.app-Anteil. Hilfe: DSK-Kurzpapier Nr. 10.
+- **Informationspflicht** (Art. 13): Pinecone verlinkt in Einstellungen › Allgemein („Über Pinecone“, umgesetzt) auf die Datenschutzerklärung, deren Adresse im Admin gepflegt wird. Ein Entwurf liegt in `anhang-datenschutzerklaerung-entwurf.md`. Sie beschreibt Launcher, Pinecone-Server und den twogg.app-Anteil. Hilfe: DSK-Kurzpapier Nr. 10.
 - **Recht auf Löschung** (Art. 17):
   - Lokale Daten löscht der Nutzer selbst, mit dem neuen Knopf „Alle lokalen Daten löschen“ unter Einstellungen › Allgemein.
   - Server-Daten löscht er per Knopf (Pinecone-Server) bzw. über die twogg.app-Kontolöschung.

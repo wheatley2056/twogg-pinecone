@@ -140,7 +140,7 @@ später  macOS, Discord RPC, Import aus Fremd-Launchern, SSE
 | Block | Funktionen | Lücken / Aufgaben | Abhängigkeit | Aufwand |
 |---|---|---|---|---|
 | v1-1 Instanzen | F-19, F-20, F-32 | Event-Instanz: „Version wechseln“ sperren (AK-20.3), Speicherempfehlung aus Manifest (AK-32.4) | MVP-A | 2–4 PT |
-| v1-2 Inhalte | F-21, F-22, F-23 | 429-Behandlung, Installation in Event-Instanzen nur bei `allowExtraMods`. **CurseForge-Klärung** (`06` H-02): Schlüssel nicht im Client ausliefern, Abfragen über einen Proxy am Pinecone-Server oder Quelle bis zur Klärung abschalten | MVP-A, Q-06 | 3–10 PT (je nach Klärung) |
+| v1-2 Inhalte | F-21, F-22, F-23 | 429-Behandlung, Installation in Event-Instanzen nur bei `allowExtraMods`. CurseForge-Proxy ist umgesetzt (12.10.2026) | MVP-A | 2–4 PT |
 | v1-3 Modpacks | F-24, F-25, F-26 | Event-Instanzen vom `.mrpack`-Export ausnehmen (AK-25.3) | MVP-A | 1–2 PT |
 | v1-4 Spielwelt | F-27, F-28, F-29, F-40 | Abnahme | – | 1–2 PT |
 | v1-5 Persönliches | F-30, F-31 | Abnahme, Sync-Packs vs. Pflicht-Mods testen (AK-31.3) | MVP-A | 1–2 PT |
@@ -148,7 +148,7 @@ später  macOS, Discord RPC, Import aus Fremd-Launchern, SSE
 | v1-7 Betrieb | F-36, F-39 | Deep Link `pinecone://event/<id>` (AK-39.2) | MVP-B | 1–2 PT |
 | v1-8 Downloads | (Querschnitt F-04, F-05, F-10, F-21, F-24) | Fortsetzen per `Range` (`02` §6), Begrenzung je Host | – | 3–5 PT |
 
-**Summe v1.x:** 15–32 PT
+**Summe v1.x:** 14–26 PT
 
 ## 7. Später (nicht eingeplant)
 
@@ -165,12 +165,12 @@ später  macOS, Discord RPC, Import aus Fremd-Launchern, SSE
 
 | Abhängigkeit | Benötigt für | Wer | Stand |
 |---|---|---|---|
-| Freigabe der Azure-App-ID für Minecraft-Services | F-01 (alle Logins) | [VERANTWORTLICHE PERSON] | Release-Builds werden mit `PINECONE_MSA_CLIENT_ID` gebaut; ob die ID freigegeben ist, steht nicht im Repo (Q-12) |
+| Freigabe der Azure-App-ID für Minecraft-Services | F-01 (alle Logins) | [VERANTWORTLICHE PERSON] | beantragt, wartet (Q-12) |
 | twogg.app T-1 bis T-8 | MVP-B | twogg.app-Team | offen |
 | Ed25519-Schlüssel und Ablage | MVP-A | Orga-Team | offen (Q-07) |
 | Code-Signing (Azure Artifact Signing oder OV-Zertifikat) | MVP-D | [VERANTWORTLICHE PERSON] | offen (U-06) |
-| CurseForge-Klärung | v1-2 | [VERANTWORTLICHE PERSON] | offen (Q-06) |
-| Datenschutzerklärung | MVP-D | Verantwortliche Stelle TwoGG | offen (Q-08) |
+| CurseForge | v1-2 | [VERANTWORTLICHE PERSON] | Proxy umgesetzt; Schlüssel beantragen und auf dem Server setzen, Rückfrage Lockfile (Q-06) |
+| Datenschutzerklärung | MVP-D | Verantwortliche Stelle TwoGG | Entwurf liegt vor, juristisch prüfen und veröffentlichen (Q-08) |
 
 ## 9. Zuordnung aller Funktionen zu Phasen
 

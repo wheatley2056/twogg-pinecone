@@ -25,6 +25,7 @@ Die Roadmap (`05`) plant nur die Lücken. Bereits Gebautes wird nicht neu geplan
 | `05-roadmap.md` | Phasen MVP → v1 → später mit Abhängigkeiten und Aufwandsspannen |
 | `06-risiken-und-offene-fragen.md` | Externe Hürden mit Quellen, Risiken, `[ungeprüft]`-Sammlung, offene Fragen |
 | `07-rueckverfolgung.md` | Funktion → Screen → Modul → Endpunkt → Phase |
+| `anhang-datenschutzerklaerung-entwurf.md` | Entwurf der Datenschutzerklärung (juristisch zu prüfen) |
 
 ## Vision (3 Sätze)
 

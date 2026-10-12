@@ -31,7 +31,7 @@ Quellen wurden am **12.10.2026** abgerufen. Das Datum in Klammern ist der Stand 
 **Folgen:**
 
 - Ohne freigegebene Client-ID funktioniert kein Microsoft-Login. F-01 ist dann gesperrt (AK-01.5).
-- Release-Builds bekommen die ID über `PINECONE_MSA_CLIENT_ID`. Ob die genutzte ID freigegeben ist, steht nicht im Repository (Q-12).
+- Release-Builds bekommen die ID über `PINECONE_MSA_CLIENT_ID`. Die Freigabe ist beantragt und steht aus (Q-12, Stand 12.10.2026).
 
 **Maßnahme:**
 
@@ -63,10 +63,14 @@ Quellen wurden am **12.10.2026** abgerufen. Das Datum in Klammern ist der Stand 
 2. `pack.lock.json` speichert CurseForge-Projekt- und Datei-IDs sowie Namen. Ob das als verbotenes „caching“ gilt, ist unklar.
 3. Ein Launcher mit CurseForge-Inhalten könnte als „indirekt konkurrierend“ gelten. Ob Overwolf das bei Launchern so sieht, ist offen.
 
-**Maßnahme:** Klärung mit CurseForge bzw. Overwolf (Q-06). Bis dahin zwei Wege:
+**Maßnahme (umgesetzt, Launcher-PR #22, Server-PR #4):** Weg (a) Proxy.
 
-- **(a) Proxy:** CurseForge-Abfragen laufen über den Pinecone-Server, der Schlüssel bleibt dort.
-- **(b) Abschalten:** CurseForge ist in Release-Builds abgeschaltet (AK-22.1 greift dann).
+- Der Schlüssel liegt nur auf dem Pinecone-Server.
+- Der Proxy leitet nur vier Abfragen weiter, die Spiel-ID ist fest Minecraft.
+- Er speichert nichts und antwortet mit `Cache-Control: no-store`.
+- Ohne Schlüssel blendet der Launcher CurseForge aus (AK-22.1).
+
+Offen bleibt der Schlüsselantrag und die Rückfrage zum Lockfile (Q-06).
 
 Nicht verteilbare Dateien werden weiter nie von Fremdquellen geladen (AK-22.2).
 
@@ -102,7 +106,7 @@ Nicht verteilbare Dateien werden weiter nie von Fremdquellen geladen (AK-22.2).
 **Folgen für Pinecone:**
 
 - **Name „TwoGG Pinecone“:** enthält „Minecraft“ nicht, ✔. Das Logo ist ein eigener Kiefernzapfen, ✔.
-- **Pflichthinweis fehlt heute:** Er gehört in Einstellungen › Allgemein („Über Pinecone“), auf die Landing-Page (`site/`) und auf die Pack-Seiten des Servers. Dazu kommt ein Kontakt per E-Mail oder Impressum: [KONTAKT-ADRESSE].
+- **Pflichthinweis (umgesetzt 12.10.2026):** steht in Einstellungen › Allgemein („Über Pinecone“), auf der Landing-Page (`site/`) und im Fuß der Pack-Seiten. Der Kontakt per E-Mail und das Impressum werden im Admin gepflegt (Einstellungen › Rechtliches) und erscheinen dann automatisch. **Offen:** die Werte eintragen ([KONTAKT-ADRESSE], [URL IMPRESSUM]). Auf der statischen Landing-Page müssen sie von Hand ergänzt werden.
 - **Spieldateien:** Pinecone lädt sie direkt von Mojang, ✔.
 - **Event-Packs:** Sie dürfen keine Minecraft-JARs oder Mojang-Assets in `overrides/` enthalten. Das prüft der Server beim Upload (neue Prüfregel, MVP-A).
 
@@ -157,7 +161,7 @@ Nicht verteilbare Dateien werden weiter nie von Fremdquellen geladen (AK-22.2).
 |---|---|---|---|---|
 | R-01 | Microsoft-Freigabe fehlt, wird entzogen oder verzögert sich | mittel | kein Login, Launcher unbrauchbar | H-01-Maßnahmen, Status dokumentieren, Offline-Konto nur für Tests |
 | R-02 | twogg.app-Team hat keine Kapazität für T-1 bis T-8 | mittel | MVP-B blockiert | Launcher-Seite gegen Nachbau-Server fertigstellen. Übergangsweise bleiben die heutigen Endpunkte, aber **ohne** Passwort-Login (nur Discord-Handoff im Standardbrowser statt WebView, falls twogg.app das kann) |
-| R-03 | CurseForge sperrt den Schlüssel | mittel | CurseForge-Inhalte fallen aus | H-02-Maßnahmen, CurseForge ist nicht MVP |
+| R-03 | CurseForge sperrt den Schlüssel | gering (Schlüssel nur noch auf dem Server) | CurseForge-Inhalte fallen aus | Proxy umgesetzt (H-02), CurseForge ist nicht MVP |
 | R-04 | Signaturschlüssel für Event-Packs geht verloren oder wird kompromittiert | gering | keine neuen Packs bzw. gefälschte Packs | Schlüssel doppelt gesichert, Rotation (`04` §6.2), Sperrliste per Launcher-Update |
 | R-05 | Updater-Schlüssel geht verloren | gering | keine Updates mehr für Bestandsnutzer | Offline-Sicherung bei zwei Personen |
 | R-06 | Mojang ändert Startargumente, Auth oder Manifeste | hoch (laufend) | Start bricht für neue Versionen | Mock-Tests, schnelle Patch-Releases, Beta-Kanal für frühe Tests |
@@ -213,18 +217,18 @@ Nicht verteilbare Dateien werden weiter nie von Fremdquellen geladen (AK-22.2).
 
 | ID | Frage | Warum offen | Wer entscheidet | Betrifft |
 |---|---|---|---|---|
-| Q-01 | Wie sehen die echten twogg.app-Datenmodelle aus (Nutzer, Event, Registrierung, Team, Gilde)? Wie entstehen `mcUuid`/`mcUsername` heute und sind sie geprüft? | Das twogg.app-Repo lag nicht vor (`[PFAD ZUM TWOGG.APP-REPO]` nicht aufgelöst). Der Vertrag in `04` stützt sich nur auf die vom Launcher gelesenen Felder | twogg.app-Team | `04` §4, T-3 bis T-5 |
-| Q-02 | Bleiben Event-Packs auf dem Pinecone-Server, oder führt twogg.app die Zuordnung Event → Pack (`pineconePackId`)? | Heute hält der Pinecone-Server `eventId`; die feste Entscheidung regelt nur Anmeldungen, Teams und Bewerbungen | Orga-Team + twogg.app-Team | F-10, `02` §8 |
+| Q-01 | Wie sehen die echten twogg.app-Datenmodelle aus (Nutzer, Event, Registrierung, Team, Gilde)? Wie entstehen `mcUuid`/`mcUsername` heute und sind sie geprüft? | Das Repo ist bekannt (`https://git.core01.twogg.de/TwoGG/twogg-app.git`), aber die Netzwerkfreigabe der Arbeitsumgebung blockiert den Host (Stand 12.10.2026). Der Vertrag in `04` stützt sich bis dahin nur auf die vom Launcher gelesenen Felder | Abgleich, sobald der Host freigegeben ist | `04` §4, T-3 bis T-5 |
+| Q-02 | ~~Wo wird ein Event-Pack einem Event zugeordnet?~~ **Entschieden (12.10.2026):** in der Admin-Oberfläche des Pinecone-Servers (`pinecone.twogg.app/admin`, Repo `wheatley2056/twogg-pinecone-server`) über das Feld `eventId`. twogg.app braucht kein Feld `pineconePackId` | – | Orga-Team | F-10, `02` §8 |
 | Q-03 | Welche Statuswerte gibt es in twogg.app wirklich (Registrierung, Team, Vormerkung, Einladung, Bewerbung), und wie werden sie zu `Participation.status` abgebildet? | Statuswerte der heutigen Antwort sind im Launcher nur teilweise ausgewertet, die Wertemenge ist unbekannt | twogg.app-Team | F-09 |
 | Q-04 | Reicht Polling (60 s vor Events), oder braucht das Orga-Team sofortige Freigaben (SSE)? | Bedarf nicht bekannt | Orga-Team | `04` §5 |
 | Q-05 | Werden die Pinecone-Freunde (Minecraft-Identität, Pinecone-Server) mit den twogg.app-Freunden zusammengeführt, oder bleiben es zwei Listen? | Zwei Systeme existieren. Der twogg.app-Endpunkt ist im Launcher angebunden, aber ohne UI | Orga-Team | F-17 |
-| Q-06 | CurseForge: Ist der eingebaute Schlüssel mit den API-Bedingungen vereinbar? Proxy über den Pinecone-Server oder Abschalten? Gilt die Lockfile-Speicherung als Caching? | Bedingungen verbieten Weitergabe und Caching, Auslegung für Launcher unklar | [VERANTWORTLICHE PERSON] mit Overwolf | F-22, F-26, H-02 |
+| Q-06 | ~~Wie wird CurseForge legal angebunden?~~ **Umgesetzt (12.10.2026):** Der Schlüssel liegt nur auf dem Pinecone-Server (`PINECONE_CURSEFORGE_API_KEY`), der Launcher fragt über dessen Proxy `/api/v1/curseforge/...`; Release-Builds enthalten keinen Schlüssel mehr, der Proxy speichert nichts (`no-store`). **Noch offen:** einen eigenen Schlüssel für „TwoGG Pinecone“ über das CurseForge-Formular beantragen; bei Overwolf nachfragen, ob das Speichern von Projekt-/Datei-IDs in `pack.lock.json` (Daten der Nutzer-Installation) als „caching“ gilt | Die Auslegung der Bedingungen für Launcher ist nicht öffentlich dokumentiert | [VERANTWORTLICHE PERSON] mit Overwolf | F-22, F-26, H-02 |
 | Q-07 | Wer verwahrt den Ed25519-Schlüssel für Event-Packs, und wer darf signieren? | Organisatorische Entscheidung | Orga-Team | F-10, `04` §6.2 |
-| Q-08 | Rechtsgrundlagen, Aufbewahrungsfristen (Logs, inaktive Freundesprofile), Umgang mit Minderjährigen, Verantwortliche Stelle | Juristische Prüfung nötig, nicht Teil eines technischen Plans | Verantwortliche Stelle TwoGG | `04` §9 |
+| Q-08 | Rechtsgrundlagen, Aufbewahrungsfristen, Umgang mit Minderjährigen, Verantwortliche Stelle | **Teilweise umgesetzt (12.10.2026):** Löschen der Freunde-Daten durch den Spieler, automatische Löschung inaktiver Profile nach 365 Tagen, Felder für Impressum/Datenschutz/Kontakt im Admin, Entwurf einer Datenschutzerklärung (`anhang-datenschutzerklaerung-entwurf.md`). Offen bleiben Verantwortliche Stelle, juristische Prüfung des Entwurfs und Minderjährige | Verantwortliche Stelle TwoGG | `04` §9 |
 | Q-09 | Sollen Event-Hinweise auch bei geschlossenem Launcher kommen (Tray, Autostart)? | Abwägung Nutzen gegen „läuft im Hintergrund“ | Orga-Team | F-14 |
 | Q-10 | Datenordner unter Windows: `%APPDATA%` (Roaming, heute) oder `%LOCALAPPDATA%`? | Roaming-Profile in Schul- und Firmennetzen könnten große Assets synchronisieren. Ein Umzug bricht bestehende Installationen ohne Migration | Launcher-Team | `02` §9.1 |
 | Q-11 | Fehler- bzw. Gefahrenfarbe: ins Design-System aufnehmen oder `--danger` aus dem Code entfernen? | Das Design-System kennt keine Fehlerfarbe, der Code nutzt `--danger` | Design-Verantwortliche | `03` §1 |
-| Q-12 | Ist die in Releases verwendete Azure-App-ID für die Minecraft-Services freigegeben, und wer hat sie beantragt? | Steht nicht im Repository | [VERANTWORTLICHE PERSON] | F-01, H-01 |
+| Q-12 | Ist die in Releases verwendete Azure-App-ID für die Minecraft-Services freigegeben? | **Beantragt, Freigabe steht aus (Stand 12.10.2026).** Bis dahin funktioniert der Microsoft-Login mit dieser App-ID nicht | [VERANTWORTLICHE PERSON] | F-01, H-01 |
 | Q-13 | Ist die Gilde in REVIVAL: Avalon ein eigenes Datenfeld oder ein Team mit Typ „Gilde“? | Datenmodell unbekannt (Q-01) | twogg.app-Team | F-09, `Participation.guild` |
 | Q-14 | Server-Adressen: Wo werden `[SERVER-ADRESSE]` (Community-Server) und die Eventserver gepflegt, und wer darf sie ändern? | Heute Admin des Pinecone-Servers bzw. twogg.app `/join`. Zuständigkeit nicht schriftlich festgelegt | Orga-Team | F-13, F-16 |
 

@@ -266,7 +266,9 @@ Bestand in 0.9.5: 121 Befehle, registriert in `src-tauri/src/main.rs`. Gruppiert
   - Pack-Seiten (HTML).
   - Neuigkeiten, TwoGG-Auswahl, Community-Server-Adresse, Freunde.
   - Admin-Oberfläche (React-Admin) für das Team.
-- **Technik:** Rust axum 0.8 mit SQLite (sqlx). Eigenes Repo `split/server`, Docker auf `[HOST]` hinter Nginx Proxy Manager.
+- **Technik:** Rust axum 0.8 mit SQLite (sqlx). Eigenes Repo `wheatley2056/twogg-pinecone-server`, Docker auf core01 hinter Nginx Proxy Manager, Auto-Update nach Merge auf `main`.
+- **Zuordnung Event → Pack (entschieden):** in der Admin-Oberfläche `pinecone.twogg.app/admin` über das Feld `eventId` des Packs.
+- **CurseForge-Proxy (umgesetzt):** `/api/v1/curseforge/...` mit dem Schlüssel nur auf dem Server (`06` H-02).
 - **Endpunkte, die der Launcher nutzt:**
   - `GET /api/v1/info`, `/news`, `/packs`, `/packs/{id}`
   - `POST /api/v1/packs/{id}/versions/{v}/download`
