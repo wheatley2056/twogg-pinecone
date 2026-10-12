@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 0.9.8
 
 - **Welt-Backups wiederherstellen.** Im Reiter „Welten“ zeigt „Backups (n)“ die Sicherungen einer
   Welt; „Wiederherstellen“ setzt sie zurück und sichert vorher den aktuellen Stand. Backups
