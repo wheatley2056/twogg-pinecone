@@ -996,7 +996,7 @@ Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken ge
 - **Nutzerziel:** Ich schicke einem Helfer im Discord einen Link zu meinem Log statt einer Datei.
 - **Verhalten:** In der Log-Ansicht (F-35) und im Absturz-Dialog: „Log teilen“. Pinecone entfernt Tokens, Pfade mit Benutzernamen und IP-Adressen (gleiche Redaktion wie `core/diagnostics`), zeigt den bereinigten Text zur Kontrolle und lädt ihn nach Bestätigung zu mclo.gs hoch. Der Link wird kopiert.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (PR #30: `core/logshare`; `LogShareDialog.svelte` im Reiter „Logs“). Aus dem Absturz-Dialog führt die Benachrichtigung „Log“ in den Reiter
 - **Akzeptanzkriterien:**
   - AK-53.1 Kein Upload ohne Bestätigung im Dialog; der Dialog nennt den Dienst (mclo.gs).
   - AK-53.2 Der Redaktions-Test von `core/diagnostics` gilt auch für den Upload.
