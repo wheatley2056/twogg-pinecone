@@ -923,7 +923,7 @@ Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken ge
 - **Nutzerziel:** Geht eine Welt kaputt, hole ich mir einen älteren Stand zurück.
 - **Verhalten:** Die Welten-Ansicht (F-28) zeigt je Welt die vorhandenen Backups (heute nur Anlegen über `core/worlds::backup`). „Wiederherstellen“ ersetzt die Welt durch das Backup; vorher legt Pinecone ein Backup des aktuellen Stands an. Pro Instanz lässt sich „Vor jedem Start sichern“ einschalten; Pinecone behält die letzten N Backups (Standard 5).
 - **Priorität:** v2
-- **Ist-Stand:** teilweise (Backup anlegen vorhanden, Wiederherstellen und Automatik fehlen)
+- **Ist-Stand:** vorhanden (PR #24: `core/worlds` `restore`, `prune_auto`, `changed_since_backup`; `WorldsTab.svelte`). Offen: Prüfung des freien Speicherplatzes vor dem Wiederherstellen
 - **Akzeptanzkriterien:**
   - AK-48.1 Wiederherstellen ist gesperrt, solange die Instanz läuft.
   - AK-48.2 Vor dem Wiederherstellen entsteht immer ein Sicherheits-Backup.
@@ -939,7 +939,7 @@ Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken ge
 - **Nutzerziel:** Ich probiere Mods aus, ohne meine laufende Instanz zu gefährden.
 - **Verhalten:** Kontextmenü der Instanz → „Duplizieren“. Dialog: Name, „Welten mitkopieren“ (Standard aus), „Screenshots mitkopieren“ (Standard aus). Pack-Bindung (Modrinth/CurseForge/TwoGG) bleibt erhalten, bei Event-Instanzen wird sie entfernt (Kopie ist eine normale Instanz).
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (PR #25: `ProfileStore::duplicate`; `DuplicateDialog.svelte`)
 - **Akzeptanzkriterien:**
   - AK-49.1 Die Kopie startet ohne erneuten Download von Mods.
   - AK-49.2 Spielzeit und „zuletzt gespielt“ beginnen bei null.
@@ -953,7 +953,7 @@ Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken ge
 - **Nutzerziel:** Bei vielen Instanzen finde ich schnell die richtige.
 - **Verhalten:** In der Bibliothek lassen sich Gruppen anlegen (z. B. „Events“, „Modded“, „Vanilla“) und Instanzen per Drag & Drop oder Kontextmenü zuordnen. Gruppen sind einklappbar. Sortierung: Name, zuletzt gespielt, Spielzeit, Erstelldatum. Event-Instanzen landen automatisch in „Events“, solange der Nutzer sie nicht verschiebt.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (PR #28: Profilfeld `group`, Einstellungen `librarySort`/`collapsedGroups`; `LibraryPage.svelte`, `GroupDialog.svelte`). Sortierung nach Erstelldatum fehlt (kein Erstelldatum gespeichert)
 - **Akzeptanzkriterien:**
   - AK-50.1 Gruppen und Sortierung bleiben nach Neustart erhalten.
   - AK-50.2 Drag & Drop hat eine Tastatur-Alternative (Kontextmenü „Verschieben nach“, AK-38.2).
@@ -968,7 +968,7 @@ Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken ge
 - **Nutzerziel:** Meine Event-Instanz startet immer mit meinem Hauptkonto, die Test-Instanz mit dem Zweitkonto.
 - **Verhalten:** Instanz-Einstellungen → „Konto“: „Aktives Konto“ (Standard) oder ein bestimmtes Konto. Die Spielleiste zeigt das Konto, mit dem gestartet wird. Neues Feld `account` am `Profile` (`core/profiles`).
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** teilweise (PR #26: Profilfeld `account`, Spielleiste „als …“). AK-51.2 fehlt, folgt mit MVP-B
 - **Akzeptanzkriterien:**
   - AK-51.1 Ist das gewählte Konto entfernt oder abgelaufen, fragt Pinecone vor dem Start statt still ein anderes zu nehmen.
   - AK-51.2 Event-Instanzen warnen, wenn das gewählte Konto nicht die bei twogg.app verknüpfte UUID hat.
@@ -982,7 +982,7 @@ Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken ge
 - **Nutzerziel:** Der Launcher soll mir beim Spielen nicht im Weg sein.
 - **Verhalten:** Einstellungen → Allgemein → „Beim Spielstart“: geöffnet lassen (Standard), minimieren, ausblenden (in Tray bzw. Taskleiste), schließen. „Nach Spielende wieder anzeigen“ holt den Launcher zurück, außer bei „schließen“.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (PR #26: Einstellungen `launchBehavior`/`showAfterExit`, umgesetzt in `App.svelte`)
 - **Akzeptanzkriterien:**
   - AK-52.1 Bei „schließen“ läuft das Spiel weiter; Spielzeit wird beim nächsten Start aus dem Log nachgetragen oder entfällt mit Hinweis.
   - AK-52.2 Bei einem Absturz erscheint der Launcher immer wieder (F-35), auch bei „ausblenden“.
@@ -1011,7 +1011,7 @@ Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken ge
 - **Nutzerziel:** Ich ziehe eine Instanz komplett auf einen anderen PC um, mit Welten und Einstellungen.
 - **Verhalten:** Kontextmenü → „Exportieren“ → „Vollständig (.pinecone.zip)“ neben dem vorhandenen `.mrpack` (F-25). Auswahl der Ordner (Welten, Configs, Screenshots, Resourcepacks, Shaderpacks, `options.txt`). Import über Bibliothek → „Importieren“ oder Doppelklick (Dateizuordnung, F-39).
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (PR #29: `core/archive`; Modus „Komplett (Umzug)“ in `ShareDialog.svelte`, Import über die Modpack-Vorschau)
 - **Akzeptanzkriterien:**
   - AK-54.1 Der Export enthält nie Konten, Tokens oder Pinecone-Einstellungen außerhalb der Instanz.
   - AK-54.2 Event-Instanzen lassen sich exportieren, importiert werden sie aber als normale Instanz.
@@ -1026,7 +1026,7 @@ Rein lokale Funktionen ohne neue Server-Abhängigkeit. Sie schließen Lücken ge
 - **Nutzerziel:** Ich starte Minecraft unter Linux mit `gamemoderun` oder auf dem Laptop mit der dedizierten Grafikkarte.
 - **Verhalten:** Instanz-Einstellungen → „Erweitert“: Befehl vor dem Start, Wrapper-Befehl, Befehl nach dem Ende. Platzhalter `$INST_DIR`, `$INST_NAME`, `$MC_VERSION`. Global vorbelegbar unter Einstellungen → Java.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** teilweise (PR #27: `core/hooks`, Profilfelder `pre_launch`/`wrapper`/`post_exit`). Globale Vorbelegung unter Einstellungen → Java fehlt
 - **Akzeptanzkriterien:**
   - AK-55.1 Scheitert der Befehl vor dem Start (Exit-Code ≠ 0), startet das Spiel nicht und die Ausgabe erscheint im Log.
   - AK-55.2 Befehle kommen nie aus Modpacks, Sync-Packs oder Event-Manifesten, nur aus der Eingabe des Nutzers.

@@ -160,7 +160,7 @@ später  macOS, Import aus Fremd-Launchern, SSE
 
 | Block | Funktionen | Aufgaben | Abhängigkeit | Aufwand |
 |---|---|---|---|---|
-| v2-A Komfort | F-48, F-49, F-50, F-51, F-52, F-53, F-54, F-55 | rein lokal: `core/worlds` (Restore, Rotation), `core/profiles` (Duplizieren, `group`, `account`, Befehle), `tauri/game` (Startverhalten, Wrapper), Log-Upload mit Redaktion aus `core/diagnostics` | v1.x | 10–16 PT |
+| v2-A Komfort | F-48, F-49, F-50, F-51, F-52, F-53, F-54, F-55 | **Umgesetzt (12.10.2026, PR #24–#29) bis auf F-53 Log teilen** (wartet auf Q-17) und Restpunkte: AK-51.2, globale Start-Befehle (F-55), Speicherplatzprüfung (F-48) | v1.x | 1–2 PT Rest |
 | v2-B Social | F-41, F-56, F-57, F-58 | Discord-IPC, Server: `invites`, Freundescodes, `sync-shares`; Launcher: Einladungs-Benachrichtigung und Annehmen-Ablauf | v1-6 (F-17) | 7–12 PT |
 | v2-C Events | F-43, F-44, F-45, F-46, F-47 | Ergebnisse, Lobby (Server-Endpunkt `lobby`), Gilden-Seite, Galerie mit Freigabe, Archiv mit Welt-Download | MVP-B, T-12 bis T-14, Q-15 | 12–20 PT + twogg.app |
 | v2-D Admin | F-59, F-60, F-61, F-62, F-63 | Tageszähler, Banner/Mindestversion in `/info`, Server-Pack aus `.mrpack` (`env.server`), Zurückziehen, Admin-Konten mit Rollen und Protokoll | – | 9–15 PT |
