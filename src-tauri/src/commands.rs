@@ -464,6 +464,25 @@ pub fn last_log(
         .collect())
 }
 
+/// Bereinigtes Log der letzten Sitzung zum Teilen (F-53); wird erst nach Bestätigung hochgeladen.
+#[tauri::command]
+pub fn log_share_preview(state: State<'_, AppState>, id: String) -> CmdResult<String> {
+    let profile = state.launcher.profiles().get(&id).map_err(err)?;
+    let path = crate::game::console_log(&state.launcher.game_dir(&profile));
+    let text = std::fs::read(&path)
+        .map(|b| String::from_utf8_lossy(&b).into_owned())
+        .map_err(|_| "Zu dieser Instanz gibt es noch kein Log.".to_string())?;
+    Ok(pinecone_core::logshare::prepare(&text))
+}
+
+/// Lädt den bestätigten Text zu mclo.gs hoch und gibt den Link zurück.
+#[tauri::command]
+pub async fn log_share_upload(text: String) -> CmdResult<String> {
+    pinecone_core::logshare::upload(pinecone_core::logshare::API, &text)
+        .await
+        .map_err(err)
+}
+
 /// Für Offline-Accounts kein Hinweis nötig, Microsoft-Accounts melden sich beim Start neu an.
 pub fn kind_label(kind: AccountKind) -> &'static str {
     match kind {

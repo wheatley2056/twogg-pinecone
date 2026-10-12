@@ -192,6 +192,8 @@ fn main() {
             commands::login_cancel,
             commands::java_list,
             commands::last_log,
+            commands::log_share_preview,
+            commands::log_share_upload,
             splash::splash_finished,
             dashboard::dashboard,
             dashboard::ping_server,

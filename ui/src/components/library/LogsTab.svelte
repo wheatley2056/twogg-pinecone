@@ -6,6 +6,7 @@
   import { t } from "../../lib/i18n.svelte";
   import { ensureRun, runOf } from "../../lib/runs.svelte";
   import type { Profile } from "../../lib/types";
+  import LogShareDialog from "./LogShareDialog.svelte";
 
   let { profile }: { profile: Profile } = $props();
 
@@ -14,6 +15,7 @@
   let stick = true;
   let notice = $state<string | null>(null);
   let error = $state<string | null>(null);
+  let sharing = $state(false);
 
   onMount(async () => {
     // Nach Neustart des Launchers die letzte Ausgabe zeigen.
@@ -53,6 +55,7 @@
         <span class="dim">{t("logs.lastSession")}</span>
       {/if}
     </span>
+    <button class="small" onclick={() => (sharing = true)} disabled={run.status !== "idle" || run.lines.length === 0}>{t("logshare.button")}</button>
     <button class="small" onclick={exportLogs}>{t("diag.exportProfile")}</button>
     <button class="small ghost" onclick={() => (ensureRun(profile.id).lines = [])} disabled={run.lines.length === 0}>{t("profile.clear")}</button>
   </div>
@@ -64,6 +67,10 @@
         class:err={line.includes("/ERROR]") || line.startsWith("\tat ") || line.includes("Exception")}>{line}
 </span>{:else}<span class="dim">{t("profile.noOutput")}</span>{/each}</pre>
 </div>
+
+{#if sharing}
+  <LogShareDialog {profile} onClose={() => (sharing = false)} />
+{/if}
 
 <style>
   .tab {

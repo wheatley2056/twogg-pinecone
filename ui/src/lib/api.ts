@@ -203,6 +203,8 @@ export const api = {
   instanceExport: (id: string, path: string, options: InstanceExportOptions) =>
     invoke<void>("instance_export", { id, path, options }),
   instanceExportSize: (id: string, options: InstanceExportOptions) => invoke<number>("instance_export_size", { id, options }),
+  logSharePreview: (id: string) => invoke<string>("log_share_preview", { id }),
+  logShareUpload: (text: string) => invoke<string>("log_share_upload", { text }),
   setProfileGroup: (id: string, group: string | null) => invoke<void>("set_profile_group", { id, group }),
   setProfileHooks: (id: string, preLaunch: string, wrapper: string, postExit: string) =>
     invoke<void>("set_profile_hooks", { id, preLaunch, wrapper, postExit }),

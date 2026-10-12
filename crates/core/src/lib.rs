@@ -16,6 +16,7 @@ pub mod jvm;
 pub mod launch;
 pub mod launcher;
 pub mod loader;
+pub mod logshare;
 pub mod manifest;
 pub mod migrate;
 pub mod modpack;

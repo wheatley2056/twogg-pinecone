@@ -30,6 +30,9 @@
   Einstellungen und nach Wahl Welten, Screenshots, Ressourcen- und Shaderpakete in eine
   `.pinecone.zip`. Auf dem anderen Rechner öffnet „Modpack importieren“ sie als neue Instanz.
   Konten und Start-Befehle sind nie enthalten.
+- **Log teilen:** Reiter „Logs“ → „Log teilen“ lädt das Log der letzten Sitzung nach Bestätigung zu
+  mclo.gs hoch und kopiert den Link, z. B. für den Discord-Support. Tokens, der Benutzername in
+  Pfaden und IP-Adressen werden vorher entfernt; die Vorschau zeigt genau, was hochgeladen wird.
 
 ## 0.9.7
 
