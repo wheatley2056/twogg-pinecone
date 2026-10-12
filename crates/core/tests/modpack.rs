@@ -615,3 +615,50 @@ async fn import_takes_pack_logo_as_instance_icon() {
     assert_eq!(plain.profile.icon, None);
     assert_eq!(packs.fill_missing_icons().await.unwrap(), 0);
 }
+
+#[tokio::test]
+async fn withdrawn_twogg_version_is_reported_with_alternative() {
+    let (server, dir, packs) = setup().await;
+    let packs = packs.with_twogg(Some(
+        pinecone_core::twogg::TwoggClient::with_base(&server.base).unwrap(),
+    ));
+    let version = |id: &str, v: &str| {
+        json!({ "id": id, "version": v, "minecraft": "1.21.1", "loader": null, "loaderVersion": null,
+                "channel": "release", "changelogHtml": "", "size": 1, "sha1": "x", "publishedAt": 0 })
+    };
+    server.on(
+        "GET",
+        "/api/v1/packs/avalon",
+        200,
+        json!({ "id": "avalon", "title": "Avalon", "summary": "", "iconUrl": null, "featured": false,
+                "updatedAt": 0, "downloads": 0, "latest": version("v1", "1.0"),
+                "versions": [version("v1", "1.0")],
+                "withdrawn": [{ "id": "v2", "version": "1.1", "reason": "Absturz im Nether" }] })
+        .to_string(),
+    );
+    let file = dir.path().join("v2.mrpack");
+    mrpack(
+        &file,
+        &server,
+        "1.1",
+        &["a1.jar"],
+        &[],
+        json!({ "minecraft": "1.21.1" }),
+    );
+    let source = PackSource::Twogg {
+        pack_id: "avalon".into(),
+        version_id: "v2".into(),
+    };
+    let profile = packs.import(&file, source, None).await.unwrap().profile;
+    let update = packs
+        .check_update(&profile)
+        .await
+        .unwrap()
+        .expect("Hinweis");
+    assert_eq!(update.withdrawn.as_deref(), Some("Absturz im Nether"));
+    // Angeboten wird die ältere, noch verfügbare Version.
+    assert_eq!(
+        (update.version_id.as_str(), update.latest.as_str()),
+        ("v1", "1.0")
+    );
+}

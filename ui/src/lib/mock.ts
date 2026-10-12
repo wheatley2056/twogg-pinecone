@@ -405,7 +405,11 @@ Object.assign(api, {
   ],
   packInfo: async (id: string) =>
     id === "fabric-test" ? { name: "Avalon Event-Pack", version: "1.4.0", source: "twogg" } : id === "qol" ? { name: "Fabulously Optimized", version: "6.3.4", source: "modrinth" } : null,
-  packCheckUpdate: async () => (await wait(400), { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" }),
+  packCheckUpdate: async (id: string) =>
+    (await wait(400),
+    id === "fabric-test"
+      ? { current: "6.5.0", latest: "6.4.2", versionId: "v642", withdrawn: "Absturz beim Betreten des Nethers – bitte auf 6.4.2 zurückgehen." }
+      : { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" }),
   packFillIcons: async () => 0,
   packUpdatesAll: async () => (await wait(600), [{ profile: profiles[0], update: { current: "6.3.4", latest: "6.5.0", versionId: "N276l2ON" } }]),
   packPlanUpdate: async () => (await wait(500), {

@@ -467,8 +467,12 @@ struct SnapshotManifest {
 #[serde(rename_all = "camelCase")]
 pub struct PackUpdate {
     pub current: String,
+    /// Empfohlene Version; leer, wenn es keine passende gibt (nur bei `withdrawn`).
     pub latest: String,
     pub version_id: String,
+    /// Die installierte Version wurde zurückgezogen (F-62): Grund des Orga-Teams.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub withdrawn: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1172,6 +1176,7 @@ impl PackManager {
                     current: info.version,
                     latest: best.version_number.clone(),
                     version_id: best.id.clone(),
+                    withdrawn: None,
                 }))
             }
             PackSource::Curseforge {
@@ -1194,6 +1199,7 @@ impl PackManager {
                         current: info.version,
                         latest: f.display_name.clone(),
                         version_id: f.id.to_string(),
+                        withdrawn: None,
                     }))
             }
             PackSource::Twogg {
@@ -1204,9 +1210,24 @@ impl PackManager {
                     return Ok(None);
                 };
                 let pack = client.pack(&pack_id).await?;
+                // Zurückgezogen (F-62): Grund melden und die beste verfügbare Version anbieten,
+                // auch wenn sie älter ist.
+                let withdrawn = pack
+                    .withdrawn
+                    .iter()
+                    .find(|w| w.id == version_id)
+                    .map(|w| w.reason.clone());
                 let versions = pack.versions.unwrap_or_default();
-                let Some(best) = crate::twogg::best_version(&versions, Some(&profile.minecraft))
-                else {
+                let best = crate::twogg::best_version(&versions, Some(&profile.minecraft));
+                if let Some(reason) = withdrawn {
+                    return Ok(Some(PackUpdate {
+                        current: info.version,
+                        latest: best.map(|b| b.version.clone()).unwrap_or_default(),
+                        version_id: best.map(|b| b.id.clone()).unwrap_or_default(),
+                        withdrawn: Some(reason),
+                    }));
+                }
+                let Some(best) = best else {
                     return Ok(None);
                 };
                 // Liste kommt neueste zuerst: nur anbieten, wenn die Kandidatin neuer ist.
@@ -1223,6 +1244,7 @@ impl PackManager {
                     current: info.version,
                     latest: best.version.clone(),
                     version_id: best.id.clone(),
+                    withdrawn: None,
                 }))
             }
             PackSource::File => Ok(None),
