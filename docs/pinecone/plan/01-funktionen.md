@@ -809,7 +809,7 @@ Ob die Freundesliste mit den twogg.app-Freunden zusammengeführt wird, ist offen
 - **Nutzerziel:** Meine Discord-Freunde sehen, dass ich ein TwoGG-Event spiele.
 - **Verhalten:** Wenn aktiviert, meldet Pinecone der lokalen Discord-App „Spielt REVIVAL: Avalon“ bzw. den Instanznamen ohne Serveradresse.
 - **Priorität:** v2 (Block v2-B, vorgezogen aus „später“)
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (PR #33: `tauri/discord`, Einstellung `discordPresence`). Braucht die Application-ID `PINECONE_DISCORD_CLIENT_ID`
 - **Akzeptanzkriterien:**
   - AK-41.1 Rich Presence ist standardmäßig aus.
   - AK-41.2 Ohne laufende Discord-App entsteht kein Fehler.
@@ -1045,7 +1045,7 @@ Baut auf F-17 und dem Pinecone-Server auf. F-41 Discord Rich Presence wird in di
 - **Nutzerziel:** Ich lade einen Freund mit einem Klick in meine Welt bzw. auf meinen Server ein, auch wenn er das Modpack noch nicht hat.
 - **Verhalten:** Während ich spiele, zeigt die Freundesliste bei jedem Freund „Einladen“. Die Einladung enthält Server (Adresse aus der Präsenz) und Pack-Bezug (Teilen-Link nach F-25: `pinecone://twogg/<pack>` oder `pinecone://modrinth/<projekt>`). Der Empfänger bekommt eine Benachrichtigung (F-37): „Annehmen“ installiert fehlendes Pack bzw. nutzt eine passende vorhandene Instanz und tritt bei (Quick Play). Server: Tabelle `invites`, `POST /api/v1/invites`, Abruf zusammen mit der Präsenz.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt (Freund beitreten ohne Einladung ist vorhanden)
+- **Ist-Stand:** teilweise (Server-PR #5, Launcher-PR #31). AK-56.4 (nur bei Event-Freigabe) folgt mit MVP-B
 - **Akzeptanzkriterien:**
   - AK-56.1 Einladungen sind nur zwischen Freunden möglich und verfallen nach 15 Minuten.
   - AK-56.2 Höchstens 10 Einladungen je Spieler und Minute (Server-Rate-Limit).
@@ -1061,7 +1061,7 @@ Baut auf F-17 und dem Pinecone-Server auf. F-41 Discord Rich Presence wird in di
 - **Nutzerziel:** Ich füge einen Freund hinzu, ohne seinen Minecraft-Namen genau zu kennen.
 - **Verhalten:** Jeder Spieler hat einen kurzen Freundescode (z. B. `PINE-7K3Q`) und einen Link `pinecone://friend/<code>`. Eingabe oder Klick schickt eine Anfrage. Der Code lässt sich neu erzeugen.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt (Anfrage per Spielername vorhanden)
+- **Ist-Stand:** vorhanden (Server-PR #5, Launcher-PR #31)
 - **Akzeptanzkriterien:**
   - AK-57.1 Codes sind nicht erratbar (≥ 40 bit Zufall) und werden bei „neu erzeugen“ sofort ungültig.
   - AK-57.2 Falsche Codes werden je IP begrenzt (gegen Durchprobieren).
@@ -1075,7 +1075,7 @@ Baut auf F-17 und dem Pinecone-Server auf. F-41 Discord Rich Presence wird in di
 - **Nutzerziel:** Ich gebe meinen Freunden meine Tastenbelegung und Einstellungen für das Event-Pack.
 - **Verhalten:** Sync-Pack (F-31) → „Teilen“ erzeugt einen Link `pinecone://sync/<code>` (Ablage am Pinecone-Server, 30 Tage). Öffnen zeigt eine Vorschau und legt das Sync-Pack an.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (Server-PR #5, Launcher-PR #32)
 - **Akzeptanzkriterien:**
   - AK-58.1 Geteilt werden Projekte (Modrinth/CurseForge-IDs) sowie `options.txt`-Werte und Tasten. Eigene Dateien des Sync-Packs werden nicht geteilt.
   - AK-58.2 Die Vorschau zeigt alle Werte, bevor etwas übernommen wird.
