@@ -186,6 +186,13 @@ Object.assign(api, {
   worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
   worldDelete: async () => {},
   worldOpenFolder: async () => {},
+  duplicateProfile: async (id: string, name: string) => {
+    await wait(700);
+    const source = profiles.find((p) => p.id === id)!;
+    const copy = { ...source, id: `${id}-kopie`, name, packSource: null, packId: null, lastPlayed: null };
+    profiles = [...profiles, copy];
+    return copy;
+  },
   worldBackups: async (id: string) =>
     id === "fabric-test"
       ? [

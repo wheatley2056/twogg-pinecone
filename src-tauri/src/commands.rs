@@ -245,6 +245,29 @@ pub async fn update_profile(
     Ok(ProfileDto::new(profile, running))
 }
 
+/// Kopiert eine Instanz unter neuem Namen (F-49). Welten nur, wenn das Spiel nicht läuft.
+#[tauri::command]
+pub async fn duplicate_profile(
+    state: State<'_, AppState>,
+    id: String,
+    name: String,
+    options: pinecone_core::profiles::DuplicateOptions,
+) -> CmdResult<ProfileDto> {
+    if options.worlds && is_running(&state, &id) {
+        return Err(
+            "Die Instanz läuft gerade. Beende zuerst das Spiel, um Welten mitzukopieren.".into(),
+        );
+    }
+    let profiles = state.launcher.profiles().clone();
+    let name = name.trim().to_string();
+    let copy =
+        tauri::async_runtime::spawn_blocking(move || profiles.duplicate(&id, &name, options))
+            .await
+            .map_err(err)?
+            .map_err(err)?;
+    Ok(ProfileDto::new(copy, false))
+}
+
 #[tauri::command]
 pub fn delete_profile(state: State<'_, AppState>, id: String) -> CmdResult<()> {
     if is_running(&state, &id) {

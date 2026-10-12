@@ -31,10 +31,11 @@
     onAddContent: (kind: ContentKind) => void;
     onCreated: (result: ImportResult) => void;
     onJoin: (address: string) => void;
+    onDuplicate: () => void;
     /** Zählt hoch, wenn der Hinzufügen-Dialog aufgehen soll. */
     addSignal?: number;
   }
-  let { profile, tab = $bindable(), onChanged, onDeleted, onAddContent, onCreated, onJoin, addSignal = 0 }: Props = $props();
+  let { profile, tab = $bindable(), onChanged, onDeleted, onAddContent, onCreated, onJoin, onDuplicate, addSignal = 0 }: Props = $props();
 
   const run = $derived(runOf(profile.id));
   const locked = $derived(run.status !== "idle");
@@ -122,6 +123,7 @@
       {#if menuOpen}
         <div class="menu-pop" role="menu">
           <button role="menuitem" onclick={() => menuAction(() => (sharing = true))}><Icon name="share" size={16} />{t("share.menu")}</button>
+          <button role="menuitem" onclick={() => menuAction(onDuplicate)}><Icon name="copy" size={16} />{t("duplicate.menu")}</button>
           <button role="menuitem" disabled={locked} onclick={() => menuAction(() => (migrating = true))}><Icon name="refresh" size={16} />{t("migrate.menu")}</button>
           {#if packInfo}
             <button role="menuitem" onclick={() => menuAction(() => (updateDialog = { target: null }))}><Icon name="clock" size={16} />{t("update.snapshots")}</button>

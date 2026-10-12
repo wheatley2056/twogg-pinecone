@@ -575,7 +575,7 @@ fn installed_key(
 }
 
 /// Kopiert einen Ordner rekursiv (ohne Symlinks); `skip` gilt nur auf oberster Ebene.
-fn copy_dir(from: &Path, to: &Path, skip: &HashSet<&str>, top: bool) -> Result<()> {
+pub(crate) fn copy_dir(from: &Path, to: &Path, skip: &HashSet<&str>, top: bool) -> Result<()> {
     std::fs::create_dir_all(to).map_err(Error::io(to))?;
     let Ok(entries) = std::fs::read_dir(from) else {
         return Ok(());

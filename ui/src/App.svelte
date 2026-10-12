@@ -16,6 +16,7 @@
   import PlayPage from "./components/pages/PlayPage.svelte";
   import ImportDialog from "./components/ImportDialog.svelte";
   import InstanceView, { type InstanceTab } from "./components/library/InstanceView.svelte";
+  import DuplicateDialog from "./components/library/DuplicateDialog.svelte";
   import NewSyncDialog from "./components/library/NewSyncDialog.svelte";
   import SyncPackView from "./components/library/SyncPackView.svelte";
   import EventsPage from "./components/pages/EventsPage.svelte";
@@ -200,6 +201,9 @@
     startGame(id, () => onGameExit(id), server ?? null);
   }
 
+  /** Instanz, die gerade dupliziert wird (Dialog offen). */
+  let duplicating = $state<Profile | null>(null);
+
   /** Signal an den Inhalt-Tab, den Hinzufügen-Dialog zu öffnen. */
   let addSignal = $state(0);
 
@@ -212,6 +216,7 @@
         : { label: t("menu.play"), icon: "play", disabled: runOf(p.id).status === "preparing", action: () => play(p.id) },
       { label: t("menu.open"), icon: "library", action: () => openProfile(p.id) },
       { label: t("content.addContent"), icon: "plus", disabled: running, action: () => (openProfile(p.id, "content"), addSignal++) },
+      { label: t("duplicate.menu"), icon: "copy", action: () => (duplicating = p) },
       "-",
       { label: t("profile.openFolder"), icon: "folder", action: () => api.openProfileFolder(p.id) },
       { label: t("instance.tabWorlds"), icon: "globe", action: () => openProfile(p.id, "worlds") },
@@ -304,6 +309,7 @@
               {addSignal}
               onCreated={onImported}
               onJoin={(address) => play(selected.id, address)}
+              onDuplicate={() => (duplicating = selected)}
             />
           {/key}
         {:else}
@@ -380,6 +386,18 @@
       await reloadSyncPacks();
       syncId = p.id;
       view = "library";
+    }}
+  />
+{/if}
+
+{#if duplicating}
+  <DuplicateDialog
+    profile={duplicating}
+    onClose={() => (duplicating = null)}
+    onCreated={async (p) => {
+      duplicating = null;
+      await reloadProfiles();
+      openProfile(p.id);
     }}
   />
 {/if}
