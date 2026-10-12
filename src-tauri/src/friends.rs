@@ -107,6 +107,59 @@ pub async fn friends_request(state: State<'_, AppState>, name: String) -> CmdRes
     with_session!(&state, |token| c.friend_request(&token, name.trim()))
 }
 
+/// Eigener Freundescode (F-57); `fresh` erzeugt einen neuen.
+#[tauri::command]
+pub async fn friends_code(state: State<'_, AppState>, fresh: bool) -> CmdResult<String> {
+    let c = client(&state)?;
+    with_session!(&state, |token| c.friend_code(&token, fresh))
+}
+
+#[derive(Serialize)]
+pub struct CodeRequestDto {
+    status: String,
+    name: String,
+}
+
+/// Anfrage per Freundescode oder `pinecone://friend/<code>`.
+#[tauri::command]
+pub async fn friends_request_code(
+    state: State<'_, AppState>,
+    code: String,
+) -> CmdResult<CodeRequestDto> {
+    let c = client(&state)?;
+    let (status, name) = with_session!(&state, |token| c.friend_request_code(&token, code.trim()))?;
+    Ok(CodeRequestDto { status, name })
+}
+
+/// Freund auf den eigenen Server einladen (F-56). `pack`: Teilen-Link der Instanz, falls vorhanden.
+#[tauri::command]
+pub async fn friends_invite(
+    state: State<'_, AppState>,
+    to: String,
+    server: String,
+    pack: Option<String>,
+    instance: Option<String>,
+) -> CmdResult<()> {
+    let c = client(&state)?;
+    with_session!(&state, |token| c.invite(
+        &token,
+        &to,
+        &server,
+        pack.as_deref(),
+        instance.as_deref()
+    ))
+}
+
+#[tauri::command]
+pub async fn friends_invite_answer(
+    state: State<'_, AppState>,
+    id: String,
+    accept: bool,
+) -> CmdResult<()> {
+    let c = client(&state)?;
+    with_session!(&state, |token| c.invite_answer(&token, &id, accept))
+}
+
 #[tauri::command]
 pub async fn friends_accept(state: State<'_, AppState>, uuid: String) -> CmdResult<()> {
     let c = client(&state)?;

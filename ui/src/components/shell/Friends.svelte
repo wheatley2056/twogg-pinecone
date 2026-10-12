@@ -1,17 +1,57 @@
 <script lang="ts">
-  // Freunde in der Spielleiste: Avatar-Stapel „2 online“, Panel nach oben mit Liste, Anfragen
-  // und Beitreten (Design-System 9.2, rechts).
+  // Freunde in der Spielleiste: Avatar-Stapel „2 online“, Panel nach oben mit Liste, Anfragen,
+  // Einladungen und Beitreten (Design-System 9.2, rechts). Hinzufügen per Spielername oder
+  // Freundescode (F-57); Einladen auf den eigenen Server (F-56).
   import { api, errorText } from "../../lib/api";
   import { friendColor, friends, refreshFriends } from "../../lib/friends.svelte";
   import { t } from "../../lib/i18n.svelte";
-  import type { Friend } from "../../lib/types";
+  import type { Friend, Invite } from "../../lib/types";
   import Icon from "../Icon.svelte";
 
   interface Props {
     /** Auf den Server eines Freundes mit der gewählten Instanz verbinden. */
     onJoin: (server: string) => void;
+    /** Eigener Server zum Einladen (nur, wenn über Pinecone beigetreten), sonst `null`. */
+    inviteFrom: { server: string; instance: string; profileId: string } | null;
+    /** Einladung annehmen: passende Instanz suchen bzw. installieren und beitreten. */
+    onAcceptInvite: (invite: Invite) => void;
   }
-  let { onJoin }: Props = $props();
+  let { onJoin, inviteFrom, onAcceptInvite }: Props = $props();
+
+  let code = $state<string | null>(null);
+  let codeCopied = $state(false);
+  const CODE = /^[A-Za-z0-9]{4}[\s-]?[A-Za-z0-9]{4}[\s-]?[A-Za-z0-9]{2}$/;
+  const NAME = /^[A-Za-z0-9_]{1,16}$/;
+  const invites = $derived(friends.state?.invites ?? []);
+  const sent = $derived(new Map((friends.state?.sentInvites ?? []).map((i) => [i.uuid, i])));
+
+  async function loadCode(fresh = false) {
+    try {
+      code = await api.friendCode(fresh);
+      codeCopied = false;
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+
+  async function copyCode() {
+    if (!code) return;
+    await navigator.clipboard.writeText(code).then(() => (codeCopied = true)).catch(() => {});
+  }
+
+  async function invite(f: Friend) {
+    if (!inviteFrom) return;
+    const from = inviteFrom;
+    await run(async () => {
+      const pack = await api.packShareLink(from.profileId).catch(() => null);
+      await api.friendInvite(f.uuid, from.server, pack, from.instance);
+      message = t("invite.sent", { name: f.name });
+    });
+  }
+
+  function sentLabel(i: Invite): string {
+    return i.status === "declined" ? t("invite.declined") : i.status === "accepted" ? t("invite.accepted") : t("invite.pending");
+  }
 
   let open = $state(false);
   let root: HTMLElement | undefined = $state();
@@ -47,10 +87,17 @@
   async function add(e: SubmitEvent) {
     e.preventDefault();
     const n = name.trim();
-    if (!/^[A-Za-z0-9_]{1,16}$/.test(n)) return;
+    if (!NAME.test(n) && !CODE.test(n)) return;
     await run(async () => {
-      const status = await api.friendRequest(n);
-      message = status === "friends" ? t("friends.nowFriends", { name: n }) : t("friends.requested", { name: n });
+      // Ein reiner Name mit 10 Zeichen könnte auch ein Code sein: Codes enthalten Bindestriche
+      // oder Leerzeichen bzw. nur Großbuchstaben und Ziffern.
+      if (CODE.test(n) && (/[\s-]/.test(n) || n === n.toUpperCase())) {
+        const r = await api.friendRequestCode(n);
+        message = r.status === "friends" ? t("friends.nowFriends", { name: r.name }) : t("friends.requested", { name: r.name });
+      } else {
+        const status = await api.friendRequest(n);
+        message = status === "friends" ? t("friends.nowFriends", { name: n }) : t("friends.requested", { name: n });
+      }
       name = "";
     });
   }
@@ -65,7 +112,7 @@
 <svelte:window onclick={onWindowClick} />
 
 <div class="friends" bind:this={root}>
-  <button class="trigger" onclick={() => ((open = !open), open && refreshFriends())} aria-expanded={open} aria-label={t("friends.title")}>
+  <button class="trigger" onclick={() => ((open = !open), open && (refreshFriends(), code === null && friends.state?.available && loadCode()))} aria-expanded={open} aria-label={t("friends.title")}>
     <span class="stack" aria-hidden="true">
       {#each stack as f (f.uuid)}
         <span class="face" style:background={friendColor(f.uuid)}></span>
@@ -81,7 +128,7 @@
             ? t("friends.requests", { count: incoming.length })
             : t("friends.title")}</span>
     </span>
-    {#if incoming.length > 0}<span class="dot"></span>{/if}
+    {#if incoming.length > 0 || invites.length > 0}<span class="dot"></span>{/if}
   </button>
 
   {#if open}
@@ -96,14 +143,41 @@
       {:else if friends.error && !friends.state}
         <p class="error">{friends.error}</p>
       {:else}
+        {#if code}
+          <div class="code-row">
+            <span class="meta">{t("friends.yourCode")}</span>
+            <span class="code mono">{code}</span>
+            <button class="ghost small" onclick={copyCode} title={t("share.copy")}>{codeCopied ? t("share.copied") : t("share.copy")}</button>
+            <button class="ghost small" aria-label={t("friends.newCode")} title={t("friends.newCodeHint")} disabled={busy} onclick={() => loadCode(true)}>
+              <Icon name="refresh" size={14} />
+            </button>
+          </div>
+        {/if}
         <form onsubmit={add}>
-          <input bind:value={name} placeholder={t("friends.addPlaceholder")} maxlength="16" spellcheck="false" aria-label={t("friends.add")} />
-          <button class="primary cut" type="submit" disabled={busy || !/^[A-Za-z0-9_]{1,16}$/.test(name.trim())}>
+          <input bind:value={name} placeholder={t("friends.addPlaceholderCode")} maxlength="32" spellcheck="false" aria-label={t("friends.add")} />
+          <button class="primary cut" type="submit" disabled={busy || !(NAME.test(name.trim()) || CODE.test(name.trim()))}>
             <Icon name="user-plus" size={16} />{t("friends.add")}
           </button>
         </form>
         {#if message}<p class="ok">{message}</p>{/if}
         {#if error}<p class="error">{error}</p>{/if}
+
+        {#if invites.length > 0}
+          <span class="section-label">{t("invite.title")}</span>
+          {#each invites as inv (inv.id)}
+            <div class="row invite">
+              <span class="face" style:background={friendColor(inv.uuid)}>{inv.name[0].toUpperCase()}</span>
+              <span class="who">
+                <span class="name">{inv.name}</span>
+                <span class="meta live">{inv.instance ? t("invite.toInstance", { instance: inv.instance }) : inv.server}</span>
+              </span>
+              <button class="primary small" disabled={busy} onclick={() => ((open = false), onAcceptInvite(inv))}>{t("friends.join")}</button>
+              <button class="ghost small" disabled={busy} aria-label={t("friends.decline")} onclick={() => run(() => api.friendInviteAnswer(inv.id, false))}>
+                <Icon name="close" size={14} />
+              </button>
+            </div>
+          {/each}
+        {/if}
 
         {#if incoming.length > 0}
           <span class="section-label">{t("friends.incoming")}</span>
@@ -129,8 +203,11 @@
               </span>
               <span class="who">
                 <span class="name">{f.name}</span>
-                <span class="meta" class:live={f.online && f.activity?.playing}>{status(f)}</span>
+                <span class="meta" class:live={f.online && f.activity?.playing}>{sent.has(f.uuid) ? sentLabel(sent.get(f.uuid)!) : status(f)}</span>
               </span>
+              {#if f.online && inviteFrom && inviteFrom.server !== f.activity?.server}
+                <button class="small" disabled={busy} onclick={() => invite(f)} title={t("invite.hint", { server: inviteFrom.server })}>{t("invite.button")}</button>
+              {/if}
               {#if f.online && f.activity?.server}
                 {@const server = f.activity.server}
                 <button class="small" onclick={() => ((open = false), onJoin(server))} title={server}>{t("friends.join")}</button>
@@ -355,5 +432,20 @@
     margin: 0;
     color: var(--nadel);
     font-size: 13px;
+  }
+
+  .code-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--surface-2);
+  }
+
+  .code-row .code {
+    flex: 1;
+    font-size: 13px;
+    letter-spacing: 1px;
+    user-select: all;
   }
 </style>

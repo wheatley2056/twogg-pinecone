@@ -225,6 +225,11 @@ export const api = {
   friends: () => invoke<FriendsState>("friends_list"),
   friendsPresence: (activity: FriendActivity) => invoke<void>("friends_presence", { activity }),
   friendRequest: (name: string) => invoke<"requested" | "friends">("friends_request", { name }),
+  friendCode: (fresh = false) => invoke<string>("friends_code", { fresh }),
+  friendRequestCode: (code: string) => invoke<{ status: "requested" | "friends"; name: string }>("friends_request_code", { code }),
+  friendInvite: (to: string, server: string, pack: string | null, instance: string | null) =>
+    invoke<void>("friends_invite", { to, server, pack, instance }),
+  friendInviteAnswer: (id: string, accept: boolean) => invoke<void>("friends_invite_answer", { id, accept }),
   friendAccept: (uuid: string) => invoke<void>("friends_accept", { uuid }),
   friendDecline: (uuid: string) => invoke<void>("friends_decline", { uuid }),
   friendRemove: (uuid: string) => invoke<void>("friends_remove", { uuid }),

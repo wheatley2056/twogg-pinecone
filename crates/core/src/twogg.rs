@@ -163,10 +163,41 @@ pub struct PlayerRef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FriendList {
     pub friends: Vec<Friend>,
     pub incoming: Vec<PlayerRef>,
     pub outgoing: Vec<PlayerRef>,
+    /// Offene Einladungen an mich (F-56).
+    #[serde(default)]
+    pub invites: Vec<Invite>,
+    /// Eigene Einladungen der letzten 15 Minuten mit Status.
+    #[serde(default)]
+    pub sent_invites: Vec<Invite>,
+}
+
+/// Einladung auf einen Server. `uuid`/`name`: Absender (eingehend) bzw. Empfänger (ausgehend).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Invite {
+    pub id: String,
+    pub uuid: String,
+    pub name: String,
+    pub server: String,
+    #[serde(default)]
+    pub pack: Option<String>,
+    #[serde(default)]
+    pub instance: Option<String>,
+    /// `open`, `accepted`, `declined`.
+    pub status: String,
+    pub expires_at: i64,
+}
+
+/// Geteiltes Sync-Pack vom Pinecone-Server (F-58).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SharedSyncPack {
+    pub data: serde_json::Value,
+    pub owner: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -324,6 +355,83 @@ impl TwoggClient {
             .send(self.http.post(&url).bearer_auth(token).json(&body), &url)
             .await?;
         Ok(v["status"].as_str().unwrap_or("requested").to_string())
+    }
+
+    /// Anfrage per Freundescode (F-57); Antwort `{status, name}`.
+    pub async fn friend_request_code(&self, token: &str, code: &str) -> Result<(String, String)> {
+        let url = format!("{}/api/v1/friends/requests", self.base);
+        let body = serde_json::json!({ "code": code });
+        let v: serde_json::Value = self
+            .send(self.http.post(&url).bearer_auth(token).json(&body), &url)
+            .await?;
+        Ok((
+            v["status"].as_str().unwrap_or("requested").to_string(),
+            v["name"].as_str().unwrap_or_default().to_string(),
+        ))
+    }
+
+    /// Eigener Freundescode; `fresh` erzeugt einen neuen (der alte gilt dann nicht mehr).
+    pub async fn friend_code(&self, token: &str, fresh: bool) -> Result<String> {
+        let url = format!("{}/api/v1/friends/code", self.base);
+        let req = if fresh {
+            self.http.post(&url)
+        } else {
+            self.http.get(&url)
+        };
+        let v: serde_json::Value = self.send(req.bearer_auth(token), &url).await?;
+        v["code"]
+            .as_str()
+            .map(str::to_string)
+            .ok_or_else(|| Error::Invalid("TwoGG-Server: kein Freundescode".into()))
+    }
+
+    /// Freund auf einen Server einladen (F-56).
+    pub async fn invite(
+        &self,
+        token: &str,
+        to: &str,
+        server: &str,
+        pack: Option<&str>,
+        instance: Option<&str>,
+    ) -> Result<()> {
+        let to = checked_uuid(to)?;
+        let url = format!("{}/api/v1/invites", self.base);
+        let body =
+            serde_json::json!({ "to": to, "server": server, "pack": pack, "instance": instance });
+        self.send_empty(self.http.post(&url).bearer_auth(token).json(&body), &url)
+            .await
+    }
+
+    pub async fn invite_answer(&self, token: &str, id: &str, accept: bool) -> Result<()> {
+        if !valid_id(id) {
+            return Err(Error::Invalid("Ungültige Einladung".into()));
+        }
+        let url = format!("{}/api/v1/invites/{id}/answer", self.base);
+        let body = serde_json::json!({ "accept": accept });
+        self.send_empty(self.http.post(&url).bearer_auth(token).json(&body), &url)
+            .await
+    }
+
+    /// Sync-Pack teilen (F-58); gibt den Code für `pinecone://sync/<code>` zurück.
+    pub async fn sync_share(&self, token: &str, data: &serde_json::Value) -> Result<String> {
+        let url = format!("{}/api/v1/sync-shares", self.base);
+        let body = serde_json::json!({ "data": data });
+        let v: serde_json::Value = self
+            .send(self.http.post(&url).bearer_auth(token).json(&body), &url)
+            .await?;
+        v["code"]
+            .as_str()
+            .map(str::to_string)
+            .ok_or_else(|| Error::Invalid("TwoGG-Server: kein Code".into()))
+    }
+
+    pub async fn sync_share_get(&self, token: &str, code: &str) -> Result<SharedSyncPack> {
+        if !valid_id(code) {
+            return Err(Error::Invalid("Ungültiger Link".into()));
+        }
+        let url = format!("{}/api/v1/sync-shares/{code}", self.base);
+        self.send(self.http.get(&url).bearer_auth(token), &url)
+            .await
     }
 
     pub async fn friend_accept(&self, token: &str, uuid: &str) -> Result<()> {
