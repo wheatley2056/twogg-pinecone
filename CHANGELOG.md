@@ -2,6 +2,12 @@
 
 ## Unveröffentlicht
 
+- **Hinweise vom TwoGG-Team:** Oben auf der Startseite erscheint ein Hinweis, den das Team im Admin
+  setzt (z. B. Wartung), als Info oder Warnung mit optionalem Link. Mit × schließen; ein neuer
+  Hinweis erscheint wieder.
+- **Mindestversion:** Verlangt der Pinecone-Server eine neuere Version, zeigt die Startseite
+  „Update nötig“ mit Knopf zum Aktualisieren. TwoGG-Packs und Event-Beitritt gehen erst nach dem
+  Update, Bibliothek und Einzelspieler funktionieren weiter.
 - **Freundescode:** Im Freunde-Panel steht dein Code (z. B. `K7QM-2HXT-9P`) zum Kopieren; ins Feld
   „Name oder Freundescode“ kann man auch den Code eines anderen eintippen. Links der Form
   `pinecone://friend/<code>` schicken die Anfrage direkt. Ein neuer Code macht den alten ungültig.

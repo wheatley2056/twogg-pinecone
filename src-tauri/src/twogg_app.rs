@@ -101,6 +101,10 @@ pub async fn twogg_app_participations(state: State<'_, AppState>) -> CmdResult<V
 
 #[tauri::command]
 pub async fn twogg_app_join(state: State<'_, AppState>, event_id: String) -> CmdResult<JoinInfo> {
+    // Event-Beitritt nur ab der Mindestversion des Pinecone-Servers (F-60, AK-60.2).
+    if let Some(client) = state.launcher.packs().twogg() {
+        client.require_launcher_version().await.map_err(err)?;
+    }
     state.twogg_app.join_info(&event_id).await.map_err(err)
 }
 

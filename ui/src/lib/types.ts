@@ -640,6 +640,19 @@ export interface ServerInfo {
   /** CurseForge über den Proxy des Pinecone-Servers verfügbar. */
   curseforge: boolean;
   legal: { imprintUrl: string | null; privacyUrl: string | null; contactEmail: string | null };
+  /** Hinweis an alle Launcher, im Admin gesetzt. */
+  banner?: ServerBanner | null;
+  /** Ältere Launcher dürfen TwoGG-Packs und Events nicht mehr nutzen. */
+  minLauncherVersion?: string | null;
+}
+
+export interface ServerBanner {
+  /** Ändert sich mit dem Inhalt; geschlossene Hinweise merkt sich der Launcher je id. */
+  id: string;
+  level: "info" | "warning";
+  text: string;
+  link?: string | null;
+  until?: number | null;
 }
 
 export interface World {

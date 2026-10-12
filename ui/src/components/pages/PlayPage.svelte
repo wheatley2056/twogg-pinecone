@@ -9,7 +9,8 @@
   import { formatAgo, locale, t } from "../../lib/i18n.svelte";
   import { byRecent, versionLabel } from "../../lib/profiles";
   import { menu, type MenuEntry } from "../../lib/contextmenu.svelte";
-  import type { NewsItem, Profile, ServerInfo, ServerStatus } from "../../lib/types";
+  import type { NewsItem, Profile, ServerBanner, ServerInfo, ServerStatus } from "../../lib/types";
+  import { checkUpdates, installUpdate, updates } from "../../lib/updates.svelte";
   import EventIcon from "../EventIcon.svelte";
   import Icon from "../Icon.svelte";
   import ProfileIcon from "../ProfileIcon.svelte";
@@ -34,6 +35,42 @@
   let reading = $state<NewsItem | null>(null);
   let bannerFailed = $state<string | null>(null);
   let newsDialog = $state<HTMLDialogElement>();
+  let notice = $state<ServerBanner | null>(null);
+  let required = $state<{ min: string; current: string } | null>(null);
+
+  const CLOSED_KEY = "pinecone.closedBanners";
+
+  function closedBanners(): string[] {
+    try {
+      return JSON.parse(localStorage.getItem(CLOSED_KEY) ?? "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function closeNotice() {
+    if (!notice) return;
+    const id = notice.id;
+    notice = null;
+    try {
+      localStorage.setItem(CLOSED_KEY, JSON.stringify([...closedBanners().filter((c) => c !== id), id].slice(-20)));
+    } catch {
+      // Ohne Speicher erscheint der Hinweis beim nächsten Start wieder.
+    }
+  }
+
+  /** true, wenn Version `a` älter ist als `b` (x.y.z, fehlende Teile = 0). */
+  function versionOlder(a: string, b: string): boolean {
+    const parts = (v: string) => v.split("-")[0].split(".").map((n) => parseInt(n, 10) || 0);
+    const [x, y] = [parts(a), parts(b)];
+    for (let i = 0; i < 3; i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) < (y[i] ?? 0);
+    return false;
+  }
+
+  function updateNow() {
+    if (updates.info) installUpdate();
+    else checkUpdates();
+  }
 
   onMount(() => {
     loadTwogg();
@@ -41,6 +78,12 @@
       .serverInfo()
       .then(async (info) => {
         server = info.gameServer;
+        if (info.banner && !closedBanners().includes(info.banner.id)) notice = info.banner;
+        const min = info.minLauncherVersion;
+        if (min) {
+          const current = (await api.appInfo().catch(() => null))?.version;
+          if (current && versionOlder(current, min)) required = { min, current };
+        }
         if (server) status = await api.pingServer(server.address).catch(() => "offline" as const);
       })
       .catch(() => {});
@@ -84,6 +127,39 @@
 
 <div class="home">
   <div class="main">
+    {#if required}
+      <div class="notice danger" role="alert">
+        <Icon name="download" size={18} stroke={2} />
+        <span class="text">
+          <strong>{t("home.updateRequired")}</strong>
+          <span>{t("home.updateRequiredText", { min: required.min, current: required.current })}</span>
+          {#if updates.error}<span class="error">{updates.error}</span>{/if}
+        </span>
+        <button class="small primary" disabled={updates.checking || updates.progress != null} onclick={updateNow}>
+          {updates.progress != null
+            ? `${Math.round((updates.progress ?? 0) * 100)} %`
+            : updates.info
+              ? t("home.updateInstall", { version: updates.info.version })
+              : t("home.updateCheck")}
+        </button>
+      </div>
+    {/if}
+    {#if notice}
+      {@const n = notice}
+      <div class="notice" class:danger={n.level === "warning"} role={n.level === "warning" ? "alert" : "status"}>
+        <Icon name={n.level === "warning" ? "alert" : "bell"} size={18} stroke={2} />
+        <span class="text"><span class="body">{n.text}</span></span>
+        {#if n.link}
+          <a href={n.link} class="external" onclick={(e) => (e.preventDefault(), open(n.link!))}>
+            {t("home.noticeMore")}
+            <Icon name="external" size={15} stroke={2} />
+          </a>
+        {/if}
+        <button class="icon" aria-label={t("home.noticeClose")} title={t("home.noticeClose")} onclick={closeNotice}>
+          <Icon name="close" size={16} />
+        </button>
+      </div>
+    {/if}
     <section class="hero" class:with-banner={banner}>
       {#if banner}
         <img class="banner" src={banner} alt="" onerror={() => (bannerFailed = banner)} />
@@ -304,6 +380,59 @@
     flex-direction: column;
     gap: 26px;
     min-width: 0;
+  }
+
+  /* Hinweise vom Pinecone-Server */
+  .notice {
+    --tone: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 10px 10px 14px;
+    margin-bottom: -12px;
+    background: color-mix(in srgb, var(--tone) 12%, var(--surface));
+    border-left: 3px solid var(--tone);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .notice.danger {
+    --tone: var(--danger);
+  }
+
+  .notice > :global(svg) {
+    flex: none;
+    color: var(--tone);
+  }
+
+  .notice .text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .notice .text span:not(.body) {
+    color: var(--text-soft);
+  }
+
+  .notice .text .error {
+    color: var(--danger);
+  }
+
+  .notice .external {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .notice .small {
+    min-height: 34px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 
   /* Event-Bühne */
