@@ -242,6 +242,8 @@ Object.assign(api, {
     gameServer: { name: "TwoGG Server", address: "mc.twogg.de" },
     curseforge: true,
     legal: { imprintUrl: "https://twogg.app/impressum", privacyUrl: "https://twogg.app/datenschutz", contactEmail: "kontakt@twogg.de" },
+    banner: { id: "a1b2c3d4e5f6", level: "warning", text: "Am Samstag ab 10 Uhr ist der Community-Server wegen Wartung etwa zwei Stunden offline.", link: "https://twogg.app/news/wartung" },
+    minLauncherVersion: "0.9.9",
   }),
   friendsDeleteData: async () => {},
   friends: async () => mockFriends,

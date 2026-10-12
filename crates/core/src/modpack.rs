@@ -623,6 +623,7 @@ impl PackManager {
             .twogg
             .as_ref()
             .ok_or_else(|| Error::Invalid("TwoGG-Server ist nicht eingerichtet".into()))?;
+        client.require_launcher_version().await?;
         let version_id = match version_id {
             Some(v) => v.to_string(),
             None => {

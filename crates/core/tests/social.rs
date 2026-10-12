@@ -78,3 +78,35 @@ async fn friend_code_invites_and_sync_shares() {
         Some("Bearer tok")
     );
 }
+
+#[tokio::test]
+async fn min_launcher_version_blocks_twogg_features() {
+    let server = MockServer::start().await;
+    server.on(
+        "GET",
+        "/api/v1/info",
+        200,
+        json!({ "minLauncherVersion": "99.0.0",
+        "banner": { "id": "abc", "level": "warning", "text": "Wartung", "link": null } })
+        .to_string(),
+    );
+    let c = TwoggClient::with_base(&server.base).unwrap();
+    let info = c.info().await.unwrap();
+    assert_eq!(info.banner.unwrap().text, "Wartung");
+    let err = c.require_launcher_version().await.unwrap_err();
+    assert!(err.to_string().contains("99.0.0"), "{err}");
+
+    // Ältere Server ohne Feld oder nicht erreichbar: keine Sperre.
+    let old = MockServer::start().await;
+    old.on("GET", "/api/v1/info", 200, json!({}).to_string());
+    TwoggClient::with_base(&old.base)
+        .unwrap()
+        .require_launcher_version()
+        .await
+        .unwrap();
+    TwoggClient::with_base("http://127.0.0.1:9")
+        .unwrap()
+        .require_launcher_version()
+        .await
+        .unwrap();
+}

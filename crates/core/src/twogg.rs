@@ -124,6 +124,40 @@ pub struct ServerInfo {
     /// Impressum, Datenschutz, Kontakt (in der Admin-Seite gepflegt).
     #[serde(default)]
     pub legal: Legal,
+    /// Hinweis an alle Launcher (F-60).
+    #[serde(default)]
+    pub banner: Option<Banner>,
+    /// Ältere Launcher brauchen ein Update für TwoGG-Packs und Events (F-60).
+    #[serde(default)]
+    pub min_launcher_version: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Banner {
+    /// Ändert sich mit dem Inhalt; geschlossene Banner merkt sich die Oberfläche je ID.
+    pub id: String,
+    /// `info` oder `warning`.
+    pub level: String,
+    pub text: String,
+    #[serde(default)]
+    pub link: Option<String>,
+    #[serde(default)]
+    pub until: Option<i64>,
+}
+
+/// `a < b` für Versionen `x.y.z` (fehlende oder kaputte Teile zählen als 0).
+pub fn version_older(a: &str, b: &str) -> bool {
+    let parse = |v: &str| -> Vec<u64> {
+        v.split(['.', '-', '+'])
+            .take(3)
+            .map(|p| p.parse().unwrap_or(0))
+            .collect()
+    };
+    let (mut x, mut y) = (parse(a), parse(b));
+    x.resize(3, 0);
+    y.resize(3, 0);
+    x < y
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -301,6 +335,20 @@ impl TwoggClient {
     pub async fn info(&self) -> Result<ServerInfo> {
         let url = format!("{}/api/v1/info", self.base);
         self.send(self.http.get(&url), &url).await
+    }
+
+    /// TwoGG-Packs und Events nur ab der Mindestversion des Servers (F-60, AK-60.2). Ist der
+    /// Server nicht erreichbar oder kennt er keine Mindestversion, gilt keine Sperre.
+    pub async fn require_launcher_version(&self) -> Result<()> {
+        let Ok(info) = self.info().await else {
+            return Ok(());
+        };
+        match info.min_launcher_version {
+            Some(min) if version_older(LAUNCHER_VERSION, &min) => Err(Error::Invalid(format!(
+                "Für TwoGG-Packs und Events brauchst du mindestens Pinecone {min} (installiert: {LAUNCHER_VERSION}). Bitte aktualisiere Pinecone unter Einstellungen → Allgemein."
+            ))),
+            _ => Ok(()),
+        }
     }
 
     // --- Freundesliste ---------------------------------------------------------------------
@@ -539,6 +587,15 @@ pub fn best_version<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compares_versions() {
+        assert!(version_older("0.9.7", "0.9.8"));
+        assert!(version_older("0.9.8", "0.10.0"));
+        assert!(!version_older("0.9.8", "0.9.8"));
+        assert!(!version_older("1.0.0", "0.9.8"));
+        assert!(version_older("0.9", "0.9.1"));
+    }
 
     fn v(id: &str, mc: &str, channel: &str) -> PackVersion {
         PackVersion {
