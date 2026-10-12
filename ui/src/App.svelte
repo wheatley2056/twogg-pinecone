@@ -324,6 +324,7 @@
         onCreateSync={() => (creatingSync = true)}
         onImport={() => openPack({ kind: "link", link: "" })}
         {instanceMenu}
+        onProfilesChange={reloadProfiles}
       >
         {#if syncPack}
           {#key syncPack.id}

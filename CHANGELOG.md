@@ -22,6 +22,10 @@
   dem Start, Wrapper um Java (z. B. `gamemoderun`, `prime-run`) und Befehl nach dem Ende, mit
   Platzhaltern wie `$INST_DIR`. Sie laufen ohne Shell; scheitert der Befehl vor dem Start, startet
   das Spiel nicht und die Ausgabe steht im Log.
+- **Gruppen in der Bibliothek:** Eigene Gruppen wie „Modded“ oder „Vanilla“ anlegen, Instanzen mit
+  der Maus hineinziehen oder per Rechtsklick → „In Gruppe verschieben …“. Gruppen lassen sich
+  einklappen, umbenennen und auflösen; Event-Instanzen stehen automatisch unter „TwoGG Events“.
+  Sortierung nach zuletzt gespielt, Name oder Spielzeit. Alles bleibt nach einem Neustart erhalten.
 
 ## 0.9.7
 

@@ -45,6 +45,10 @@ export interface Profile {
   /** Pack-ID bei TwoGG-Packs. */
   packId?: string | null;
   lastPlayed?: number | null;
+  /** Gesamte Spielzeit in Sekunden; nur in der Liste. */
+  playtime?: number | null;
+  /** Eigene Gruppe in der Bibliothek; `null` = automatisch. */
+  group?: string | null;
   /** Geänderte Welten vor jedem Start sichern. */
   backupOnLaunch: boolean;
   /** Automatische Backups je Welt, die behalten werden. */
@@ -153,6 +157,9 @@ export interface Settings {
   launchBehavior: "keep" | "minimize" | "hide" | "close";
   /** Nach Spielende wieder anzeigen (bei „minimieren“). */
   showAfterExit: boolean;
+  librarySort: "recent" | "name" | "playtime";
+  /** Eingeklappte Gruppen der Bibliothek. */
+  collapsedGroups: string[];
 }
 
 /** JVM-Presets in den Einstellungen: eigene und geänderte eingebaute (gleiche ID). */
