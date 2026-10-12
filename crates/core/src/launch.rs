@@ -226,6 +226,19 @@ pub fn substitute(arg: &str, vars: &HashMap<&'static str, String>) -> String {
 }
 
 impl LaunchCommand {
+    /// Setzt einen Wrapper vor Java: `wrapper[0] wrapper[1..] java args…` (F-55).
+    pub fn wrap(&mut self, wrapper: Vec<String>) {
+        let mut words = wrapper.into_iter();
+        let Some(program) = words.next() else {
+            return;
+        };
+        let java = std::mem::replace(&mut self.program, PathBuf::from(program));
+        let mut args: Vec<String> = words.collect();
+        args.push(java.display().to_string());
+        args.append(&mut self.args);
+        self.args = args;
+    }
+
     async fn command(&self) -> Result<tokio::process::Command> {
         tokio::fs::create_dir_all(&self.cwd)
             .await
@@ -442,5 +455,31 @@ mod tests {
             cp.contains(';') && cp.contains("natives-windows") && !cp.contains("natives-linux")
         );
         assert!(cmd.args.iter().any(|a| a.starts_with("-XX:HeapDumpPath=")));
+    }
+
+    #[test]
+    fn wrapper_goes_in_front_of_java() {
+        let mut cmd = LaunchCommand {
+            program: "/usr/bin/java".into(),
+            args: vec!["-Xmx4G".into(), "net.minecraft.client.main.Main".into()],
+            cwd: "/tmp".into(),
+        };
+        cmd.wrap(vec!["prime-run".into(), "--flag".into()]);
+        assert_eq!(cmd.program, PathBuf::from("prime-run"));
+        assert_eq!(
+            cmd.args,
+            [
+                "--flag",
+                "/usr/bin/java",
+                "-Xmx4G",
+                "net.minecraft.client.main.Main"
+            ]
+        );
+        cmd.wrap(Vec::new());
+        assert_eq!(
+            cmd.program,
+            PathBuf::from("prime-run"),
+            "leerer Wrapper ändert nichts"
+        );
     }
 }

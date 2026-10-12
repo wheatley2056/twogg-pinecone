@@ -46,6 +46,15 @@ pub struct Profile {
     /// UUID des Kontos, mit dem diese Instanz startet; ohne Angabe das aktive Konto.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub account: Option<String>,
+    /// Befehl vor dem Start (F-55); scheitert er, startet das Spiel nicht.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pre_launch: Option<String>,
+    /// Wrapper um Java, z. B. `gamemoderun` oder `prime-run`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wrapper: Option<String>,
+    /// Befehl nach dem Spielende.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub post_exit: Option<String>,
     /// Geänderte Welten vor jedem Start automatisch sichern.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub backup_on_launch: bool,
@@ -80,6 +89,9 @@ impl Profile {
             color: None,
             icon: None,
             account: None,
+            pre_launch: None,
+            wrapper: None,
+            post_exit: None,
             backup_on_launch: false,
             backup_keep: None,
         }

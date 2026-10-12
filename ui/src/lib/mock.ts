@@ -188,6 +188,10 @@ Object.assign(api, {
   worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
   worldDelete: async () => {},
   worldOpenFolder: async () => {},
+  setProfileHooks: async (id: string, preLaunch: string, wrapper: string, postExit: string) => {
+    if ([preLaunch, wrapper, postExit].some((c) => (c.match(/"/g)?.length ?? 0) % 2 === 1)) throw "Fehlendes \" im Befehl";
+    profiles = profiles.map((p) => (p.id === id ? { ...p, preLaunch: preLaunch || null, wrapper: wrapper || null, postExit: postExit || null } : p));
+  },
   setProfileAccount: async (id: string, account: string | null) =>
     void (profiles = profiles.map((p) => (p.id === id ? { ...p, account } : p))),
   duplicateProfile: async (id: string, name: string) => {

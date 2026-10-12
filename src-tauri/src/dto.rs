@@ -55,6 +55,9 @@ pub struct ProfileDto {
     pub backup_keep: u32,
     /// UUID des festen Kontos der Instanz; `None` = aktives Konto.
     pub account: Option<String>,
+    pub pre_launch: Option<String>,
+    pub wrapper: Option<String>,
+    pub post_exit: Option<String>,
 }
 
 impl ProfileDto {
@@ -71,6 +74,9 @@ impl ProfileDto {
             color: p.color,
             icon: p.icon,
             account: p.account,
+            pre_launch: p.pre_launch,
+            wrapper: p.wrapper,
+            post_exit: p.post_exit,
             backup_on_launch: p.backup_on_launch,
             backup_keep: p
                 .backup_keep

@@ -18,6 +18,10 @@
 - **Beim Spielstart:** Einstellungen → Allgemein: Launcher geöffnet lassen, minimieren, ausblenden
   oder schließen. Ausgeblendet kommt er nach Spielende zurück, minimiert nach Wahl, nach einem
   Absturz immer. „Schließen“ blendet nur aus, solange noch Downloads laufen.
+- **Start-Befehle und Wrapper:** Einstellungen der Instanz → „Start-Befehle und Wrapper“: Befehl vor
+  dem Start, Wrapper um Java (z. B. `gamemoderun`, `prime-run`) und Befehl nach dem Ende, mit
+  Platzhaltern wie `$INST_DIR`. Sie laufen ohne Shell; scheitert der Befehl vor dem Start, startet
+  das Spiel nicht und die Ausgabe steht im Log.
 
 ## 0.9.7
 

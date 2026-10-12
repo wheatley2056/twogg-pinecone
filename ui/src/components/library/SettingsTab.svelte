@@ -34,6 +34,30 @@
     ...(account && !accounts.some((a) => a.uuid === account) && accounts.length > 0 ? [{ value: account, label: t("instance.accountMissing") }] : []),
   ]);
 
+  // svelte-ignore state_referenced_locally
+  let hooks = $state({ pre: profile.preLaunch ?? "", wrapper: profile.wrapper ?? "", post: profile.postExit ?? "" });
+  // svelte-ignore state_referenced_locally
+  let savedHooks = $state(JSON.stringify(hooks));
+  let hooksBusy = $state(false);
+  let hooksError = $state<string | null>(null);
+  const hooksDirty = $derived(JSON.stringify(hooks) !== savedHooks);
+  let advanced = $state(!!(hooks.pre || hooks.wrapper || hooks.post));
+
+  async function saveHooks(e: SubmitEvent) {
+    e.preventDefault();
+    hooksBusy = true;
+    hooksError = null;
+    try {
+      await api.setProfileHooks(profile.id, hooks.pre, hooks.wrapper, hooks.post);
+      savedHooks = JSON.stringify(hooks);
+      onChanged();
+    } catch (err) {
+      hooksError = errorText(err);
+    } finally {
+      hooksBusy = false;
+    }
+  }
+
   async function setAccount(value: string) {
     const before = account;
     account = value;
@@ -75,6 +99,31 @@
     <SettingRow title={t("instance.account")} hint={t("instance.accountHint")}>
       <Dropdown label="" value={account} options={accountOptions} align="right" disabled={locked} onchange={setAccount} />
     </SettingRow>
+    <button type="button" class="ghost disclose" aria-expanded={advanced} onclick={() => (advanced = !advanced)}>
+      {advanced ? "▾" : "▸"} {t("hooks.title")}
+    </button>
+    {#if advanced}
+      <form class="hooks" onsubmit={saveHooks}>
+        <p class="hint">{t("hooks.hint")}</p>
+        <label>
+          {t("hooks.pre")}
+          <input class="mono" bind:value={hooks.pre} placeholder={t("hooks.prePlaceholder")} disabled={locked} spellcheck="false" />
+        </label>
+        <label>
+          {t("hooks.wrapper")}
+          <input class="mono" bind:value={hooks.wrapper} placeholder="gamemoderun" disabled={locked} spellcheck="false" />
+        </label>
+        <label>
+          {t("hooks.post")}
+          <input class="mono" bind:value={hooks.post} placeholder={t("hooks.postPlaceholder")} disabled={locked} spellcheck="false" />
+        </label>
+        <p class="hint">{t("hooks.placeholders")}</p>
+        {#if hooksError}<p class="error">{hooksError}</p>{/if}
+        <div class="actions">
+          <button type="submit" class="primary cut" disabled={locked || hooksBusy || !hooksDirty}>{hooksBusy ? t("dialog.saving") : t("common.save")}</button>
+        </div>
+      </form>
+    {/if}
   </section>
 
   <section class="block danger-zone">
@@ -147,5 +196,30 @@
   .hint {
     font-size: 12px;
     color: var(--text-muted);
+  }
+
+  .disclose {
+    align-self: flex-start;
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+
+  .hooks {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    background: var(--surface);
+    clip-path: var(--cut-1);
+  }
+
+  .hooks p {
+    margin: 0;
+  }
+
+  .hooks input {
+    background: var(--surface-2);
+    font-family: var(--font-mono);
+    font-size: 13px;
   }
 </style>
