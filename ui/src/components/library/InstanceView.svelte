@@ -98,7 +98,9 @@
       <span class="chip">{versionLabel(profile)}</span>
       <span class="chip">{t("instance.ram", { gb: ((profile.memoryMb ?? 4096) / 1024).toFixed(1).replace(".0", "") })}</span>
       {#if packInfo && packInfo.source !== "file"}
-        {#if packUpdate}
+        {#if packUpdate?.withdrawn}
+          <span class="chip withdrawn"><Icon name="alert" size={13} stroke={2.2} />{t("instance.withdrawnChip")}</span>
+        {:else if packUpdate}
           <button class="chip update" disabled={locked} onclick={() => (updateDialog = { target: { version: packUpdate!.versionId, file: null } })}>
             <Icon name="arrow-up" size={13} stroke={2.2} />{t("instance.packUpdate", { version: packUpdate.latest })}
           </button>
@@ -134,6 +136,22 @@
     </div>
   </div>
 </header>
+
+<!-- Vom Orga-Team zurückgezogene Pack-Version (F-62): Grund und Wechsel zur empfohlenen. -->
+{#if packUpdate?.withdrawn}
+  <div class="withdrawn-bar" role="alert">
+    <Icon name="alert" size={18} stroke={2} />
+    <span class="text">
+      <strong>{t("instance.withdrawnTitle", { version: packUpdate.current })}</strong>
+      <span>{packUpdate.withdrawn}</span>
+    </span>
+    {#if packUpdate.versionId}
+      <button class="small" disabled={locked} onclick={() => (updateDialog = { target: { version: packUpdate!.versionId, file: null } })}>
+        {t("instance.withdrawnSwitch", { version: packUpdate.latest })}
+      </button>
+    {/if}
+  </div>
+{/if}
 
 <div class="tabs" role="tablist" aria-label={t("instance.areas")}>
   {#each tabs as item (item.id)}
@@ -254,6 +272,45 @@
     min-height: 0;
     font-weight: 400;
     color: var(--accent-fg);
+  }
+
+  .chip.withdrawn {
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface-2));
+  }
+
+  .withdrawn-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 28px 4px;
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+    border-left: 3px solid var(--danger);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .withdrawn-bar :global(svg) {
+    flex: none;
+    color: var(--danger);
+  }
+
+  .withdrawn-bar .text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .withdrawn-bar .text span {
+    color: var(--text-soft);
+  }
+
+  .withdrawn-bar .small {
+    min-height: 34px;
+    font-size: 13px;
   }
 
   .actions {

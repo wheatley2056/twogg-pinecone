@@ -13,6 +13,8 @@
   öffnet, sieht vorher alle Werte und übernimmt das Pack als eigenes.
 - **Discord-Status:** Einstellungen → Allgemein → „Discord-Status“ (standardmäßig aus) zeigt in
   Discord „Spielt <Instanz>“ mit Version und Spielzeit. Die Serveradresse wird nie übertragen.
+- **Zurückgezogene Pack-Versionen:** Zieht das Orga-Team eine TwoGG-Pack-Version zurück, zeigt die
+  Instanz eine Hinweisleiste mit dem Grund und „Auf <Version> wechseln“ – auch zurück auf eine ältere.
 
 ## 0.9.8
 

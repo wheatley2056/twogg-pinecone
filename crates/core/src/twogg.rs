@@ -71,6 +71,18 @@ pub struct Pack {
     /// Öffentliche Seite des Packs (`/packs/<id>` auf dem Pinecone-Server); fehlt bei älteren Servern.
     #[serde(default)]
     pub page_url: Option<String>,
+    /// Zurückgezogene Versionen mit Grund (F-62); nicht mehr in `versions`.
+    #[serde(default)]
+    pub withdrawn: Vec<WithdrawnVersion>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WithdrawnVersion {
+    pub id: String,
+    pub version: String,
+    #[serde(default)]
+    pub reason: String,
 }
 
 /// Eintrag der TwoGG-Auswahl in „Entdecken“.

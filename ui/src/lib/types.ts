@@ -290,8 +290,11 @@ export interface PackInfo {
 
 export interface PackUpdate {
   current: string;
+  /** Empfohlene Version; leer, wenn es keine passende gibt (nur bei `withdrawn`). */
   latest: string;
   versionId: string;
+  /** Installierte Version wurde zurückgezogen (F-62): Grund des Orga-Teams. */
+  withdrawn?: string | null;
 }
 
 export type ChangeAction = "add" | "replace" | "remove";
