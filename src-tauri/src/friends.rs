@@ -160,6 +160,70 @@ pub async fn friends_invite_answer(
     with_session!(&state, |token| c.invite_answer(&token, &id, accept))
 }
 
+/// Sync-Pack teilen (F-58): ohne eigene Dateien, Link `pinecone://sync/<code>` für 30 Tage.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncShareDto {
+    link: String,
+    /// Eigene Dateien, die nicht mitgeteilt werden.
+    skipped_files: usize,
+}
+
+#[tauri::command]
+pub async fn syncpack_share(state: State<'_, AppState>, id: String) -> CmdResult<SyncShareDto> {
+    use pinecone_core::syncpacks::SharedPack;
+    let pack = state.launcher.syncpacks().get(&id).map_err(err)?;
+    let data = serde_json::to_value(SharedPack::from_pack(&pack)).map_err(err)?;
+    let c = client(&state)?;
+    let code = with_session!(&state, |token| c.sync_share(&token, &data))?;
+    Ok(SyncShareDto {
+        link: format!("pinecone://sync/{code}"),
+        skipped_files: SharedPack::skipped_files(&pack),
+    })
+}
+
+#[derive(Serialize)]
+pub struct SharedSyncDto {
+    owner: String,
+    pack: pinecone_core::syncpacks::SharedPack,
+}
+
+fn share_code(input: &str) -> String {
+    input
+        .trim()
+        .trim_start_matches("pinecone://sync/")
+        .trim_end_matches('/')
+        .to_ascii_uppercase()
+}
+
+/// Vorschau eines geteilten Sync-Packs: alle Werte, bevor etwas übernommen wird (AK-58.2).
+#[tauri::command]
+pub async fn syncpack_share_preview(
+    state: State<'_, AppState>,
+    code: String,
+) -> CmdResult<SharedSyncDto> {
+    let c = client(&state)?;
+    let code = share_code(&code);
+    let shared = with_session!(&state, |token| c.sync_share_get(&token, &code))?;
+    Ok(SharedSyncDto {
+        owner: shared.owner,
+        pack: pinecone_core::syncpacks::SharedPack::parse(&shared.data).map_err(err)?,
+    })
+}
+
+#[tauri::command]
+pub async fn syncpack_share_import(
+    state: State<'_, AppState>,
+    code: String,
+) -> CmdResult<pinecone_core::syncpacks::SyncPack> {
+    let preview = syncpack_share_preview(state.clone(), code).await?;
+    state
+        .launcher
+        .syncpacks()
+        .import_shared(&preview.pack)
+        .map_err(err)
+}
+
 #[tauri::command]
 pub async fn friends_accept(state: State<'_, AppState>, uuid: String) -> CmdResult<()> {
     let c = client(&state)?;

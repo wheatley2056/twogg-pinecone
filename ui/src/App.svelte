@@ -18,6 +18,7 @@
   import ImportDialog from "./components/ImportDialog.svelte";
   import InstanceView, { type InstanceTab } from "./components/library/InstanceView.svelte";
   import DuplicateDialog from "./components/library/DuplicateDialog.svelte";
+  import SyncShareDialog from "./components/library/SyncShareDialog.svelte";
   import NewSyncDialog from "./components/library/NewSyncDialog.svelte";
   import SyncPackView from "./components/library/SyncPackView.svelte";
   import EventsPage from "./components/pages/EventsPage.svelte";
@@ -93,6 +94,10 @@
       addFriendByLink(value);
       return;
     }
+    if (value.startsWith("pinecone://sync/")) {
+      syncShareCode = value;
+      return;
+    }
     openPack(value.startsWith("pinecone://") ? { kind: "link", link: value } : { kind: "file", path: value });
   }
 
@@ -110,6 +115,9 @@
       notify({ id: `friend-code-${Date.now()}`, kind: "error", title: t("friends.add"), text: errorText(e) });
     }
   }
+
+  /** Geöffneter Link auf ein geteiltes Sync-Pack (F-58). */
+  let syncShareCode = $state<string | null>(null);
 
   /** Nach dem Installieren aus einer Einladung direkt beitreten. */
   let joinAfterImport: string | null = null;
@@ -502,6 +510,19 @@
     onClose={() => (creatingSync = false)}
     onCreated={async (p) => {
       creatingSync = false;
+      await reloadSyncPacks();
+      syncId = p.id;
+      view = "library";
+    }}
+  />
+{/if}
+
+{#if syncShareCode}
+  <SyncShareDialog
+    code={syncShareCode}
+    onClose={() => (syncShareCode = null)}
+    onImported={async (p) => {
+      syncShareCode = null;
       await reloadSyncPacks();
       syncId = p.id;
       view = "library";

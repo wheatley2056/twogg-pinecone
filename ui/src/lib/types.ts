@@ -434,6 +434,12 @@ export interface SyncPack {
   auto: { enabled: boolean; loaders: (LoaderKind | null)[] };
 }
 
+/** Geteiltes Sync-Pack (F-58): ohne eigene Dateien. */
+export interface SharedSyncPack {
+  owner: string;
+  pack: { name: string; mode: SyncMode; entries: SyncEntry[]; options: Record<string, string> };
+}
+
 export interface ProfileSyncPack {
   pack: SyncPack;
   enabled: boolean;

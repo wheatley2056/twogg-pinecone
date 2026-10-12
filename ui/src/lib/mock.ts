@@ -256,6 +256,21 @@ Object.assign(api, {
     mockFriends.sentInvites = [{ id: "s1", uuid: to, name: mockFriends.friends!.find((f) => f.uuid === to)?.name ?? to, server, pack: null, instance: null, status: "open", expiresAt: 0 }];
   },
   friendInviteAnswer: async (id: string) => void (mockFriends.invites = mockFriends.invites!.filter((i) => i.id !== id)),
+  syncpackShare: async () => (await wait(400), { link: "pinecone://sync/QWERTY2345", skippedFiles: 1 }),
+  syncpackSharePreview: async () => ({
+    owner: "Kalle",
+    pack: {
+      name: "Event-Tasten",
+      mode: "sync" as const,
+      entries: [{ type: "modrinth" as const, projectId: "AANobbMI", kind: "mod" as const, name: "Sodium" }],
+      options: { "key_key.jump": "key.keyboard.space", "key_key.zoom": "key.keyboard.c", fov: "0.25" },
+    },
+  }),
+  syncpackShareImport: async () => {
+    const p: SyncPack = { id: "event-tasten", name: "Event-Tasten", mode: "sync", entries: [], options: { fov: "0.25" }, auto: { enabled: false, loaders: [] } };
+    syncPacks = [...syncPacks, p];
+    return p;
+  },
   friendAccept: async (uuid: string) => {
     const p = mockFriends.incoming!.find((x) => x.uuid === uuid);
     mockFriends.incoming = mockFriends.incoming!.filter((x) => x.uuid !== uuid);
@@ -523,7 +538,8 @@ Object.assign(api, {
   skinApply: async () => { throw "Microsoft-Login ist nicht eingerichtet"; },
   skinSetCape: async () => { throw "Microsoft-Login ist nicht eingerichtet"; },
   skinImportAccount: async () => addMockSkin("Account"),
-  takeOpenRequests: async () => [],
+  // Im Browser: `#open=<link>` simuliert einen beim Start übergebenen Link.
+  takeOpenRequests: async () => (location.hash.startsWith("#open=") ? [decodeURIComponent(location.hash.slice(6))] : []),
   onOpenPack: async () => () => {},
   packInstallModrinth: async () => (await wait(800), { profile: profiles[0], missing: [] }),
   packInstallCurseforge: async () => (await wait(800), {
