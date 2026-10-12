@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.9.7
+
+- **Entfernen repariert.** Konto entfernen (Einstellungen → Konten und Kontomenü), Inhalt aus einer
+  Instanz entfernen und Welt löschen brachen mit „Cannot read properties of null (reading 'uuid')“
+  ab und taten nichts. Sie funktionieren wieder.
+
 ## 0.9.6
 
 - **CurseForge über den Pinecone-Server.** Der Launcher enthält keinen CurseForge-Schlüssel mehr,
