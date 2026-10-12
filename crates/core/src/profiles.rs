@@ -42,7 +42,16 @@ pub struct Profile {
     /// Kurzes Symbol (ein Emoji oder bis zu zwei Zeichen).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// Geänderte Welten vor jedem Start automatisch sichern.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub backup_on_launch: bool,
+    /// So viele automatische Backups je Welt behalten; ohne Angabe [`DEFAULT_BACKUP_KEEP`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backup_keep: Option<u32>,
 }
+
+/// Automatische Welt-Backups je Welt, wenn das Profil nichts anderes sagt.
+pub const DEFAULT_BACKUP_KEEP: u32 = 5;
 
 impl Profile {
     pub fn new(name: impl Into<String>, minecraft: impl Into<String>) -> Self {
@@ -58,6 +67,8 @@ impl Profile {
             resolution: None,
             color: None,
             icon: None,
+            backup_on_launch: false,
+            backup_keep: None,
         }
     }
 

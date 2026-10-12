@@ -45,6 +45,10 @@ export interface Profile {
   /** Pack-ID bei TwoGG-Packs. */
   packId?: string | null;
   lastPlayed?: number | null;
+  /** Geänderte Welten vor jedem Start sichern. */
+  backupOnLaunch: boolean;
+  /** Automatische Backups je Welt, die behalten werden. */
+  backupKeep: number;
 }
 
 export interface ProfileInput {
@@ -592,6 +596,17 @@ export interface World {
   version: string | null;
   size: number;
   icon: string | null;
+}
+
+export interface WorldBackup {
+  /** Dateiname im Backup-Ordner (ID für Aktionen). */
+  file: string;
+  /** Ordner der gesicherten Welt. */
+  folder: string;
+  /** Unix-Zeit in Millisekunden. */
+  created: number;
+  size: number;
+  auto: boolean;
 }
 
 export interface SavedServer {
