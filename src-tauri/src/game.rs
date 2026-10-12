@@ -78,6 +78,16 @@ pub async fn launch(
     };
 
     let profile = state.launcher.profiles().get(&id).map_err(err)?;
+    if profile.backup_on_launch {
+        let _ = on_event.send(LaunchEvent::Stage { stage: "backup" });
+        let app = app.clone();
+        let p = profile.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            crate::instance::backup_before_launch(&app.state::<AppState>(), &p)
+        })
+        .await
+        .map_err(err)?;
+    }
     let account = state
         .accounts
         .session(None, state.msa.as_ref())

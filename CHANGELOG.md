@@ -1,5 +1,15 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- **Welt-Backups wiederherstellen.** Im Reiter „Welten“ zeigt „Backups (n)“ die Sicherungen einer
+  Welt; „Wiederherstellen“ setzt sie zurück und sichert vorher den aktuellen Stand. Backups
+  gelöschter Welten stehen unten und lassen sich ebenfalls zurückholen. Ein beschädigtes Backup
+  wird erkannt, bevor die Welt angefasst wird.
+- **Automatisch vor jedem Start sichern:** pro Instanz einschaltbar. Gesichert werden nur Welten,
+  die sich seit dem letzten Backup geändert haben; Pinecone behält die letzten N automatischen
+  Backups (Standard 5), manuelle bleiben immer.
+
 ## 0.9.7
 
 - **Entfernen repariert.** Konto entfernen (Einstellungen → Konten und Kontomenü), Inhalt aus einer

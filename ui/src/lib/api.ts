@@ -12,6 +12,7 @@ import type {
   Recommendation,
   SavedServer,
   World,
+  WorldBackup,
   ServerInfo,
   Participation,
   AppInfo,
@@ -198,6 +199,12 @@ export const api = {
   worlds: (id: string) => invoke<World[]>("worlds_list", { id }),
   worldBackup: (id: string, folder: string) => invoke<string>("world_backup", { id, folder }),
   worldDelete: (id: string, folder: string) => invoke<void>("world_delete", { id, folder }),
+  worldBackups: (id: string) => invoke<WorldBackup[]>("world_backups", { id }),
+  /** Gibt den Pfad der Sicherung des vorherigen Stands zurück, falls die Welt noch existierte. */
+  worldRestore: (id: string, file: string) => invoke<string | null>("world_restore", { id, file }),
+  worldBackupDelete: (id: string, file: string) => invoke<void>("world_backup_delete", { id, file }),
+  setBackupOnLaunch: (id: string, enabled: boolean, keep: number) =>
+    invoke<void>("set_backup_on_launch", { id, enabled, keep }),
   worldOpenFolder: (id: string, folder: string) => invoke<void>("world_open_folder", { id, folder }),
   savedServers: (id: string) => invoke<SavedServer[]>("servers_list", { id }),
   recommendations: (projectType: ProjectType) => invoke<Recommendation[]>("twogg_recommendations", { projectType }),

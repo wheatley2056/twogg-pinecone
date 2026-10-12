@@ -51,6 +51,8 @@ pub struct ProfileDto {
     pub pack_id: Option<String>,
     /// Unix-Zeit des letzten Spielendes; nur in der Liste.
     pub last_played: Option<u64>,
+    pub backup_on_launch: bool,
+    pub backup_keep: u32,
 }
 
 impl ProfileDto {
@@ -66,6 +68,10 @@ impl ProfileDto {
             java: p.java.map(|j| j.display().to_string()),
             color: p.color,
             icon: p.icon,
+            backup_on_launch: p.backup_on_launch,
+            backup_keep: p
+                .backup_keep
+                .unwrap_or(pinecone_core::profiles::DEFAULT_BACKUP_KEEP),
             running,
             pack_source: None,
             pack_id: None,

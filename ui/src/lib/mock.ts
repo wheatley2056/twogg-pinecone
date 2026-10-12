@@ -8,12 +8,12 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const loginHandlers: ((r: { user?: AppUser; error?: string }) => void)[] = [];
 
 let profiles: Profile[] = [
-  { id: "fabric-test", packId: "horizons-unbound", name: "REVIVAL: Avalon", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 6144, jvmArgs: [], java: null, color: null, icon: "motif:shield", running: false, packSource: "twogg", lastPlayed: null },
-  { id: "latest-2026", name: "LATEST 2026", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 4096, jvmArgs: [], java: null, color: null, icon: "motif:waves", running: false, packSource: "twogg", lastPlayed: null },
-  { id: "survival", name: "Survival", minecraft: "26.2", loader: null, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:block", running: false, packSource: null, lastPlayed: null },
-  { id: "quilt-1-21-1", name: "Bauteam-Welt", minecraft: "26.2", loader: { kind: "quilt", version: "0.30.1" }, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:house", running: false, packSource: null, lastPlayed: null },
-  { id: "qol", name: "QoL Mods", minecraft: "26.2", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:sliders", running: false, packSource: "modrinth", lastPlayed: null },
-  { id: "retro", name: "Retro", minecraft: "1.8.9", loader: null, memoryMb: 2048, jvmArgs: [], java: null, color: null, icon: null, running: false, packSource: null, lastPlayed: null },
+  { id: "fabric-test", packId: "horizons-unbound", name: "REVIVAL: Avalon", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 6144, jvmArgs: [], java: null, color: null, icon: "motif:shield", running: false, packSource: "twogg", lastPlayed: null, backupOnLaunch: false, backupKeep: 5 },
+  { id: "latest-2026", name: "LATEST 2026", minecraft: "1.21.11", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: 4096, jvmArgs: [], java: null, color: null, icon: "motif:waves", running: false, packSource: "twogg", lastPlayed: null, backupOnLaunch: false, backupKeep: 5 },
+  { id: "survival", name: "Survival", minecraft: "26.2", loader: null, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:block", running: false, packSource: null, lastPlayed: null, backupOnLaunch: false, backupKeep: 5 },
+  { id: "quilt-1-21-1", name: "Bauteam-Welt", minecraft: "26.2", loader: { kind: "quilt", version: "0.30.1" }, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:house", running: false, packSource: null, lastPlayed: null, backupOnLaunch: false, backupKeep: 5 },
+  { id: "qol", name: "QoL Mods", minecraft: "26.2", loader: { kind: "fabric", version: "0.19.5" }, memoryMb: null, jvmArgs: [], java: null, color: null, icon: "motif:sliders", running: false, packSource: "modrinth", lastPlayed: null, backupOnLaunch: false, backupKeep: 5 },
+  { id: "retro", name: "Retro", minecraft: "1.8.9", loader: null, memoryMb: 2048, jvmArgs: [], java: null, color: null, icon: null, running: false, packSource: null, lastPlayed: null, backupOnLaunch: false, backupKeep: 5 },
 ];
 let accounts: Account[] = [{ uuid: "1a70aea0-11fc-356b-8f09-325a0158a7d0", name: "Tobi", kind: "offline", active: true }];
 const stopped = new Set<string>();
@@ -143,7 +143,7 @@ function preview(token: string, source: "modrinth" | "curseforge" | "file") {
 }
 
 function toProfile(id: string, input: ProfileInput): Profile {
-  return { id, running: false, ...input, loader: input.loader && { ...input.loader, version: input.loader.version || "0.19.5" } };
+  return { id, running: false, backupOnLaunch: false, backupKeep: 5, ...input, loader: input.loader && { ...input.loader, version: input.loader.version || "0.19.5" } };
 }
 
 // Echte Events von twogg.app (gekürzt) plus REVIVAL aus dem Design-System.
@@ -186,6 +186,17 @@ Object.assign(api, {
   worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
   worldDelete: async () => {},
   worldOpenFolder: async () => {},
+  worldBackups: async (id: string) =>
+    id === "fabric-test"
+      ? [
+          { file: "Avalon-1791800000000-auto.zip", folder: "Avalon", created: Date.now() - 3 * 3600_000, size: 380_000_000, auto: true },
+          { file: "Avalon-1791700000000.zip", folder: "Avalon", created: Date.now() - 2 * 86400_000, size: 360_000_000, auto: false },
+          { file: "Alte Welt-1791000000000.zip", folder: "Alte Welt", created: Date.now() - 20 * 86400_000, size: 12_000_000, auto: false },
+        ]
+      : [],
+  worldRestore: async (_id: string, file: string) => (await wait(500), `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${file}`),
+  worldBackupDelete: async () => {},
+  setBackupOnLaunch: async () => {},
   savedServers: async () => [
     { name: "TwoGG Community", address: "mc.twogg.de", icon: null },
     { name: "Avalon (Event)", address: "avalon.twogg.de", icon: null },
