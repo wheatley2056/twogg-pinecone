@@ -51,6 +51,10 @@ pub struct ProfileDto {
     pub pack_id: Option<String>,
     /// Unix-Zeit des letzten Spielendes; nur in der Liste.
     pub last_played: Option<u64>,
+    /// Gesamte Spielzeit in Sekunden; nur in der Liste.
+    pub playtime: Option<u64>,
+    /// Eigene Gruppe in der Bibliothek.
+    pub group: Option<String>,
     pub backup_on_launch: bool,
     pub backup_keep: u32,
     /// UUID des festen Kontos der Instanz; `None` = aktives Konto.
@@ -85,6 +89,8 @@ impl ProfileDto {
             pack_source: None,
             pack_id: None,
             last_played: None,
+            playtime: None,
+            group: p.group,
         }
     }
 }

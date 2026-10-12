@@ -43,6 +43,9 @@ pub struct Profile {
     /// Kurzes Symbol (ein Emoji oder bis zu zwei Zeichen).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// Eigene Gruppe in der Bibliothek (F-50); ohne Angabe die Standardgruppe.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
     /// UUID des Kontos, mit dem diese Instanz startet; ohne Angabe das aktive Konto.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub account: Option<String>,
@@ -71,6 +74,17 @@ pub struct DuplicateOptions {
     pub screenshots: bool,
 }
 
+/// Gruppennamen: getrimmt, 1–32 Zeichen; leer = keine Gruppe.
+pub fn clean_group(name: Option<&str>) -> Result<Option<String>> {
+    match name.map(str::trim).filter(|n| !n.is_empty()) {
+        None => Ok(None),
+        Some(n) if n.chars().count() > 32 => Err(Error::Invalid(
+            "Gruppenname darf höchstens 32 Zeichen lang sein".into(),
+        )),
+        Some(n) => Ok(Some(n.to_string())),
+    }
+}
+
 /// Automatische Welt-Backups je Welt, wenn das Profil nichts anderes sagt.
 pub const DEFAULT_BACKUP_KEEP: u32 = 5;
 
@@ -88,6 +102,7 @@ impl Profile {
             resolution: None,
             color: None,
             icon: None,
+            group: None,
             account: None,
             pre_launch: None,
             wrapper: None,
@@ -357,6 +372,17 @@ mod tests {
         assert!(!dir.path().join("instances/fabric-test-2").exists());
         assert_eq!(store.list().unwrap().len(), 1);
         assert!(store.delete("gibt-es-nicht").is_err());
+    }
+
+    #[test]
+    fn cleans_group_names() {
+        assert_eq!(clean_group(None).unwrap(), None);
+        assert_eq!(clean_group(Some("   ")).unwrap(), None);
+        assert_eq!(
+            clean_group(Some(" Modded ")).unwrap().as_deref(),
+            Some("Modded")
+        );
+        assert!(clean_group(Some(&"x".repeat(33))).is_err());
     }
 
     #[test]

@@ -1,9 +1,15 @@
 <script lang="ts">
   // Bibliothek nach docs/design/referenz/02-bibliothek-instanz.html: Liste links (280 px),
-  // rechts die gewählte Instanz oder ein Sync-Pack.
+  // rechts die gewählte Instanz oder ein Sync-Pack. Instanzen stehen in Gruppen (F-50):
+  // automatisch „TwoGG Events“ bzw. „Eigene Instanzen“ oder in einer eigenen Gruppe. Gruppen
+  // lassen sich einklappen; Instanzen per Ziehen oder „In Gruppe verschieben …“ zuordnen.
   import type { Snippet } from "svelte";
+  import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
-  import { byRecent, isTwogg, versionLabel } from "../../lib/profiles";
+  import { byName, byPlaytime, byRecent, isTwogg, versionLabel } from "../../lib/profiles";
+  import { settings, updateSettings } from "../../lib/settings.svelte";
+  import Dropdown from "../ui/Dropdown.svelte";
+  import GroupDialog from "../library/GroupDialog.svelte";
   import { runOf } from "../../lib/runs.svelte";
   import { menu, type MenuEntry } from "../../lib/contextmenu.svelte";
   import type { Profile, SyncPack } from "../../lib/types";
@@ -22,21 +28,122 @@
     onCreateSync: () => void;
     onImport: () => void;
     instanceMenu: (p: Profile) => MenuEntry[];
+    /** Gruppe einer Instanz wurde geändert: Liste neu laden. */
+    onProfilesChange: () => void;
     children: Snippet;
   }
-  let { profiles, syncPacks, current, onSelect, onSelectSync, onCreate, onCreateSync, onImport, instanceMenu, children }: Props = $props();
+  let { profiles, syncPacks, current, onSelect, onSelectSync, onCreate, onCreateSync, onImport, instanceMenu, onProfilesChange, children }: Props = $props();
+
+  type Sort = "recent" | "name" | "playtime";
+  interface Group {
+    /** `auto:twogg`, `auto:own` oder `group:<name>`. */
+    key: string;
+    label: string;
+    items: Profile[];
+  }
 
   let filter = $state("");
+  let error = $state<string | null>(null);
+  let dialog = $state<{ kind: "move"; profile: Profile } | { kind: "rename"; group: string } | null>(null);
 
   const q = $derived(filter.trim().toLowerCase());
-  const sorted = $derived(profiles.filter((p) => !q || p.name.toLowerCase().includes(q)).sort(byRecent));
-  const twogg = $derived(sorted.filter(isTwogg));
-  const own = $derived(sorted.filter((p) => !isTwogg(p)));
+  const sort = $derived<Sort>(settings.current?.librarySort ?? "recent");
+  const collapsed = $derived(new Set(settings.current?.collapsedGroups ?? []));
+  const compare = $derived(sort === "name" ? byName : sort === "playtime" ? byPlaytime : byRecent);
+  const sorted = $derived(profiles.filter((p) => !q || p.name.toLowerCase().includes(q)).sort(compare));
+  const autoKey = (p: Profile) => (isTwogg(p) ? "auto:twogg" : "auto:own");
+  const keyOf = (p: Profile) => (p.group ? `group:${p.group}` : autoKey(p));
+  const groups = $derived.by(() => {
+    const custom = [...new Set(profiles.map((p) => p.group).filter((g): g is string => !!g))].sort((a, b) => a.localeCompare(b));
+    const list: Group[] = [
+      { key: "auto:twogg", label: t("library.groupTwogg"), items: [] },
+      ...custom.map((g) => ({ key: `group:${g}`, label: g, items: [] as Profile[] })),
+      { key: "auto:own", label: t("library.groupOwn"), items: [] },
+    ];
+    const byKey = new Map(list.map((g) => [g.key, g]));
+    for (const p of sorted) byKey.get(keyOf(p))?.items.push(p);
+    // TwoGG nur mit Inhalt, eigene Gruppen nur ohne Filter auch leer (sonst verschwinden sie beim Suchen).
+    return list.filter((g) => g.key === "auto:own" || g.items.length > 0 || (g.key.startsWith("group:") && !q));
+  });
   const syncs = $derived(syncPacks.filter((s) => !q || s.name.toLowerCase().includes(q)));
+
+  async function toggleGroup(key: string) {
+    await updateSettings((s) => {
+      const set = new Set(s.collapsedGroups);
+      if (!set.delete(key)) set.add(key);
+      s.collapsedGroups = [...set];
+    }).catch((e) => (error = errorText(e)));
+  }
+
+  async function moveTo(p: Profile, key: string) {
+    if (key === keyOf(p)) return;
+    // Automatische Gruppen nehmen nur Instanzen der passenden Art auf.
+    if (key.startsWith("auto:") && key !== autoKey(p)) return;
+    error = null;
+    try {
+      await api.setProfileGroup(p.id, key.startsWith("group:") ? key.slice(6) : null);
+      onProfilesChange();
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+
+  async function dissolve(group: string) {
+    error = null;
+    try {
+      for (const p of profiles.filter((p) => p.group === group)) await api.setProfileGroup(p.id, null);
+      onProfilesChange();
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+
+  // Ziehen mit Zeiger-Ereignissen (HTML-Drag&Drop kollidiert mit dem Datei-Drop von Tauri).
+  let drag = $state<{ profile: Profile; x: number; y: number; over: string | null } | null>(null);
+  let pressed: { profile: Profile; x: number; y: number; id: number } | null = null;
+  let suppressClick = false;
+
+  function groupAt(x: number, y: number): string | null {
+    return (document.elementFromPoint(x, y)?.closest("[data-group]") as HTMLElement | null)?.dataset.group ?? null;
+  }
+
+  function onPointerDown(e: PointerEvent, p: Profile) {
+    if (e.button !== 0) return;
+    pressed = { profile: p, x: e.clientX, y: e.clientY, id: e.pointerId };
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    if (!pressed || e.pointerId !== pressed.id) return;
+    if (!drag && Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y) < 6) return;
+    drag = { profile: pressed.profile, x: e.clientX, y: e.clientY, over: groupAt(e.clientX, e.clientY) };
+  }
+
+  function onPointerUp(e: PointerEvent) {
+    if (drag) {
+      const { profile, over } = drag;
+      drag = null;
+      suppressClick = true;
+      setTimeout(() => (suppressClick = false));
+      if (over) moveTo(profile, over);
+    }
+    pressed = null;
+  }
+
+  const canDrop = (key: string) => !!drag && key !== keyOf(drag.profile) && (!key.startsWith("auto:") || key === autoKey(drag.profile));
 </script>
 
+<svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={() => ((drag = null), (pressed = null))} />
+
 {#snippet item(p: Profile)}
-  <button class="item" class:active={current === p.id} onclick={() => onSelect(p.id)} aria-current={current === p.id ? "true" : undefined} use:menu={() => instanceMenu(p)}>
+  <button
+    class="item"
+    class:active={current === p.id}
+    class:dragging={drag?.profile.id === p.id}
+    onclick={() => !suppressClick && onSelect(p.id)}
+    onpointerdown={(e) => onPointerDown(e, p)}
+    aria-current={current === p.id ? "true" : undefined}
+    use:menu={() => [...instanceMenu(p), "-", { label: t("groups.moveMenu"), icon: "layers", action: () => (dialog = { kind: "move", profile: p }) }]}
+  >
     <ProfileIcon profile={p} size={36} />
     <span class="text">
       <span class="name">{p.name}</span>
@@ -54,19 +161,49 @@
         <Icon name="plus" size={16} stroke={2.6} />
       </button>
     </div>
-    <SearchField bind:value={filter} placeholder={t("library.filter")} height={36} />
+    <div class="tools">
+      <SearchField bind:value={filter} placeholder={t("library.filter")} height={36} />
+      <Dropdown
+        label={t("library.sort")}
+        value={sort}
+        options={[
+          { value: "recent", label: t("library.sortRecent") },
+          { value: "name", label: t("library.sortName") },
+          { value: "playtime", label: t("library.sortPlaytime") },
+        ]}
+        align="right"
+        onchange={(v) => updateSettings((s) => (s.librarySort = v)).catch((e) => (error = errorText(e)))}
+      />
+    </div>
+    {#if error}<p class="error">{error}</p>{/if}
 
     <div class="groups">
-      {#if twogg.length > 0}
-        <div class="group">
-          <span class="label">{t("library.groupTwogg")}</span>
-          {#each twogg as p (p.id)}{@render item(p)}{/each}
+      {#each groups as g (g.key)}
+        {@const isCollapsed = collapsed.has(g.key) && !q}
+        <div class="group" data-group={g.key} class:drop={drag?.over === g.key && canDrop(g.key)}>
+          <span
+            class="label head-row"
+            use:menu={() =>
+              g.key.startsWith("group:")
+                ? [
+                    { label: t("groups.renameMenu"), icon: "edit", action: () => (dialog = { kind: "rename", group: g.label }) },
+                    { label: t("groups.dissolve"), icon: "trash", action: () => dissolve(g.label) },
+                  ]
+                : []}
+          >
+            <button class="ghost collapse" aria-expanded={!isCollapsed} onclick={() => toggleGroup(g.key)}>
+              <span class="chev" class:closed={isCollapsed} aria-hidden="true">▾</span>
+              {g.label}
+              <span class="count">{g.items.length}</span>
+            </button>
+          </span>
+          {#if !isCollapsed}
+            {#each g.items as p (p.id)}{@render item(p)}{:else}
+              <p class="empty">{g.key === "auto:own" ? (q ? t("library.noMatch") : t("library.noOwn")) : t("groups.empty")}</p>
+            {/each}
+          {/if}
         </div>
-      {/if}
-      <div class="group">
-        <span class="label">{t("library.groupOwn")}</span>
-        {#each own as p (p.id)}{@render item(p)}{:else}<p class="empty">{q ? t("library.noMatch") : t("library.noOwn")}</p>{/each}
-      </div>
+      {/each}
       <div class="group">
         <span class="label with-action">
           {t("library.groupSync")}
@@ -93,6 +230,24 @@
     {@render children()}
   </main>
 </div>
+
+{#if drag}
+  <div class="ghost-drag" style:left="{drag.x + 12}px" style:top="{drag.y + 8}px" aria-hidden="true">
+    <ProfileIcon profile={drag.profile} size={24} />{drag.profile.name}
+  </div>
+{/if}
+
+{#if dialog}
+  <GroupDialog
+    mode={dialog}
+    {profiles}
+    onClose={() => (dialog = null)}
+    onDone={() => {
+      dialog = null;
+      onProfilesChange();
+    }}
+  />
+{/if}
 
 <style>
   .library {
@@ -153,6 +308,83 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    outline: 1px dashed transparent;
+    outline-offset: 2px;
+  }
+
+  .group.drop {
+    outline-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+
+  .tools {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .tools > :global(:last-child) {
+    align-self: flex-end;
+    margin: -2px -4px -6px 0;
+  }
+
+  .head-row {
+    padding: 0 0 4px;
+  }
+
+  .collapse {
+    width: 100%;
+    min-height: 26px;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 0 6px;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+  }
+
+  .collapse:hover:not(:disabled) {
+    color: var(--text-soft);
+    background: transparent;
+  }
+
+  .chev {
+    display: inline-block;
+    transition: transform 0.12s;
+  }
+
+  .chev.closed {
+    transform: rotate(-90deg);
+  }
+
+  .count {
+    margin-left: auto;
+    color: var(--text-dim);
+  }
+
+  .item.dragging {
+    opacity: 0.45;
+  }
+
+  .ghost-drag {
+    position: fixed;
+    z-index: 50;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--surface-active);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+  }
+
+  .error {
+    margin: 0;
+    font-size: 12px;
   }
 
   .label {

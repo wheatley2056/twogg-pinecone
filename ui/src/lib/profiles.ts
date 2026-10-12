@@ -21,3 +21,12 @@ export function isTwogg(p: Pick<Profile, "packSource">): boolean {
 export function byRecent(a: Profile, b: Profile): number {
   return (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0) || a.name.localeCompare(b.name);
 }
+
+export function byName(a: Profile, b: Profile): number {
+  return a.name.localeCompare(b.name);
+}
+
+/** Meiste Spielzeit zuerst. */
+export function byPlaytime(a: Profile, b: Profile): number {
+  return (b.playtime ?? 0) - (a.playtime ?? 0) || byName(a, b);
+}

@@ -27,6 +27,8 @@ let settings: Settings = {
   jvm: { defaultPreset: "aikar", presets: [] },
   launchBehavior: "keep",
   showAfterExit: true,
+  librarySort: "recent",
+  collapsedGroups: [],
 };
 // Gekürzte Flag-Listen; die echten stehen in crates/core/src/jvm.rs.
 const JVM_BUILTIN: JvmPreset[] = [
@@ -188,6 +190,8 @@ Object.assign(api, {
   worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
   worldDelete: async () => {},
   worldOpenFolder: async () => {},
+  setProfileGroup: async (id: string, group: string | null) =>
+    void (profiles = profiles.map((p) => (p.id === id ? { ...p, group } : p))),
   setProfileHooks: async (id: string, preLaunch: string, wrapper: string, postExit: string) => {
     if ([preLaunch, wrapper, postExit].some((c) => (c.match(/"/g)?.length ?? 0) % 2 === 1)) throw "Fehlendes \" im Befehl";
     profiles = profiles.map((p) => (p.id === id ? { ...p, preLaunch: preLaunch || null, wrapper: wrapper || null, postExit: postExit || null } : p));

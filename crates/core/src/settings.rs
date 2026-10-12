@@ -40,6 +40,16 @@ pub enum LaunchBehavior {
     Close,
 }
 
+/// Sortierung der Bibliothek (F-50).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LibrarySort {
+    #[default]
+    Recent,
+    Name,
+    Playtime,
+}
+
 /// Welche Launcher-Versionen das Selbst-Update anbietet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -160,6 +170,11 @@ pub struct Settings {
     /// Nach Spielende das Fenster wieder anzeigen (bei „minimieren“).
     #[serde(default = "default_true")]
     pub show_after_exit: bool,
+    #[serde(default)]
+    pub library_sort: LibrarySort,
+    /// Eingeklappte Gruppen der Bibliothek (`twogg`, `own` oder eigener Gruppenname).
+    #[serde(default)]
+    pub collapsed_groups: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -192,6 +207,8 @@ impl Default for Settings {
             jvm: crate::jvm::JvmSettings::default(),
             launch_behavior: LaunchBehavior::Keep,
             show_after_exit: true,
+            library_sort: LibrarySort::Recent,
+            collapsed_groups: Vec::new(),
         }
     }
 }

@@ -108,10 +108,12 @@ pub fn list_profiles(state: State<'_, AppState>) -> CmdResult<Vec<ProfileDto>> {
                 _ => None,
             };
             let last_played = stats.profiles.get(&p.id).and_then(|s| s.last_played);
+            let playtime = stats.profiles.get(&p.id).map(|s| s.playtime_secs);
             let mut dto = ProfileDto::new(p, running);
             dto.pack_source = source;
             dto.pack_id = pack_id;
             dto.last_played = last_played;
+            dto.playtime = playtime;
             dto
         })
         .collect())
@@ -266,6 +268,19 @@ pub async fn duplicate_profile(
             .map_err(err)?
             .map_err(err)?;
     Ok(ProfileDto::new(copy, false))
+}
+
+/// Instanz in eine Gruppe der Bibliothek verschieben (F-50); `None` = Standardgruppe.
+#[tauri::command]
+pub fn set_profile_group(
+    state: State<'_, AppState>,
+    id: String,
+    group: Option<String>,
+) -> CmdResult<()> {
+    let profiles = state.launcher.profiles();
+    let mut profile = profiles.get(&id).map_err(err)?;
+    profile.group = pinecone_core::profiles::clean_group(group.as_deref()).map_err(err)?;
+    profiles.save(&profile).map_err(err)
 }
 
 /// Festes Konto einer Instanz setzen (F-51); `None` = aktives Konto.
