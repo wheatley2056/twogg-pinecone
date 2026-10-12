@@ -1,5 +1,14 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- **Freundescode:** Im Freunde-Panel steht dein Code (z. B. `K7QM-2HXT-9P`) zum Kopieren; ins Feld
+  „Name oder Freundescode“ kann man auch den Code eines anderen eintippen. Links der Form
+  `pinecone://friend/<code>` schicken die Anfrage direkt. Ein neuer Code macht den alten ungültig.
+- **Einladungen:** Wer über Pinecone auf einem Server ist, kann online Freunde mit „Einladen“
+  dazuholen. Der Freund bekommt eine Benachrichtigung; „Beitreten“ nimmt eine passende Instanz oder
+  installiert erst das Pack und tritt dann bei. Abgelehnte Einladungen sieht der Absender.
+
 ## 0.9.8
 
 - **Welt-Backups wiederherstellen.** Im Reiter „Welten“ zeigt „Backups (n)“ die Sicherungen einer

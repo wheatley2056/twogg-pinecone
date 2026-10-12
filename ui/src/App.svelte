@@ -4,7 +4,7 @@
   import { t } from "./lib/i18n.svelte";
   import { notify } from "./lib/notifications.svelte";
   import { hasUnread } from "./lib/notifications.svelte";
-  import { startFriends } from "./lib/friends.svelte";
+  import { friends, refreshFriends, startFriends } from "./lib/friends.svelte";
   import { byRecent, versionLabel } from "./lib/profiles";
   import { installs } from "./lib/installs.svelte";
   import { runOf, startGame, stopGame } from "./lib/runs.svelte";
@@ -12,7 +12,7 @@
   import { loadSettings, settings } from "./lib/settings.svelte";
   import { appWindow } from "./lib/window";
   import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
-  import type { Account, AppInfo, ContentKind, ImportResult, OpenRequest, Profile, ProjectType, SyncPack } from "./lib/types";
+  import type { Account, AppInfo, ContentKind, ImportResult, Invite, OpenRequest, Profile, ProjectType, SyncPack } from "./lib/types";
   import DiscoverPage from "./components/pages/DiscoverPage.svelte";
   import PlayPage from "./components/pages/PlayPage.svelte";
   import ImportDialog from "./components/ImportDialog.svelte";
@@ -89,14 +89,94 @@
 
   /** Vom System übergeben: Link oder Dateipfad. */
   function openExternal(value: string) {
+    if (value.startsWith("pinecone://friend/")) {
+      addFriendByLink(value);
+      return;
+    }
     openPack(value.startsWith("pinecone://") ? { kind: "link", link: value } : { kind: "file", path: value });
   }
+
+  /** `pinecone://friend/<code>` (F-57): Anfrage schicken und Ergebnis melden. */
+  async function addFriendByLink(link: string) {
+    try {
+      const r = await api.friendRequestCode(link);
+      notify({
+        id: `friend-code-${Date.now()}`,
+        kind: "friend",
+        title: r.status === "friends" ? t("friends.nowFriends", { name: r.name }) : t("friends.codeAdded", { name: r.name }),
+      });
+      refreshFriends();
+    } catch (e) {
+      notify({ id: `friend-code-${Date.now()}`, kind: "error", title: t("friends.add"), text: errorText(e) });
+    }
+  }
+
+  /** Nach dem Installieren aus einer Einladung direkt beitreten. */
+  let joinAfterImport: string | null = null;
 
   async function onImported(result: ImportResult) {
     await reloadProfiles();
     openProfile(result.profile.id);
     if (result.missing.length > 0) missing = result;
+    if (joinAfterImport) {
+      const server = joinAfterImport;
+      joinAfterImport = null;
+      play(result.profile.id, server);
+    }
   }
+
+  /** Teilen-Link ohne Versionsangabe, damit eine andere Version desselben Packs passt. */
+  const packBase = (link: string) => link.replace(/^(pinecone:\/\/[^/]+\/[^/?#]+).*$/, "$1");
+
+  /** Einladung annehmen (F-56): passende Instanz suchen, sonst das Pack installieren, dann beitreten. */
+  async function acceptInvite(inv: Invite) {
+    try {
+      await api.friendInviteAnswer(inv.id, true);
+    } catch (e) {
+      notify({ id: `invite-${inv.id}`, kind: "error", title: t("invite.notice", { name: inv.name }), text: errorText(e) });
+      refreshFriends();
+      return;
+    }
+    refreshFriends();
+    if (inv.pack) {
+      const wanted = packBase(inv.pack);
+      for (const p of profiles) {
+        const link = await api.packShareLink(p.id).catch(() => null);
+        if (link && packBase(link) === wanted) {
+          play(p.id, inv.server);
+          return;
+        }
+      }
+      joinAfterImport = inv.server;
+      notify({ id: `invite-${inv.id}`, kind: "info", title: t("invite.notice", { name: inv.name }), text: t("invite.installFirst") });
+      openPack({ kind: "link", link: inv.pack });
+      return;
+    }
+    if (selected) play(selected.id, inv.server);
+  }
+
+  // Eigener Server zum Einladen: nur wenn über Pinecone beigetreten (sonst kennt Pinecone ihn nicht).
+  const inviteFrom = $derived.by(() => {
+    if (!selected) return null;
+    const run = runOf(selected.id);
+    return run.status === "running" && run.server ? { server: run.server, instance: selected.name, profileId: selected.id } : null;
+  });
+
+  // Neue Einladungen als Benachrichtigung mit „Beitreten“.
+  const seenInvites = new Set<string>();
+  $effect(() => {
+    for (const inv of friends.state?.invites ?? []) {
+      if (seenInvites.has(inv.id)) continue;
+      seenInvites.add(inv.id);
+      notify({
+        id: `invite-${inv.id}`,
+        kind: "friend",
+        title: t("invite.notice", { name: inv.name }),
+        text: t("invite.noticeText", { instance: inv.instance ?? "Minecraft", server: inv.server }),
+        action: { label: t("friends.join"), run: () => acceptInvite(inv) },
+      });
+    }
+  });
 
   const selected = $derived(profiles.find((p) => p.id === selectedId) ?? null);
   const hasAccount = $derived(accounts.some((a) => a.active));
@@ -402,7 +482,7 @@
     onAccountsChange={reloadAccounts}
   >
     {#snippet friends()}
-      <Friends onJoin={(server) => selected && play(selected.id, server)} />
+      <Friends onJoin={(server) => selected && play(selected.id, server)} {inviteFrom} onAcceptInvite={acceptInvite} />
     {/snippet}
   </PlayBar>
 </div>

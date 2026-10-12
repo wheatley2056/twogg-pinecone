@@ -603,6 +603,23 @@ export interface FriendsState {
   friends?: Friend[];
   incoming?: { uuid: string; name: string }[];
   outgoing?: { uuid: string; name: string }[];
+  /** Offene Einladungen an mich (F-56). */
+  invites?: Invite[];
+  /** Eigene Einladungen der letzten 15 Minuten. */
+  sentInvites?: Invite[];
+}
+
+/** Einladung auf einen Server; `uuid`/`name` = Absender bzw. Empfänger. */
+export interface Invite {
+  id: string;
+  uuid: string;
+  name: string;
+  server: string;
+  /** Teilen-Link des Packs (`pinecone://…`). */
+  pack: string | null;
+  instance: string | null;
+  status: "open" | "accepted" | "declined";
+  expiresAt: number;
 }
 
 export interface ServerInfo {

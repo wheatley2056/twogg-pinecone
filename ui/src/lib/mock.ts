@@ -176,7 +176,10 @@ const mockFriends: FriendsState = {
   ],
   incoming: [{ uuid: "a4", name: "Lina" }],
   outgoing: [],
+  invites: [{ id: "inv1", uuid: "a1", name: "Kalle", server: "mc.twogg.de", pack: "pinecone://twogg/horizons-unbound", instance: "REVIVAL: Avalon", status: "open", expiresAt: Math.floor(Date.now() / 1000) + 600 }],
+  sentInvites: [],
 };
+let mockCode = "K7QM-2HXT-9P";
 
 Object.assign(api, {
   worlds: async (id: string) =>
@@ -243,6 +246,16 @@ Object.assign(api, {
   friends: async () => mockFriends,
   friendsPresence: async () => {},
   friendRequest: async (name: string) => (mockFriends.outgoing!.push({ uuid: name, name }), "requested"),
+  friendCode: async (fresh = false) => (fresh ? (mockCode = "R4VN-8WCE-3J") : mockCode),
+  friendRequestCode: async (code: string) => {
+    if (code.replace(/[\s-]/g, "").length !== 10) throw "TwoGG-Server: Diesen Freundescode gibt es nicht";
+    mockFriends.outgoing!.push({ uuid: code, name: "Lina" });
+    return { status: "requested" as const, name: "Lina" };
+  },
+  friendInvite: async (to: string, server: string) => {
+    mockFriends.sentInvites = [{ id: "s1", uuid: to, name: mockFriends.friends!.find((f) => f.uuid === to)?.name ?? to, server, pack: null, instance: null, status: "open", expiresAt: 0 }];
+  },
+  friendInviteAnswer: async (id: string) => void (mockFriends.invites = mockFriends.invites!.filter((i) => i.id !== id)),
   friendAccept: async (uuid: string) => {
     const p = mockFriends.incoming!.find((x) => x.uuid === uuid);
     mockFriends.incoming = mockFriends.incoming!.filter((x) => x.uuid !== uuid);
