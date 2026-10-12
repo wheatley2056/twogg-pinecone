@@ -114,8 +114,10 @@
     confirmLabel={t("account.removeConfirm")}
     onCancel={() => (removing = null)}
     onConfirm={() => {
+      // Erst die UUID merken: `account` hängt an `removing` und ist danach null.
+      const uuid = account.uuid;
       removing = null;
-      run(() => api.removeAccount(account.uuid));
+      run(() => api.removeAccount(uuid));
     }}
   >
     <p>{t(account.kind === "microsoft" ? "account.removeTextMs" : "account.removeText", { name: account.name })}</p>

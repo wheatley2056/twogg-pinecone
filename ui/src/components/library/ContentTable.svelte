@@ -352,8 +352,9 @@
     confirmLabel={t("content.remove")}
     onCancel={() => (removing = null)}
     onConfirm={() => {
+      const key = item.key;
       removing = null;
-      act(item.key, () => api.contentRemove(profile.id, item.key));
+      act(key, () => api.contentRemove(profile.id, key));
     }}
   >
     <p>{t("content.removeText", { name: item.name })}</p>

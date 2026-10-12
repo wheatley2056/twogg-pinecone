@@ -108,9 +108,10 @@
     confirmLabel={t("worlds.delete")}
     onCancel={() => (deleting = null)}
     onConfirm={() => {
+      const folder = w.folder;
       deleting = null;
-      run(w.folder, async () => {
-        await api.worldDelete(profile.id, w.folder);
+      run(folder, async () => {
+        await api.worldDelete(profile.id, folder);
         await load();
       });
     }}
