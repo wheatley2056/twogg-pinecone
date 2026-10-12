@@ -378,7 +378,10 @@ mod tests {
     fn cleans_group_names() {
         assert_eq!(clean_group(None).unwrap(), None);
         assert_eq!(clean_group(Some("   ")).unwrap(), None);
-        assert_eq!(clean_group(Some(" Modded ")).unwrap().as_deref(), Some("Modded"));
+        assert_eq!(
+            clean_group(Some(" Modded ")).unwrap().as_deref(),
+            Some("Modded")
+        );
         assert!(clean_group(Some(&"x".repeat(33))).is_err());
     }
 
