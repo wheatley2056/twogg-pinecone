@@ -8,10 +8,9 @@
   import { t } from "../../lib/i18n.svelte";
   import { byName, byPlaytime, byRecent, isTwogg, versionLabel } from "../../lib/profiles";
   import { settings, updateSettings } from "../../lib/settings.svelte";
-  import Dropdown from "../ui/Dropdown.svelte";
   import GroupDialog from "../library/GroupDialog.svelte";
   import { runOf } from "../../lib/runs.svelte";
-  import { menu, type MenuEntry } from "../../lib/contextmenu.svelte";
+  import { contextMenu, menu, type MenuEntry } from "../../lib/contextmenu.svelte";
   import type { Profile, SyncPack } from "../../lib/types";
   import Icon from "../Icon.svelte";
   import ProfileIcon from "../ProfileIcon.svelte";
@@ -65,6 +64,18 @@
     // TwoGG nur mit Inhalt, eigene Gruppen nur ohne Filter auch leer (sonst verschwinden sie beim Suchen).
     return list.filter((g) => g.key === "auto:own" || g.items.length > 0 || (g.key.startsWith("group:") && !q));
   });
+  const sortLabel = $derived({ recent: t("library.sortRecent"), name: t("library.sortName"), playtime: t("library.sortPlaytime") });
+  /** Sortier-Menü am Symbol-Knopf; die aktive Sortierung trägt ein Häkchen. */
+  function sortMenu(e: MouseEvent) {
+    contextMenu(
+      e,
+      (["recent", "name", "playtime"] as const).map((v) => ({
+        label: sortLabel[v],
+        icon: v === sort ? ("check" as const) : undefined,
+        action: () => updateSettings((s) => (s.librarySort = v)).catch((err) => (error = errorText(err))),
+      })),
+    );
+  }
   const syncs = $derived(syncPacks.filter((s) => !q || s.name.toLowerCase().includes(q)));
 
   async function toggleGroup(key: string) {
@@ -163,17 +174,9 @@
     </div>
     <div class="tools">
       <SearchField bind:value={filter} placeholder={t("library.filter")} height={36} />
-      <Dropdown
-        label={t("library.sort")}
-        value={sort}
-        options={[
-          { value: "recent", label: t("library.sortRecent") },
-          { value: "name", label: t("library.sortName") },
-          { value: "playtime", label: t("library.sortPlaytime") },
-        ]}
-        align="right"
-        onchange={(v) => updateSettings((s) => (s.librarySort = v)).catch((e) => (error = errorText(e)))}
-      />
+      <button class="sort-btn" aria-label="{t('library.sort')}: {sortLabel[sort]}" title="{t('library.sort')}: {sortLabel[sort]}" onclick={sortMenu}>
+        <Icon name="sort" size={18} />
+      </button>
     </div>
     {#if error}<p class="error">{error}</p>{/if}
 
@@ -319,14 +322,22 @@
 
   .tools {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
     gap: 6px;
   }
 
-  .tools > :global(:last-child) {
-    align-self: flex-end;
-    margin: -2px -4px -6px 0;
+  .tools > :global(:first-child) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sort-btn {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    flex: none;
+    background: var(--surface);
+    color: var(--text-soft);
   }
 
   .head-row {
@@ -488,4 +499,5 @@
     flex-direction: column;
     overflow: hidden;
   }
+
 </style>
