@@ -163,17 +163,38 @@ pub struct PreviewDto {
 }
 
 async fn preview(state: &AppState, archive: PathBuf, source: PackSource) -> CmdResult<PreviewDto> {
-    let preview = state
-        .launcher
-        .packs()
-        .preview(&archive)
+    // Vollständiger Instanz-Export (F-54) statt Modpack: eigene Vorschau, Import ohne Downloads.
+    let instance = matches!(source, PackSource::File) && {
+        let a = archive.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            pinecone_core::archive::is_instance_archive(&a)
+        })
         .await
-        .map_err(err)?;
+        .unwrap_or(false)
+    };
+    let preview = if instance {
+        let a = archive.clone();
+        tauri::async_runtime::spawn_blocking(move || pinecone_core::archive::preview(&a))
+            .await
+            .map_err(err)?
+            .map_err(err)?
+    } else {
+        state
+            .launcher
+            .packs()
+            .preview(&archive)
+            .await
+            .map_err(err)?
+    };
     let token = archive.display().to_string();
     let dto = PreviewDto {
         token: token.clone(),
         preview,
-        source: source_name(&source),
+        source: if instance {
+            "instance"
+        } else {
+            source_name(&source)
+        },
     };
     state
         .pending_imports
@@ -225,6 +246,19 @@ pub async fn pack_import_pending(
         .remove(&token)
         .ok_or("Keine Vorschau zu diesem Modpack. Bitte erneut öffnen.")?;
     let name = name.map(|n| n.trim().to_string()).filter(|n| !n.is_empty());
+    if matches!(source, PackSource::File) && pinecone_core::archive::is_instance_archive(&archive) {
+        let profiles = state.launcher.profiles().clone();
+        let profile = tauri::async_runtime::spawn_blocking(move || {
+            pinecone_core::archive::import(&profiles, &archive, name)
+        })
+        .await
+        .map_err(err)?
+        .map_err(err)?;
+        return Ok(ImportDto {
+            profile: ProfileDto::new(profile, false),
+            missing: Vec::new(),
+        });
+    }
     let result = state
         .launcher
         .packs()
@@ -423,6 +457,39 @@ pub fn pack_rollback(state: State<'_, AppState>, id: String, snapshot: String) -
         .packs()
         .rollback(&profile, &snapshot)
         .map_err(err)
+}
+
+/// Vollständiger Instanz-Export als `.pinecone.zip` (F-54).
+#[tauri::command]
+pub async fn instance_export(
+    state: State<'_, AppState>,
+    id: String,
+    path: String,
+    options: pinecone_core::archive::ExportOptions,
+) -> CmdResult<()> {
+    let profiles = state.launcher.profiles().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        pinecone_core::archive::export(&profiles, &id, Path::new(&path), options)
+    })
+    .await
+    .map_err(err)?
+    .map_err(err)
+}
+
+/// Ungefähre Größe eines vollständigen Exports in Bytes.
+#[tauri::command]
+pub async fn instance_export_size(
+    state: State<'_, AppState>,
+    id: String,
+    options: pinecone_core::archive::ExportOptions,
+) -> CmdResult<u64> {
+    let profiles = state.launcher.profiles().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        pinecone_core::archive::export_size(&profiles, &id, options)
+    })
+    .await
+    .map_err(err)?
+    .map_err(err)
 }
 
 #[tauri::command]

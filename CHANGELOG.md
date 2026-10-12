@@ -26,6 +26,10 @@
   der Maus hineinziehen oder per Rechtsklick → „In Gruppe verschieben …“. Gruppen lassen sich
   einklappen, umbenennen und auflösen; Event-Instanzen stehen automatisch unter „TwoGG Events“.
   Sortierung nach zuletzt gespielt, Name oder Spielzeit. Alles bleibt nach einem Neustart erhalten.
+- **Komplette Instanz exportieren:** „Exportieren“ → „Komplett (Umzug)“ packt Mods, Configs und
+  Einstellungen und nach Wahl Welten, Screenshots, Ressourcen- und Shaderpakete in eine
+  `.pinecone.zip`. Auf dem anderen Rechner öffnet „Modpack importieren“ sie als neue Instanz.
+  Konten und Start-Befehle sind nie enthalten.
 
 ## 0.9.7
 

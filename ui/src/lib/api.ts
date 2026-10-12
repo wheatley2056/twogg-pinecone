@@ -40,6 +40,7 @@ import type {
   ExportOptions,
   ExportReport,
   ImportResult,
+  InstanceExportOptions,
   PackInfo,
   PackUpdate,
   Resolution,
@@ -199,6 +200,9 @@ export const api = {
   worlds: (id: string) => invoke<World[]>("worlds_list", { id }),
   worldBackup: (id: string, folder: string) => invoke<string>("world_backup", { id, folder }),
   worldDelete: (id: string, folder: string) => invoke<void>("world_delete", { id, folder }),
+  instanceExport: (id: string, path: string, options: InstanceExportOptions) =>
+    invoke<void>("instance_export", { id, path, options }),
+  instanceExportSize: (id: string, options: InstanceExportOptions) => invoke<number>("instance_export_size", { id, options }),
   setProfileGroup: (id: string, group: string | null) => invoke<void>("set_profile_group", { id, group }),
   setProfileHooks: (id: string, preLaunch: string, wrapper: string, postExit: string) =>
     invoke<void>("set_profile_hooks", { id, preLaunch, wrapper, postExit }),

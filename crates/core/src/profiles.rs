@@ -85,6 +85,29 @@ pub fn clean_group(name: Option<&str>) -> Result<Option<String>> {
     }
 }
 
+/// Macht aus einer Event-Instanz eine normale: Die TwoGG-Pack-Bindung im `pack.lock.json`
+/// entfällt, ihre Dateien gelten als eigene. Andere Packs bleiben gebunden.
+pub(crate) fn unbind_event(lock_path: &std::path::Path) -> Result<()> {
+    let Ok(bytes) = std::fs::read(lock_path) else {
+        return Ok(());
+    };
+    let mut lock: crate::content::ContentLock =
+        serde_json::from_slice(&bytes).map_err(Error::json(lock_path.display().to_string()))?;
+    if lock
+        .pack
+        .as_ref()
+        .is_some_and(|p| matches!(p.source, crate::modpack::PackSource::Twogg { .. }))
+    {
+        lock.pack = None;
+        for entry in lock.files.values_mut() {
+            entry.from_pack = false;
+        }
+        let json = serde_json::to_vec_pretty(&lock).map_err(Error::json("pack.lock.json"))?;
+        std::fs::write(lock_path, json).map_err(Error::io(lock_path))?;
+    }
+    Ok(())
+}
+
 /// Automatische Welt-Backups je Welt, wenn das Profil nichts anderes sagt.
 pub const DEFAULT_BACKUP_KEEP: u32 = 5;
 
@@ -156,6 +179,11 @@ impl ProfileStore {
 
     fn profile_file(&self, id: &str) -> PathBuf {
         self.paths.instance_dir(id).join("profile.json")
+    }
+
+    /// Instanzordner eines Profils (`instances/<id>/`, enthält `profile.json` und `.minecraft`).
+    pub fn instance_dir(&self, id: &str) -> PathBuf {
+        self.paths.instance_dir(id)
     }
 
     /// Spielordner eines Profils.
@@ -283,25 +311,7 @@ impl ProfileStore {
         }
         crate::migrate::copy_dir(&self.game_dir(from), &self.game_dir(to), &skip, true)?;
 
-        let lock_path = dst.join("pack.lock.json");
-        if let Ok(bytes) = std::fs::read(&lock_path) {
-            let mut lock: crate::content::ContentLock = serde_json::from_slice(&bytes)
-                .map_err(Error::json(lock_path.display().to_string()))?;
-            if lock
-                .pack
-                .as_ref()
-                .is_some_and(|p| matches!(p.source, crate::modpack::PackSource::Twogg { .. }))
-            {
-                lock.pack = None;
-                for entry in lock.files.values_mut() {
-                    entry.from_pack = false;
-                }
-                let json =
-                    serde_json::to_vec_pretty(&lock).map_err(Error::json("pack.lock.json"))?;
-                std::fs::write(&lock_path, json).map_err(Error::io(&lock_path))?;
-            }
-        }
-        Ok(())
+        unbind_event(&dst.join("pack.lock.json"))
     }
 
     /// Löscht das Profil samt Spielordner (Welten, Mods, Einstellungen!).

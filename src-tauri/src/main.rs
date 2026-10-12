@@ -253,6 +253,8 @@ fn main() {
             packs::pack_preview_link,
             packs::pack_preview_cancel,
             packs::pack_import_pending,
+            packs::instance_export,
+            packs::instance_export_size,
             packs::pack_share_link,
             packs::pack_info,
             packs::pack_check_update,

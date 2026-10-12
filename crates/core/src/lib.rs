@@ -1,6 +1,7 @@
 //! Kern von TwoGG Pinecone. Kennt keine GUI und wird von CLI und Tauri-Backend genutzt.
 
 pub mod accounts;
+pub mod archive;
 pub mod auth;
 pub mod content;
 pub mod curseforge;
