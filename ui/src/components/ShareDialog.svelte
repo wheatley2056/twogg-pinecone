@@ -3,8 +3,9 @@
   import { save } from "@tauri-apps/plugin-dialog";
   import { api, errorText } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
-  import type { ExportOptions, Profile } from "../lib/types";
+  import type { ExportOptions, InstanceExportOptions, Profile } from "../lib/types";
   import Icon from "./Icon.svelte";
+  import Segmented from "./ui/Segmented.svelte";
 
   let { profile, onClose }: { profile: Profile; onClose: () => void } = $props();
 
@@ -15,6 +16,44 @@
   let busy = $state(false);
   let error = $state<string | null>(null);
   let result = $state<string | null>(null);
+  // „Teilen“ = .mrpack für andere, „Umzug“ = alles für den eigenen anderen Rechner (F-54).
+  let mode = $state<"share" | "full">("share");
+  let full = $state<InstanceExportOptions>({ worlds: true, screenshots: false, resourcepacks: true, shaderpacks: true });
+  let fullSize = $state<number | null>(null);
+
+  $effect(() => {
+    if (mode !== "full") return;
+    const opts = $state.snapshot(full);
+    fullSize = null;
+    api.instanceExportSize(profile.id, opts).then((s) => (fullSize = s)).catch(() => {});
+  });
+
+  async function exportFull() {
+    error = result = null;
+    const safeName = profile.name.replace(/[^\w.-]+/g, "_");
+    const path = await save({ defaultPath: `${safeName}.pinecone.zip`, filters: [{ name: t("share.fullFilter"), extensions: ["zip"] }] });
+    if (!path) return;
+    busy = true;
+    try {
+      await api.instanceExport(profile.id, path, $state.snapshot(full));
+      result = t("share.fullDone", { path });
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  function size(bytes: number) {
+    return bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1e6))} MB`;
+  }
+
+  const fullFolders: [keyof InstanceExportOptions, () => string][] = [
+    ["worlds", () => t("share.worlds")],
+    ["screenshots", () => t("share.screenshots")],
+    ["resourcepacks", () => t("share.resourcepacks")],
+    ["shaderpacks", () => t("share.shaders")],
+  ];
 
   onMount(() => {
     dialog.showModal();
@@ -61,7 +100,33 @@
   <div class="dialog-body">
     <h2>{t("share.title", { name: profile.name })}</h2>
 
-    {#if link}
+    <Segmented
+      items={[
+        { id: "share", label: t("share.modeShare") },
+        { id: "full", label: t("share.modeFull") },
+      ]}
+      value={mode}
+      label={t("share.mode")}
+      variant="soft"
+      onchange={(m) => ((mode = m as "share" | "full"), (error = result = null))}
+    />
+
+    {#if mode === "full"}
+      <section>
+        <h3><Icon name="download" size={16} />{t("share.fullTitle")}</h3>
+        <p class="muted">{t("share.fullHint")}</p>
+        <fieldset>
+          <legend>{t("share.include")}</legend>
+          <span class="check fixed"><input type="checkbox" checked disabled />{t("share.fullAlways")}</span>
+          {#each fullFolders as [key, label] (key)}
+            <label class="check"><input type="checkbox" bind:checked={full[key]} />{label()}</label>
+          {/each}
+        </fieldset>
+        <p class="muted small">{t("share.fullNever")}{fullSize !== null ? ` ${t("share.fullSize", { size: size(fullSize) })}` : ""}</p>
+      </section>
+    {/if}
+
+    {#if mode === "share" && link}
       <section>
         <h3><Icon name="link" size={16} />{t("share.linkTitle")}</h3>
         <div class="link-row">
@@ -72,6 +137,7 @@
       </section>
     {/if}
 
+    {#if mode === "share"}
     <section>
       <h3><Icon name="file" size={16} />{t("share.fileTitle")}</h3>
       <p class="muted">{t("pack.exportHint")}</p>
@@ -94,13 +160,18 @@
       </fieldset>
       <p class="muted small">{t("share.never")}</p>
     </section>
+    {/if}
 
     {#if error}<p class="error">{error}</p>{/if}
     {#if result}<p class="notice">{result}</p>{/if}
   </div>
   <div class="dialog-actions">
     <button onclick={onClose} disabled={busy}>{t("common.close")}</button>
-    <button class="primary" onclick={exportPack} disabled={busy || !options.version.trim()}>{busy ? t("common.loading") : t("pack.exportButton")}</button>
+    {#if mode === "full"}
+      <button class="primary" onclick={exportFull} disabled={busy}>{busy ? t("share.fullBusy") : t("share.fullButton")}</button>
+    {:else}
+      <button class="primary" onclick={exportPack} disabled={busy || !options.version.trim()}>{busy ? t("common.loading") : t("pack.exportButton")}</button>
+    {/if}
   </div>
 </dialog>
 

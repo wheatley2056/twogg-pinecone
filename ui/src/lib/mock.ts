@@ -190,6 +190,9 @@ Object.assign(api, {
   worldBackup: async (_id: string, folder: string) => `/home/beispiel/.local/share/twogg-pinecone/backups/worlds/${folder}.zip`,
   worldDelete: async () => {},
   worldOpenFolder: async () => {},
+  instanceExport: async () => void (await wait(900)),
+  instanceExportSize: async (_id: string, o: { worlds: boolean; screenshots: boolean }) =>
+    48_000_000 + (o.worlds ? 412_000_000 : 0) + (o.screenshots ? 22_000_000 : 0),
   setProfileGroup: async (id: string, group: string | null) =>
     void (profiles = profiles.map((p) => (p.id === id ? { ...p, group } : p))),
   setProfileHooks: async (id: string, preLaunch: string, wrapper: string, postExit: string) => {

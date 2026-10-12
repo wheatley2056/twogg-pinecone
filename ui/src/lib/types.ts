@@ -364,7 +364,16 @@ export interface PackPreview {
 export interface PreviewResult {
   token: string;
   preview: PackPreview;
-  source: "modrinth" | "curseforge" | "twogg" | "file";
+  /** `instance` = vollständiger Instanz-Export (`.pinecone.zip`). */
+  source: "modrinth" | "curseforge" | "twogg" | "file" | "instance";
+}
+
+/** Vollständiger Export (F-54): was zusätzlich zu Mods, Configs und Einstellungen mitkommt. */
+export interface InstanceExportOptions {
+  worlds: boolean;
+  screenshots: boolean;
+  resourcepacks: boolean;
+  shaderpacks: boolean;
 }
 
 /** Von außen geöffnet (Link, Datei) oder in der Bibliothek gewählt; leerer Link = Eingabefeld. */
