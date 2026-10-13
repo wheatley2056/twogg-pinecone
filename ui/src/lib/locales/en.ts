@@ -352,6 +352,8 @@ const en: Record<MessageKey, string> = {
   "skins.anim.idle": "Idle",
   "skins.anim.walk": "Walk",
   "skins.anim.run": "Run",
+  "skins.anim.sneak": "Sneak",
+  "skins.anim.mine": "Mine",
   "skins.anim.wave": "Wave",
   "skins.anim.cheer": "Cheer",
   "skins.anim.dance": "Dance",

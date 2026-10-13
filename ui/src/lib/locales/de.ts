@@ -350,6 +350,8 @@ const de = {
   "skins.anim.idle": "Ruhe",
   "skins.anim.walk": "Gehen",
   "skins.anim.run": "Laufen",
+  "skins.anim.sneak": "Schleichen",
+  "skins.anim.mine": "Abbauen",
   "skins.anim.wave": "Winken",
   "skins.anim.cheer": "Jubeln",
   "skins.anim.dance": "Tanzen",
