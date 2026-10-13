@@ -1,0 +1,54 @@
+/* Rechtstexte (Impressum, Datenschutz, Privacy): gleiche Farben und Schriften wie index.html */
+@font-face { font-family: "Pixelify Sans"; font-weight: 600; font-display: swap; src: url(fonts/pixelify-sans-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 400; font-display: swap; src: url(fonts/figtree-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 600; font-display: swap; src: url(fonts/figtree-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url(fonts/jetbrains-mono-latin-500-normal.woff2) format("woff2"); }
+
+:root {
+  --bg: #12100D; --bar: #0D0B09; --surface: #1C1814; --line: #2A231B;
+  --text: #F1E8DA; --text-soft: #D2C4AC; --text-muted: #B5A790; --text-dim: #8F8270;
+  --harz: #E9A23B; --harz-hover: #F3BC64;
+  --pixel: "Pixelify Sans", "Figtree", sans-serif;
+  --ui: "Figtree", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text-soft); font: 400 16px/1.65 var(--ui); -webkit-font-smoothing: antialiased; }
+a { color: var(--harz); text-decoration: none; }
+a:hover { color: var(--harz-hover); text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--harz); outline-offset: 3px; }
+.wrap { width: min(760px, 100% - 32px); margin-inline: auto; }
+
+.top { background: var(--bar); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 16px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font: 600 22px/1 var(--pixel); font-variant-ligatures: none; }
+.brand:hover { color: var(--text); text-decoration: none; }
+.brand svg { width: 18px; height: 26px; }
+.top .spacer { flex: 1; }
+.top .lang { font: 500 12px/1 var(--mono); letter-spacing: 1px; color: var(--text-muted); }
+
+main { padding: 56px 0 72px; }
+.label { font: 500 11px/1 var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); }
+h1 { font: 600 40px/1.05 var(--pixel); color: var(--text); margin: 12px 0 8px; font-variant-ligatures: none; letter-spacing: .5px; }
+.lead { color: var(--text-muted); margin: 0 0 40px; }
+h2 { font: 600 20px/1.2 var(--ui); color: var(--text); margin: 44px 0 12px; }
+h3 { font: 600 16px/1.3 var(--ui); color: var(--text); margin: 24px 0 8px; }
+p { margin: 0 0 12px; }
+ul { margin: 0 0 12px; padding-left: 22px; }
+li { margin: 4px 0; }
+strong { color: var(--text); font-weight: 600; }
+address { font-style: normal; }
+.card { background: var(--surface); border-left: 3px solid var(--harz); padding: 16px 20px; margin: 0 0 16px; }
+.table { width: 100%; overflow-x: auto; margin: 0 0 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); }
+th { color: var(--text-dim); font: 500 11px/1.4 var(--mono); letter-spacing: 1px; text-transform: uppercase; }
+
+footer { border-top: 1px solid var(--line); padding: 28px 0 44px; color: var(--text-dim); font-size: 13.5px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+footer a { color: var(--text-muted); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 26px; overflow-wrap: anywhere; hyphens: auto; }
+  main { padding: 40px 0 56px; }
+}
