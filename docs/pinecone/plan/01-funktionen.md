@@ -1093,10 +1093,10 @@ Funktionen für das Orga-Team in der Admin-Oberfläche des Pinecone-Servers (`pi
 - **Nutzerziel:** Das Orga-Team sieht, welche Packs und Launcher-Versionen genutzt werden.
 - **Verhalten:** Das Admin-Dashboard zeigt (heute nur Summen aus `stats` in `src/admin.rs`) zusätzlich: Downloads je Pack und Version über die Zeit (Tageswerte), Verteilung der Launcher-Versionen (aus `X-Pinecone-Client`, Tageszähler), aktive Freunde-Profile je Tag. Gespeichert werden nur Tageszähler, keine IPs, UUIDs oder Einzelereignisse.
 - **Priorität:** v2
-- **Ist-Stand:** teilweise (Gesamtsummen vorhanden)
+- **Ist-Stand:** vorhanden (Server-PR #9: Tageszähler `daily_stats`, Dashboard „Nutzung“ mit 7/30/90 Tagen). Abweichung: Zähler werden nach 400 Tagen gelöscht statt nach 2 Jahren (AK-59.2 angepasst)
 - **Akzeptanzkriterien:**
   - AK-59.1 Aus der Statistik lässt sich kein einzelner Spieler ableiten (nur Zähler je Tag).
-  - AK-59.2 Tageszähler älter als 2 Jahre werden gelöscht.
+  - AK-59.2 Tageszähler älter als 400 Tage werden gelöscht (reicht für den Vergleich mit dem Vorjahr, Datensparsamkeit).
 - **Randfälle:**
   - *Offline:* entfällt.
   - *Abbruch:* entfällt.
@@ -1107,7 +1107,7 @@ Funktionen für das Orga-Team in der Admin-Oberfläche des Pinecone-Servers (`pi
 - **Nutzerziel:** Das Orga-Team erreicht alle Launcher sofort, z. B. bei Server-Wartung oder einer kaputten Version.
 - **Verhalten:** Im Admin unter Einstellungen: Banner (Text, Stufe Info/Warnung, Zeitraum, optional Link) und `minLauncherVersion`. `/api/v1/info` liefert beides. Der Launcher zeigt das Banner oben auf der Startseite (schließbar je Banner-ID) und bei zu alter Version eine Tafel „Update nötig“ mit Knopf (F-34).
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (Server-PR #8, Launcher-PR #36)
 - **Akzeptanzkriterien:**
   - AK-60.1 Ein geschlossenes Banner erscheint nicht wieder, ein geändertes (neue ID) schon.
   - AK-60.2 Unter `minLauncherVersion` bleiben Bibliothek und Einzelspieler nutzbar; gesperrt werden nur Event-Beitritt und TwoGG-Packs.
@@ -1121,7 +1121,7 @@ Funktionen für das Orga-Team in der Admin-Oberfläche des Pinecone-Servers (`pi
 - **Nutzerziel:** Das Orga-Team bekommt aus einer Pack-Version direkt die Dateien für den Event-Server.
 - **Verhalten:** Im Admin bei einer Pack-Version: „Server-Pack erzeugen“. Der Server liest das `.mrpack`, nimmt nur Dateien mit `env.server` ≠ `unsupported`, legt `overrides` und `server-overrides` dazu und fügt einen Hinweis zum Loader-Installer (Version aus dem Pack) bei. Ergebnis: ZIP zum Download im Admin.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (Server-PR #10, Prüfung per SHA-1 und SHA-512)
 - **Akzeptanzkriterien:**
   - AK-61.1 Client-only Mods (`env.server = unsupported`) fehlen im Server-Pack.
   - AK-61.2 Jede Datei wird gegen den SHA-512 des `.mrpack` geprüft.
@@ -1138,7 +1138,7 @@ Abgrenzung zum Nicht-Ziel „Kein Hosting oder Verwalten der Minecraft-Server“
 - **Nutzerziel:** Eine fehlerhafte Pack-Version erreicht keine weiteren Spieler, und wer sie hat, erfährt davon.
 - **Verhalten:** Im Admin: Version → „Zurückziehen“ mit Grund. Die Version verschwindet aus Listen und Update-Prüfung. Launcher mit dieser Version zeigen „Diese Version wurde zurückgezogen: <Grund>“ und bieten die neueste nicht zurückgezogene Version an (Update nach F-12/F-24).
 - **Priorität:** v2
-- **Ist-Stand:** fehlt
+- **Ist-Stand:** vorhanden (Server-PR #7 und #11, Launcher-PR #35)
 - **Akzeptanzkriterien:**
   - AK-62.1 Eine zurückgezogene Version lässt sich wiederherstellen.
   - AK-62.2 Ist sie die einzige Version, warnt der Admin vor dem Zurückziehen.
@@ -1152,7 +1152,7 @@ Abgrenzung zum Nicht-Ziel „Kein Hosting oder Verwalten der Minecraft-Server“
 - **Nutzerziel:** Mehrere Leute im Orga-Team arbeiten im Admin, und man sieht, wer was geändert hat.
 - **Verhalten:** Admin-Konten mit Rollen „Admin“ (alles) und „Redakteur“ (Neuigkeiten, Empfehlungen, Galerie-Freigabe, keine Einstellungen und Konten). Ein Protokoll zeigt Zeitpunkt, Konto, Aktion und Objekt jeder Änderung.
 - **Priorität:** v2
-- **Ist-Stand:** fehlt (ein gemeinsamer Admin-Zugang)
+- **Ist-Stand:** vorhanden (Server-PR #6)
 - **Akzeptanzkriterien:**
   - AK-63.1 Der bisherige Zugang wird beim Update als erstes Admin-Konto übernommen.
   - AK-63.2 Das Protokoll lässt sich nicht im Admin bearbeiten oder löschen; Einträge älter als 1 Jahr werden automatisch gelöscht.
