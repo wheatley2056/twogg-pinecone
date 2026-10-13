@@ -16,6 +16,8 @@ Instanzen, Mods und Modpacks an einem Ort, dazu TwoGG-Events, Event-Packs und de
 [Änderungen](CHANGELOG.md) ·
 [Fehler melden](https://github.com/wheatley2056/twogg-pinecone/issues)
 
+**Deutsch** · [English](README.en.md)
+
 <br>
 
 <img src="site/img/play.webp" alt="Startseite von Pinecone mit aktuellem Event, Event-Kalender, zuletzt gespielten Instanzen und dem Community-Server" width="900">
