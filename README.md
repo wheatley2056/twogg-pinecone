@@ -1,278 +1,153 @@
+<div align="center">
+
+<img src="assets/pinecone.svg" alt="" width="72">
+
 # TwoGG Pinecone
 
-Minecraft-Launcher der TwoGG-Community: Rust-Kern, Desktop-App mit Tauri 2 und Svelte 5.
-Windows und Linux, Fabric, Quilt, Forge und NeoForge, Modrinth und CurseForge, TwoGG-Events und -Modpacks.
-Architektur und Phasen stehen in [PLAN.md](PLAN.md), Änderungen in [CHANGELOG.md](CHANGELOG.md).
+**Der Minecraft-Launcher der TwoGG-Community.**<br>
+Instanzen, Mods und Modpacks an einem Ort, dazu TwoGG-Events, Event-Packs und deine Freunde.
 
-Website mit Download: https://wheatley2056.github.io/twogg-pinecone/ (Quelle in `site/`).
+[![Neueste Version](https://img.shields.io/github/v/release/wheatley2056/twogg-pinecone?include_prereleases&label=Version&color=E9A23B)](https://github.com/wheatley2056/twogg-pinecone/releases/latest)
+![Windows und Linux](https://img.shields.io/badge/Windows%20%7C%20Linux-64%20Bit-8CCB7E)
+[![Lizenz](https://img.shields.io/badge/Lizenz-MIT%20%2F%20Apache--2.0-B5A790)](#lizenz)
 
-> **Beta.** Pinecone ist in der Beta-Phase. Fehler bitte mit dem Diagnose-ZIP
-> (Einstellungen → Allgemein → „Hilfe & Diagnose“) melden.
+[**Herunterladen**](https://wheatley2056.github.io/twogg-pinecone/#download) ·
+[Website](https://wheatley2056.github.io/twogg-pinecone/) ·
+[Änderungen](CHANGELOG.md) ·
+[Fehler melden](https://github.com/wheatley2056/twogg-pinecone/issues)
 
-Der Server hinter `https://pinecone.twogg.app` (Neuigkeiten, TwoGG-Modpacks, Freunde, Admin-Seite)
-liegt im eigenen Repo [twogg-pinecone-server](https://github.com/wheatley2056/twogg-pinecone-server).
+**Deutsch** · [English](README.en.md)
 
-## Aufbau
+<br>
 
-```
-crates/
-  core/     # pinecone-core: Manifeste, Downloads, Java, Loader, Profile, Accounts, Launch
-  cli/      # pinecone: schlanke CLI über core für Entwicklung, Tests und Debugging
-src-tauri/  # Desktop-App (Tauri 2): Befehle und Spielstart über core
-ui/         # Oberfläche (Svelte 5 + TypeScript, Vite)
-assets/     # Quell-Grafiken (Pixel-Art-Tannenzapfen fürs App-Icon)
-```
+<img src="site/img/play.webp" alt="Startseite von Pinecone mit aktuellem Event, Event-Kalender, zuletzt gespielten Instanzen und dem Community-Server" width="900">
 
-## Desktop-App
+</div>
 
-Voraussetzungen: Rust, Node.js mit npm und unter Linux WebKitGTK 4.1
-(`webkit2gtk-4.1`, unter Arch/CachyOS `pacman -S webkit2gtk-4.1`).
+> [!NOTE]
+> Pinecone ist in der **Beta**. Updates kommen automatisch, sobald eine neue Version erscheint.
 
-```sh
-npm install
-npm run tauri dev       # App mit Hot-Reload starten
-npm run tauri build     # Release-Build mit Installern
-npm run dev             # nur die Oberfläche im Browser, mit Beispieldaten (Mock-Modus)
-npm run check           # Svelte/TypeScript prüfen
-```
+## Funktionen
 
-Aufbau der App (nach dem Pinecone-Design-System, `docs/design/`): Kopfleiste mit den Bereichen
-**Spielen · Bibliothek · Entdecken · Events · Skins**, rechts Downloads, Benachrichtigungen und
-Einstellungen; unten auf jedem Screen die Spielleiste mit Instanzwahl, SPIELEN, Freunden und Konto.
+| | |
+|---|---|
+| 🎮 **Instanzen** | Jede Instanz hat ihren eigenen Spielordner mit Mods, Welten und Einstellungen. Vanilla, Fabric, Quilt, Forge oder NeoForge, jede Minecraft-Version. Java lädt Pinecone selbst. |
+| 🔎 **Entdecken** | Modpacks, Mods, Ressourcenpakete, Shader und Datenpakete von Modrinth, CurseForge und TwoGG durchsuchen und mit einem Klick installieren, samt Abhängigkeiten. |
+| 📦 **Modpacks** | Aus Datei oder Link importieren (`.mrpack`, CurseForge-ZIP). Updates legen vorher eine Sicherung an, deine eigenen Änderungen bleiben erhalten. |
+| 🔁 **Version wechseln** | Eine Instanz auf eine andere Minecraft-Version oder einen anderen Loader umziehen. Pinecone sucht die passenden Mods dafür. |
+| 🧩 **Sync-Packs** | Eigene Sammlungen wie „Basics“ einmal anlegen und in jeder Instanz per Schalter einschalten. Mit Freunden per Link teilen. |
+| 🌍 **Welten & Server** | Welten sichern und wiederherstellen, auf Wunsch automatisch vor jedem Start. Server mit Live-Status, direkt beitreten. |
+| 👕 **Skins** | Skin-Bibliothek mit 3D-Vorschau und Editor. Skin und Cape deines Kontos direkt aus dem Launcher setzen. |
+| 🎨 **Dein Look** | Drei Themes (Rinde, Kiefer, Winterland), fünf Akzentfarben und reduzierte Animationen auf Wunsch. |
 
-- **Spielen**: Event-Teaser, Event-Kalender, zuletzt gespielte Instanzen und der Community-Server
-  mit Live-Status und Schnellbeitritt.
-- **Bibliothek**: Instanzen in Gruppen (TwoGG Events, eigene Instanzen, Sync-Packs). Jede Instanz hat
-  die Tabs Inhalt, Welten, Server, Screenshots, Logs und Einstellungen. Herkunft und Hash jeder Datei
-  stehen in `instances/<id>/pack.lock.json`.
-- **Entdecken**: Modpacks, Mods, Ressourcenpakete, Shader und Datenpakete von Modrinth, CurseForge
-  und TwoGG, mit der TwoGG-Auswahl oben.
-- **Events**: Events von twogg.app mit Anmeldung, Event-Pack und Server-Beitritt.
-- **Einstellungen**: Allgemein, Darstellung (Themes Rinde, Kiefer, Winterland, Akzentfarbe),
-  Java & Arbeitsspeicher, Konten, Downloads & Quellen, TwoGG-Verknüpfung. Gespeichert wird in
-  `<data-dir>/settings.json`, die Spielzeit in `<data-dir>/stats.json`.
+### Gemacht für TwoGG
 
-Das Spiel schreibt seine Konsolenausgabe nach `<profil>/.minecraft/logs/pinecone-console.log`;
-die App liest sie live mit. Wird der Launcher geschlossen, läuft das Spiel weiter.
-Unter Linux setzt die App `WEBKIT_DISABLE_DMABUF_RENDERER=1`, weil WebKitGTK sonst mit
-NVIDIA-Treibern unter Wayland abstürzt (eigener Wert der Variable hat Vorrang).
+- **Events:** Die Events von twogg.app im Launcher sehen, das passende Event-Pack mit einem Klick installieren und dem Event-Server direkt beitreten.
+- **Freunde:** Sehen, wer online ist und was gespielt wird. Freunde per Spielername oder Freundescode hinzufügen und auf deinen Server einladen. Dein Status ist nur für Freunde sichtbar.
+- **TwoGG-Auswahl:** Vom Team geprüfte Event-Packs, Performance-Packs und Shader oben in „Entdecken“. TwoGG-Modpacks gibt es nur über Pinecone.
+- **Community-Server und Neuigkeiten** direkt auf der Startseite.
+- **Discord-Status** „Spielt …“ auf Wunsch.
 
-## CLI
+<table>
+  <tr>
+    <td><img src="site/img/library.webp" alt="Bibliothek mit Instanzen und Inhalten"></td>
+    <td><img src="site/img/discover.webp" alt="Entdecken mit Modpacks von Modrinth, CurseForge und TwoGG"></td>
+  </tr>
+  <tr>
+    <td><img src="site/img/events.webp" alt="Events von twogg.app"></td>
+    <td><img src="site/img/winterland.webp" alt="Theme Winterland"></td>
+  </tr>
+</table>
 
-```sh
-cargo run -p pinecone-cli -- versions                 # Releases anzeigen (--all für Snapshots)
-cargo run -p pinecone-cli -- install latest           # Version, Libraries, Assets laden
-cargo run -p pinecone-cli -- profile create "Fabric" --version latest --loader fabric --memory 6144
-cargo run -p pinecone-cli -- profile list             # Profile (Instanzen)
-cargo run -p pinecone-cli -- profile edit Fabric --java auto --jvm-args "-XX:+UseZGC"
-cargo run -p pinecone-cli -- run Fabric               # Profil starten
-cargo run -p pinecone-cli -- loader versions quilt 1.21.1
-cargo run -p pinecone-cli -- run Fabric --server mc.twogg.de   # Quick-Join
-cargo run -p pinecone-cli -- server ping mc.twogg.de  # MOTD, Spieler, Ping (inkl. SRV-Eintrag)
-cargo run -p pinecone-cli -- server list Fabric       # Server aus servers.dat
-cargo run -p pinecone-cli -- stats                    # Spielzeit je Profil
-cargo run -p pinecone-cli -- content search sodium --profile Fabric
-cargo run -p pinecone-cli -- content install Fabric iris            # inkl. Abhängigkeiten (Sodium)
-cargo run -p pinecone-cli -- content install Fabric complementary-reimagined --type shader
-cargo run -p pinecone-cli -- content list Fabric       # erkennt auch von Hand abgelegte Dateien
-cargo run -p pinecone-cli -- content updates Fabric --apply
-cargo run -p pinecone-cli -- pack import modrinth:fabulously-optimized   # Modpack als neues Profil
-cargo run -p pinecone-cli -- pack import ~/Downloads/pack.mrpack         # oder CurseForge-ZIP
-cargo run -p pinecone-cli -- pack update "Fabulously Optimized"          # Plan anzeigen
-cargo run -p pinecone-cli -- pack update "Fabulously Optimized" --apply  # einspielen (mit Snapshot)
-cargo run -p pinecone-cli -- pack rollback "Fabulously Optimized" --to <snapshot>
-cargo run -p pinecone-cli -- pack export Fabric fabric.mrpack --version 1.0.0 --with-options
-cargo run -p pinecone-cli -- pack share "Fabulously Optimized"    # pinecone://modrinth/<projekt>/<version>
-cargo run -p pinecone-cli -- pack preview pinecone://modrinth/fabulously-optimized   # oder Datei
-cargo run -p pinecone-cli -- pack import pinecone://modrinth/1KVo5zza/ssWn7YI0
-cargo run -p pinecone-cli -- account login           # Microsoft-Login (siehe unten)
-cargo run -p pinecone-cli -- account offline Tobi     # Offline-Account für Tests/LAN
-cargo run -p pinecone-cli -- account list             # Accounts, * = aktiv
-cargo run -p pinecone-cli -- run 1.21.1               # Version ohne Profil starten
-cargo run -p pinecone-cli -- run 1.8.9 --offline Tobi # einmalig offline, ohne zu speichern
-cargo run -p pinecone-cli -- profile migrate Fabric --minecraft 1.21.1            # Plan anzeigen
-cargo run -p pinecone-cli -- profile migrate Fabric --minecraft 1.21.1 --loader quilt --apply
-cargo run -p pinecone-cli -- java list                # gefundene Java-Installationen
-cargo run -p pinecone-cli -- java install jre-legacy  # Mojang-Runtime laden (hier Java 8)
-```
+## Installation
 
-Profile liegen unter `<data-dir>/instances/<id>/` mit `profile.json` (Version, Loader, RAM,
-JVM-Argumente, Java) und eigenem `.minecraft`-Ordner für Welten, Mods und Einstellungen.
-Fabric und Quilt werden über ihre Meta-APIs installiert; ohne Angabe wird die neueste stabile
-Loader-Version gewählt. Forge (empfohlene Version laut Forge) und NeoForge kommen über ihre
-offiziellen Installer: Pinecone lädt die Installer-JAR nach `versions/<id>/`, entpackt die
-mitgelieferten Bibliotheken und führt beim ersten Start die Installer-Prozessoren mit dem Java der
-Instanz aus (moderne Versionen ab 1.13; ältere Installer bis 1.12.2 brauchen das nicht). Spontane
-Starts ohne Profil nutzen `instances/_<version>/`.
+Lade die passende Datei auf der [Website](https://wheatley2056.github.io/twogg-pinecone/#download) oder unter [Releases](https://github.com/wheatley2056/twogg-pinecone/releases/latest) herunter.
 
-Java wird beim Start automatisch gewählt: zuerst eine installierte Java-Version mit genau der
-Major-Version aus dem Version-JSON (von Pinecone verwaltete Runtimes bevorzugt), sonst wird Mojangs
-passende Runtime nach `<data-dir>/runtimes/` geladen.
+| System | Datei |
+|---|---|
+| **Windows 10 und 11** (64 Bit) | Installer `…-setup.exe` (empfohlen) oder `….msi` |
+| **Linux** (x86_64) | `….AppImage` für alle Distributionen, `….deb` für Debian, Ubuntu und Mint, `….rpm` für Fedora und openSUSE |
 
-Nützliche Optionen:
+<details>
+<summary><b>Windows zeigt „Der Computer wurde durch Windows geschützt“</b></summary>
 
-- `--data-dir <pfad>` bzw. `PINECONE_HOME`: Datenverzeichnis (Standard: `~/.local/share/twogg-pinecone`,
-  unter Windows `%APPDATA%\TwoGG\Pinecone`)
-- `--verify`: vorhandene Dateien per SHA-1 prüfen statt nur per Größe
-- `run --print-command`: nur den Java-Startbefehl ausgeben
-- `run --no-update`: ohne Netzwerk starten
-- `run --java <pfad>`: bestimmtes Java-Programm statt automatischer Auswahl
+Der Installer ist noch nicht mit einem Zertifikat signiert. Klick auf **Weitere Informationen** und dann auf **Trotzdem ausführen**.
+</details>
 
-## Microsoft-Login
+<details>
+<summary><b>AppImage unter Linux starten</b></summary>
 
-Pinecone nutzt den Device-Code-Flow (Code im Browser bestätigen) und speichert nur den
-Refresh-Token, und zwar im Schlüsselbund des Systems (Windows Credential Manager, macOS
-Keychain, unter Linux Secret Service/KWallet/GNOME Keyring). `accounts.json` enthält keine Tokens.
-
-Dafür braucht Pinecone eine eigene Azure-App:
-
-1. Im [Azure-Portal](https://portal.azure.com) unter *Microsoft Entra ID → App-Registrierungen*
-   eine neue App anlegen, Kontotyp **„Nur persönliche Microsoft-Konten“**.
-2. Unter *Authentifizierung* **„Öffentliche Clientflows zulassen“** aktivieren (nötig für den Device-Code-Flow).
-3. Die Anwendungs-ID (Client-ID) als `PINECONE_MSA_CLIENT_ID` setzen oder per `--client-id` übergeben.
-   Beim Bauen gesetzt, wird sie fest einkompiliert.
-4. Neue Apps müssen von Mojang für die Minecraft-API freigeschaltet werden. Bis dahin antwortet
-   `login_with_xbox` mit 403 (Pinecone meldet das so); Infos unter https://aka.ms/AppRegInfo.
-   Bis zur Freischaltung mit Offline-Accounts testen.
-
-## Modpacks
-
-Modrinth-Packs (`.mrpack`) und CurseForge-Packs (ZIP mit `manifest.json`) werden als neues Profil
-installiert. Updates bleiben bei der Minecraft-Version und dem Loader des Profils und vergleichen
-drei Stände per Hash: was das Pack zuletzt geliefert hat, was jetzt im Spielordner liegt und was die
-neue Version liefert. Unveränderte Pack-Dateien werden ersetzt, eigene Änderungen und eigene Mods
-bleiben, vom Pack entfernte Dateien werden gelöscht; bei echten Konflikten wählt man selbst
-(Vorschlag: Configs und `options.txt` behalten, Mods aus dem Pack nehmen). Vorher wird ein Snapshot
-unter `instances/<id>/snapshots/` angelegt (die letzten drei bleiben), aus dem man zurückrollen kann.
-`.mrpack`-Downloads sind auf die von Modrinth erlaubten Hosts beschränkt.
-
-## Version wechseln
-
-„Version wechseln …“ im Menü einer Instanz (bzw. `profile migrate`) zieht eine Instanz auf eine andere
-Minecraft-Version oder einen anderen Loader (Fabric, Quilt, Forge, NeoForge, Vanilla) um. Pinecone legt dafür ein
-neues Profil an und lässt das bisherige unverändert. Für jeden Inhalt wird die passende Version
-gesucht: Modrinth-Inhalte per Hash-Abgleich, CurseForge-Inhalte per Projekt; der Kanal (Release/Beta)
-wird nicht instabiler. Bekannte Gegenstücke werden ersetzt (z. B. Quilted Fabric API → Fabric API
-beim Wechsel zu Fabric). Mods, die es für das Ziel nicht gibt, kommen deaktiviert mit oder werden
-weggelassen; Ressourcenpakete, Shader und Configs werden übernommen. Welten lassen sich mitkopieren,
-bei einem Wechsel auf eine ältere Version warnt Pinecone. Gibt es das Modpack des Profils selbst für
-das Ziel, wird stattdessen diese Pack-Version angeboten.
-
-## Sync-Packs und Vorlagen
-
-In der Bibliothek unter „Sync-Packs“ legt man eigene Sammlungen an: Mods, Ressourcenpakete und Shader (als
-Modrinth-/CurseForge-Projekt ohne feste Version), eigene Dateien wie Configs sowie Steuerung und
-Spieleinstellungen aus `options.txt` (aus einer Instanz übernehmbar). Eingeschaltet wird im Sync-Pack
-für jede Instanz oder im Tab Inhalt einer Instanz.
-
-- **Sync-Pack**: bleibt verbunden und wird vor jedem Start abgeglichen. Für jedes Profil wird die
-  zur Minecraft-Version und zum Loader passende Datei installiert (samt Abhängigkeiten). Ausschalten
-  entfernt genau die Inhalte, die das Sync-Pack gebracht hat (im `pack.lock.json` mit `sync` markiert).
-- **Vorlage**: wird einmal eingespielt und ist danach normaler Profil-Inhalt.
-- Bringt das Modpack oder der Nutzer ein Projekt schon mit, gewinnt deren Fassung. Eigene Dateien und
-  Optionen werden beim ersten Einspielen gesetzt, danach nur, solange man sie im Profil nicht selbst
-  geändert hat.
-- Optional automatisch bei neuen Profilen und Modpack-Imports, auf Wunsch nur für bestimmte Loader.
-- Gespeichert unter `<data-dir>/syncpacks/<id>/`, der Zustand je Profil in `instances/<id>/syncpacks.json`.
+Nach dem Download ausführbar machen und starten:
 
 ```sh
-cargo run -p pinecone-cli -- sync create Basics
-cargo run -p pinecone-cli -- sync add basics zoomify
-cargo run -p pinecone-cli -- sync add basics fresh-animations --type resourcepack
-cargo run -p pinecone-cli -- sync option basics fov 0.25
-cargo run -p pinecone-cli -- sync enable Fabric basics      # bzw. disable, run, list --profile Fabric
+chmod +x Pinecone*.AppImage
+./Pinecone*.AppImage
 ```
 
-## Skins
+Pinecone braucht WebKitGTK 4.1. Bei aktuellen Distributionen ist es dabei, sonst z. B. `sudo apt install libwebkit2gtk-4.1-0` oder `sudo pacman -S webkit2gtk-4.1`.
+</details>
 
-Unter „Skins“ liegt eine eigene Skin-Bibliothek (`<data-dir>/skins/`): Skins per Spielername von
-Mojang übernehmen, PNG importieren, umbenennen, Modell Classic/Slim wählen, als PNG speichern. Die
-3D-Vorschau (mit aktivem Cape) nutzt [skinview3d](https://github.com/bs-community/skinview3d) (MIT).
-Mit Microsoft-Account lässt sich ein Skin als Account-Skin setzen, das Cape wechseln oder ausblenden
-und der aktuelle Skin in die Bibliothek übernehmen. Minecraft akzeptiert nur 64×64 und 64×32.
+## Erste Schritte
 
-Der Skin-Editor ist der [MC Skin Editor](https://github.com/eheikes/mc-skin-editor) von Eric Heikes
-(Apache-2.0), unverändert eingebunden unter `ui/vendor/mc-skin-editor` und als eigene Seite im iframe
-geladen; Details und Aktualisieren siehe `ui/vendor/mc-skin-editor/VENDORED.md`.
+1. **Anmelden:** Unter Einstellungen › Konten mit deinem Microsoft-Konto anmelden. Du brauchst eine eigene Minecraft: Java Edition.
+2. **Instanz anlegen:** In der Bibliothek eine neue Instanz erstellen oder unter „Entdecken“ ein Modpack installieren.
+3. **Spielen:** Instanz unten in der Spielleiste wählen und auf **SPIELEN** klicken.
+4. **Optional:** Unter Einstellungen › TwoGG-Verknüpfung dein twogg.app-Konto verbinden, um deine Event-Anmeldungen zu sehen.
 
-```sh
-cargo run -p pinecone-cli -- skin import jeb_          # oder eine PNG-Datei (--slim)
-cargo run -p pinecone-cli -- skin list
-cargo run -p pinecone-cli -- skin upload <id>          # als Skin des aktiven Microsoft-Accounts
-cargo run -p pinecone-cli -- skin cape                 # Capes anzeigen; mit <id> bzw. none wechseln
-```
+## Häufige Fragen
 
-## Screenshots
+<details>
+<summary><b>Kostet Pinecone etwas?</b></summary>
 
-Der Tab Screenshots einer Instanz zeigt ihre Screenshots, nach Tagen gruppiert. Vorschaubilder
-entstehen bei Bedarf in `<data-dir>/cache/thumbs/`. Neue Screenshots erscheinen automatisch
-(Datei-Watcher auf den Screenshot-Ordnern). In der Großansicht: blättern mit ←/→, kopieren,
-speichern unter, im Ordner zeigen, öffnen, löschen.
+Nein. Pinecone ist kostenlos und Open Source. Du brauchst nur eine eigene Minecraft: Java Edition.
+</details>
 
-## Modpacks teilen
+<details>
+<summary><b>Brauche ich ein TwoGG-Konto?</b></summary>
 
-„Teilen …“ im Menü einer Instanz bietet zwei Wege:
+Nein. Zum Spielen reicht dein Microsoft-Konto. Die Verbindung mit twogg.app ist optional und zeigt dir deine Event-Anmeldungen im Launcher. Die Freundesliste läuft über dein Minecraft-Konto.
+</details>
 
-- **Link** (nur für Packs von Modrinth oder CurseForge): `pinecone://modrinth/<projekt>/<version>` bzw.
-  `pinecone://curseforge/<projekt>/<datei>`. Der Link verweist auf genau die installierte Version bei
-  der Originalquelle; eigene Änderungen sind nicht enthalten. Freunde fügen ihn unter
-  Bibliothek → „Modpack importieren“ ein, oder klicken ihn an, falls Pinecone installiert ist.
-  Modrinth-Adressen (`https://modrinth.com/modpack/<slug>`) funktionieren dort auch.
-- **Datei** (`.mrpack`): für eigene Zusammenstellungen. Aktive Mods sind immer dabei,
-  Ressourcenpakete, Shader, `config/` und `options.txt` sind wählbar. Welten, `servers.dat`,
-  Screenshots, Logs und Accounts werden nie exportiert. Mods von Modrinth werden nur verlinkt.
+<details>
+<summary><b>Kann ich meine Modpacks von anderen Launchern mitnehmen?</b></summary>
 
-Vor jeder Installation aus Datei oder Link zeigt Pinecone eine Vorschau (Version, Loader, Anzahl der
-Inhalte, Download-Größe) und warnt bei Dateien von Dritten sowie bei Download-Quellen, die Pinecone
-nicht lädt. Die App registriert sich für `pinecone://`-Links und `.mrpack`-Dateien; läuft sie schon,
-übernimmt das offene Fenster den Link. `pinecone://pack/<code>` ist für einen späteren Share-Dienst
-reserviert.
+Ja. Modrinth-Packs (`.mrpack`) und CurseForge-Packs (ZIP) lassen sich importieren, ebenso Links von Modrinth. Eigene Instanzen kannst du als `.mrpack` exportieren und teilen.
+</details>
 
-## CurseForge
+<details>
+<summary><b>Wie bekomme ich Updates?</b></summary>
 
-Pinecone fragt CurseForge über den Pinecone-Server (`<server>/api/v1/curseforge/...`). Der
-API-Schlüssel liegt nur dort, denn die
-[CurseForge-API-Bedingungen](https://support.curseforge.com/en/support/solutions/articles/9000207405)
-verbieten, ihn weiterzugeben, und auch, API-Daten zu speichern oder zu cachen. Hat der Server keinen
-Schlüssel, blendet Pinecone CurseForge aus. Zum Entwickeln lässt sich zur Laufzeit ein eigener
-Schlüssel mit `PINECONE_CURSEFORGE_API_KEY` setzen; er wird nicht mehr einkompiliert. Dateien, deren
-Autoren Downloads über andere Launcher gesperrt haben, meldet Pinecone mit Link zum manuellen
-Herunterladen und lädt sie nie von anderswo.
+Pinecone prüft beim Start auf neue Versionen und installiert sie auf Wunsch. Updates sind signiert, der Launcher installiert nur Pakete von TwoGG.
+</details>
 
-## TwoGG: Server, Events und Freunde
+<details>
+<summary><b>Wo liegen meine Daten?</b></summary>
 
-Neuigkeiten, TwoGG-Modpacks, die TwoGG-Auswahl, der Community-Server und die Pinecone-Freundesliste
-kommen vom [Pinecone-Server](https://github.com/wheatley2056/twogg-pinecone-server)
-(`https://pinecone.twogg.app`, abweichend über `PINECONE_SERVER_URL` zur Laufzeit oder beim Bauen).
-TwoGG-Packs: `pinecone pack import twogg:<pack>` bzw. `pinecone://twogg/<pack>[/<version>]`; sie
-bekommen Updates wie Modrinth-Packs.
+Unter Windows in `%APPDATA%\TwoGG\Pinecone`, unter Linux in `~/.local/share/twogg-pinecone`. Anmeldedaten speichert Pinecone im Schlüsselbund deines Systems, nicht in Dateien. Pinecone enthält keine Werbung und kein Tracking. Mehr dazu in der [Datenschutzerklärung](https://wheatley2056.github.io/twogg-pinecone/datenschutz.html).
+</details>
 
-- **Freunde**: Anmeldung mit dem Minecraft-Konto über den Mojang-Session-Server, Anfragen per
-  Spielername, Status sehen nur Freunde. Offline-Konten nehmen nicht teil.
-- **twogg.app**: Events, Anmeldungen und Freunde holt der Launcher direkt von `https://api.twogg.app`
-  (Anmeldung mit Discord im Login-Fenster oder per E-Mail; das Refresh-Token liegt im
-  Schlüsselbund). CLI: `pinecone events` listet die kommenden Events.
+<details>
+<summary><b>Läuft das Spiel weiter, wenn ich den Launcher schließe?</b></summary>
 
-## Logs, Diagnose und Updates
+Ja. Ob Pinecone beim Spielstart offen bleibt, sich minimiert oder schließt, stellst du unter Einstellungen › Allgemein ein.
+</details>
 
-Die App schreibt ihre Logs nach `<data-dir>/logs/` (eine Datei pro Tag, die letzten sieben bleiben).
-Unter Einstellungen → Allgemein → „Hilfe & Diagnose“ (oder im Logs-Tab einer Instanz, bzw.
-`pinecone diag <datei.zip>`) entsteht ein ZIP mit Systeminfos, Launcher- und Spiel-Logs, den neuesten
-Crash-Reports, der Mod-Liste und der Profil-Konfiguration; Account-Daten fehlen, Tokens werden geschwärzt.
+## Hilfe und Fehler melden
 
-Release-Builds prüfen beim Start auf Updates (signiert, Tauri-Updater) und installieren sie auf Wunsch.
-Installer gibt es für Windows (NSIS, MSI) und Linux (AppImage, deb, rpm); wie ein Release entsteht und
-welche Schlüssel nötig sind, steht in [RELEASING.md](RELEASING.md).
+Etwas funktioniert nicht? So helfen wir dir am schnellsten:
 
-## Entwicklung
+1. In Pinecone unter **Einstellungen › Allgemein › Hilfe & Diagnose** ein Diagnose-ZIP erstellen. Es enthält keine Kontodaten, Tokens werden entfernt.
+2. Stürzt das Spiel ab, im Tab **Logs** der Instanz auf **Log teilen** klicken und den Link mitschicken.
+3. Ein [Issue auf GitHub](https://github.com/wheatley2056/twogg-pinecone/issues) öffnen oder im TwoGG-Discord melden, mit kurzer Beschreibung, was du gemacht hast.
 
-```sh
-cargo test
-cargo clippy --all-targets -- -D warnings
-cargo test -p pinecone-core --test msa -- --ignored keyring   # echter OS-Schlüsselbund
-```
+## Mitmachen
+
+Pinecone ist Open Source. Wie du den Launcher selbst baust und wie er aufgebaut ist, steht in [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
 
 ## Lizenz
 
-MIT oder Apache-2.0, nach Wahl ([LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE)).
-Eingebundene Fremdkomponenten (skinview3d, MC Skin Editor, Schriften unter OFL) behalten ihre Lizenzen.
+Pinecone steht unter MIT oder Apache-2.0, nach Wahl ([LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE)). Eingebundene Fremdkomponenten wie [skinview3d](https://github.com/bs-community/skinview3d), der [MC Skin Editor](https://github.com/eheikes/mc-skin-editor) und Schriften unter OFL behalten ihre Lizenzen.
+
+[Impressum](https://wheatley2056.github.io/twogg-pinecone/impressum.html) · [Datenschutz](https://wheatley2056.github.io/twogg-pinecone/datenschutz.html) · [Privacy Policy](https://wheatley2056.github.io/twogg-pinecone/privacy.html)
+
+<sub>Kein offizielles Minecraft-Produkt. Nicht von Mojang oder Microsoft genehmigt oder mit ihnen verbunden. Minecraft ist eine Marke von Mojang AB.</sub>
