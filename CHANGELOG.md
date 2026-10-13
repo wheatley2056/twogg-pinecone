@@ -2,6 +2,9 @@
 
 ## Unveröffentlicht
 
+- **Skin-Animationen neu:** Ruhe, Gehen, Laufen, Winken, Jubeln und Tanzen sind neu gestaltet, mit
+  Ausholen und Nachfedern, nachschwingendem Umhang und leicht schräger Ansicht beim Gehen und Laufen.
+  Neu sind **Schleichen** und **Abbauen** wie im Spiel. Tanzen wechselt zwischen drei Figuren im Takt.
 - **Hinweise vom TwoGG-Team:** Oben auf der Startseite erscheint ein Hinweis, den das Team im Admin
   setzt (z. B. Wartung), als Info oder Warnung mit optionalem Link. Mit × schließen; ein neuer
   Hinweis erscheint wieder.

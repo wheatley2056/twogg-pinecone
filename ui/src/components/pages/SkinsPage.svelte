@@ -378,11 +378,19 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    width: max-content;
+    max-width: calc(100% - 32px);
   }
 
+  /* Acht Animationen: bei schmaler Bühne in zwei Reihen statt abgeschnitten. */
   .motion :global(.segmented) {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: center;
     white-space: nowrap;
+  }
+
+  .motion :global(.segmented button) {
+    padding: 0 11px;
   }
 
   .motion .on {
