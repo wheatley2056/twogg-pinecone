@@ -9,6 +9,8 @@
 <meta property="og:description" content="Der Minecraft-Launcher der TwoGG-Community. Für Windows und Linux.">
 <meta property="og:image" content="img/play.webp">
 <meta name="theme-color" content="#12100D">
+<link rel="alternate" hreflang="en" href="https://wheatley2056.github.io/twogg-pinecone/en/">
+<link rel="alternate" hreflang="de" href="https://wheatley2056.github.io/twogg-pinecone/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
 @font-face { font-family: "Pixelify Sans"; font-weight: 600; font-display: swap; src: url(fonts/pixelify-sans-latin-600-normal.woff2) format("woff2"); }
@@ -58,6 +60,8 @@ img { display: block; max-width: 100%; height: auto; }
 .top nav a { color: var(--text-muted); font: 600 16px/1 var(--pixel); font-variant-ligatures: none; padding: 21px 0 19px; border-bottom: 3px solid transparent; }
 .top nav a:hover { color: var(--text); border-bottom-color: var(--harz); }
 .top .spacer { flex: 1; }
+.top .lang { font: 500 12px/1 var(--mono); letter-spacing: 1px; color: var(--text-muted); margin-right: 14px; }
+.top .lang:hover { color: var(--text); }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 0; cursor: pointer; font: 700 14px/1 var(--ui); padding: 12px 18px; clip-path: var(--cut-2); }
 .btn svg { width: 17px; height: 17px; flex: none; }
 .btn.harz { background: var(--harz); color: var(--ink); box-shadow: inset 0 -3px 0 var(--harz-edge); }
@@ -212,6 +216,7 @@ footer .claim { font: 500 11px/1 var(--mono); letter-spacing: 2px; color: var(--
       <a href="#fragen">Fragen</a>
     </nav>
     <span class="spacer"></span>
+    <a class="lang" href="en/" lang="en" hreflang="en">English</a>
     <a class="btn dark" href="https://github.com/wheatley2056/twogg-pinecone"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
   </div>
 </header>
@@ -323,7 +328,7 @@ footer .claim { font: 500 11px/1 var(--mono); letter-spacing: 2px; color: var(--
           <h3>Sieh, wer gerade spielt</h3>
           <p>Die Pinecone-Freundesliste nutzt dein Minecraft-Konto, du brauchst kein weiteres Konto.</p>
           <ul>
-            <li>Freunde per Spielername hinzufügen</li>
+            <li>Freunde per Spielername oder Freundescode hinzufügen</li>
             <li>Sehen, wer online ist und was gespielt wird</li>
             <li>Dein Status ist nur für Freunde sichtbar</li>
           </ul>
@@ -461,7 +466,7 @@ footer .claim { font: 500 11px/1 var(--mono); letter-spacing: 2px; color: var(--
       <a href="https://github.com/wheatley2056/twogg-pinecone/releases">Releases</a>
       <a href="impressum.html">Impressum</a>
       <a href="datenschutz.html">Datenschutz</a>
-      <a href="privacy.html" lang="en">Privacy Policy</a>
+      <a href="lizenzen.html">Lizenzen</a>
     </nav>
     <p style="flex-basis:100%;margin-top:8px">Kein offizielles Minecraft-Produkt. Nicht von Mojang oder Microsoft genehmigt oder mit ihnen verbunden. Minecraft ist eine Marke von Mojang AB. NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.</p>
   </div>
