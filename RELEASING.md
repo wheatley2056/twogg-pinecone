@@ -13,7 +13,7 @@ npx tauri signer generate -w ~/.tauri/pinecone.key
   ohne ihn lassen sich keine Updates mehr ausliefern.
 - Inhalt von `~/.tauri/pinecone.key.pub` → GitHub-Variable `PINECONE_UPDATE_PUBKEY`
   (Settings → Secrets and variables → Actions → Variables).
-- Optional: `PINECONE_MSA_CLIENT_ID` (Azure-App, siehe README) als Secret; sie wird in die
+- Optional: `PINECONE_MSA_CLIENT_ID` (Azure-App, siehe docs/ENTWICKLUNG.md) als Secret; sie wird in die
   Release-Builds einkompiliert.
 - Optional: `PINECONE_DISCORD_CLIENT_ID` als **Variable** (nicht Secret, die ID ist öffentlich) für den
   Discord-Status. Im [Discord-Entwicklerportal](https://discord.com/developers/applications) eine
@@ -41,6 +41,7 @@ nur auf `releases/latest`; sie bekommen ein Update erst, wenn ein normales Relea
 2. Version an drei Stellen gleich setzen: `Cargo.toml` (`[workspace.package] version`),
    `src-tauri/tauri.conf.json` (`version`) und `package.json` (`version`), danach `cargo check`
    (aktualisiert `Cargo.lock`) und `npm install` (aktualisiert `package-lock.json`).
+   Danach `python3 scripts/licenses.py`, damit die Lizenzseite der Website zur Version passt.
 3. Committen und taggen: `git tag v0.9.1 && git push origin v0.9.1`.
 4. Der Workflow „Release“ baut Windows (NSIS-.exe, .msi) und Linux (AppImage, .deb, .rpm),
    signiert die Update-Pakete und legt ein **Release als Entwurf** mit `latest.json` an.
