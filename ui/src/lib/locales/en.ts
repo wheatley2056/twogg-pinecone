@@ -297,6 +297,7 @@ const en: Record<MessageKey, string> = {
   "pack.exportButton": "Export …",
   "pack.filter": "Modrinth modpack",
   "pack.filterAny": "Modpack (Modrinth or CurseForge)",
+  "appUpdate.deferred": "A game is running: the update installs after you stop playing.",
   "appUpdate.title": "Updates",
   "appUpdate.channel": "Update channel",
   "appUpdate.channelRelease": "Release",

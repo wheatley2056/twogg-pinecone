@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::paths::Paths;
 use crate::stats::now_secs;
-use crate::{Error, LAUNCHER_NAME, LAUNCHER_VERSION, Result};
+use crate::{Error, Result};
 
 const INDEX: &str = "skins.json";
 /// Größer ist kein Skin (64×64-PNGs haben wenige KB).
@@ -120,7 +120,7 @@ impl SkinLibrary {
 
     pub fn with_endpoints(paths: &Paths, mojang: MojangEndpoints) -> Result<Self> {
         let http = reqwest::Client::builder()
-            .user_agent(format!("{LAUNCHER_NAME}/{LAUNCHER_VERSION}"))
+            .user_agent(crate::user_agent())
             .connect_timeout(Duration::from_secs(15))
             .timeout(Duration::from_secs(30))
             .build()

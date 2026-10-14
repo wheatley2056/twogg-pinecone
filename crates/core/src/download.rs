@@ -8,7 +8,7 @@ use futures::{StreamExt, TryStreamExt};
 use sha1::{Digest, Sha1};
 use tokio::io::AsyncWriteExt;
 
-use crate::{Error, LAUNCHER_NAME, LAUNCHER_VERSION, Result};
+use crate::{Error, Result};
 
 #[derive(Debug, Clone)]
 pub struct DownloadTask {
@@ -44,7 +44,7 @@ pub struct Downloader {
 impl Downloader {
     pub fn new() -> Result<Self> {
         let client = reqwest::Client::builder()
-            .user_agent(format!("{LAUNCHER_NAME}/{LAUNCHER_VERSION}"))
+            .user_agent(crate::user_agent())
             .connect_timeout(Duration::from_secs(15))
             .read_timeout(Duration::from_secs(60))
             .build()

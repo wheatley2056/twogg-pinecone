@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{Error, LAUNCHER_VERSION, Result};
+use crate::{Error, Result};
 
 pub const API: &str = "https://api.modrinth.com/v2";
 
@@ -234,7 +234,7 @@ impl Modrinth {
     pub fn with_base(base: impl Into<String>) -> Result<Self> {
         // Modrinth verlangt einen aussagekräftigen User-Agent mit Kontakt.
         let http = reqwest::Client::builder()
-            .user_agent(format!("TwoGG/pinecone/{LAUNCHER_VERSION} (twogg.de)"))
+            .user_agent(crate::user_agent())
             .connect_timeout(Duration::from_secs(15))
             .timeout(Duration::from_secs(30))
             .build()

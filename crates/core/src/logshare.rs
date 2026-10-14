@@ -10,7 +10,7 @@ use std::time::Duration;
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::{Error, LAUNCHER_VERSION, Result};
+use crate::{Error, Result};
 
 pub const API: &str = "https://api.mclo.gs";
 pub const MAX_LINES: usize = 25_000;
@@ -81,7 +81,7 @@ pub async fn upload(base: &str, text: &str) -> Result<String> {
         source,
     };
     let http = reqwest::Client::builder()
-        .user_agent(format!("TwoGG/pinecone/{LAUNCHER_VERSION} (twogg.de)"))
+        .user_agent(crate::user_agent())
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(60))
         .build()

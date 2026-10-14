@@ -5,7 +5,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{Error, LAUNCHER_NAME, LAUNCHER_VERSION, Result};
+use crate::{Error, Result};
 
 const SCOPE: &str = "XboxLive.signin offline_access";
 
@@ -158,7 +158,7 @@ impl MsaClient {
 
     pub fn with_endpoints(client_id: impl Into<String>, endpoints: Endpoints) -> Result<Self> {
         let http = reqwest::Client::builder()
-            .user_agent(format!("{LAUNCHER_NAME}/{LAUNCHER_VERSION}"))
+            .user_agent(crate::user_agent())
             .connect_timeout(Duration::from_secs(15))
             .timeout(Duration::from_secs(30))
             .build()

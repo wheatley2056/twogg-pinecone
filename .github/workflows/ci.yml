@@ -40,6 +40,9 @@ jobs:
       # Die App bettet dist/ ein; ohne Build schlägt das Kompilieren fehl.
       - run: npm run build
       - run: npm run check
+      # Text-Tokens erreichen in allen Themes und Akzenten 4,5:1 (AK-38.3).
+      - run: python3 scripts/contrast.py
+        if: runner.os == 'Linux'
 
       - run: cargo fmt --all -- --check
         if: runner.os == 'Linux'
