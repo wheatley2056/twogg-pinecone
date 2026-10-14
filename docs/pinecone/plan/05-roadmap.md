@@ -105,6 +105,8 @@ später  macOS, Import aus Fremd-Launchern, SSE
 
 ### MVP-C – Hinweise und Absturz
 
+**Absturz-Teil umgesetzt (14.10.2026, Launcher-PR #47):** F-35 mit Ursachenerkennung und Absturztafel. Offen sind die Erinnerungen (F-14, F-37) und das Vorab-Laden von Pflicht-Updates.
+
 - **Funktionen:** F-14, F-37, F-35
 - **Aufgaben:**
   - `tauri-plugin-notification` einbinden (unter Windows nur für installierte Apps, siehe v2.tauri.app „Notification“).
