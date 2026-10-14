@@ -178,6 +178,44 @@ pub struct Settings {
     /// Discord-Status „Spielt …“ (F-41), standardmäßig aus.
     #[serde(default)]
     pub discord_presence: bool,
+    /// Event-Erinnerungen und OS-Benachrichtigungen (F-14, F-37).
+    #[serde(default)]
+    pub notifications: NotificationSettings,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationSettings {
+    /// Hinweise vor Eventstart (im Panel und als Desktop-Benachrichtigung).
+    #[serde(default = "default_true")]
+    pub event_reminders: bool,
+    /// Auch für Events, zu denen man nicht angemeldet ist (AK-14.2).
+    #[serde(default)]
+    pub all_events: bool,
+    /// Vorlaufzeiten in Minuten.
+    #[serde(default = "default_lead_minutes")]
+    pub lead_minutes: Vec<u32>,
+    /// Desktop-Benachrichtigung bei Absturz bzw. Freundschaftsanfrage (AK-37.4).
+    #[serde(default = "default_true")]
+    pub os_crash: bool,
+    #[serde(default = "default_true")]
+    pub os_friends: bool,
+}
+
+fn default_lead_minutes() -> Vec<u32> {
+    vec![60, 10]
+}
+
+impl Default for NotificationSettings {
+    fn default() -> Self {
+        Self {
+            event_reminders: true,
+            all_events: false,
+            lead_minutes: default_lead_minutes(),
+            os_crash: true,
+            os_friends: true,
+        }
+    }
 }
 
 fn default_true() -> bool {
@@ -213,6 +251,7 @@ impl Default for Settings {
             library_sort: LibrarySort::Recent,
             collapsed_groups: Vec::new(),
             discord_presence: false,
+            notifications: NotificationSettings::default(),
         }
     }
 }

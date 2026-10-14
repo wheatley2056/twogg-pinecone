@@ -2,6 +2,10 @@
 
 ## Unveröffentlicht
 
+- **Erinnerung vor Eventstart:** Solange Pinecone läuft, kommt vor angemeldeten Events ein Hinweis
+  im Panel und auf dem Desktop (Standard 60 und 10 Minuten vorher, einstellbar unter Einstellungen ›
+  Allgemein). Beim ersten Hinweis lädt Pinecone ein Pflicht-Update des Event-Packs schon vorab.
+  Abstürze und Freundschaftsanfragen melden sich ebenfalls auf dem Desktop; beides lässt sich abschalten.
 - **Absturz-Analyse:** Stürzt Minecraft ab, zeigt der Logs-Tab eine Absturztafel mit der erkannten
   Ursache (fehlende Abhängigkeit, falsche Java-Version, zu wenig Speicher, doppelte Mod), dem
   Crash-Report und den Knöpfen „Diagnose exportieren“, „Crash-Report öffnen“ und „Im Discord melden“.

@@ -183,6 +183,18 @@ export interface Settings {
   collapsedGroups: string[];
   /** Discord-Status „Spielt …“ (F-41). */
   discordPresence: boolean;
+  /** Event-Erinnerungen und Desktop-Benachrichtigungen (F-14, F-37). */
+  notifications: NotificationSettings;
+}
+
+export interface NotificationSettings {
+  eventReminders: boolean;
+  /** Auch nicht angemeldete Events. */
+  allEvents: boolean;
+  /** Vorlaufzeiten in Minuten. */
+  leadMinutes: number[];
+  osCrash: boolean;
+  osFriends: boolean;
 }
 
 /** JVM-Presets in den Einstellungen: eigene und geänderte eingebaute (gleiche ID). */
