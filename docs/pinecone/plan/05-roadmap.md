@@ -64,6 +64,8 @@ später  macOS, Import aus Fremd-Launchern, SSE
 
 ### MVP-A – Echte Event-Packs
 
+**Umgesetzt (14.10.2026, Launcher-PR #43–#46, Server-PR #13).** Offen ist nur der echte Schlüssel (Q-07): mit `pinecone eventpack keygen` erzeugen und als `PINECONE_EVENTPACK_KEYS` in GitHub und auf dem Server setzen. Das Vorab-Laden von Pflicht-Updates folgt mit MVP-C.
+
 - **Funktionen:** F-10, F-11, F-12
 - **Aufgaben Launcher:**
   - Modul `eventpack` (`02` §3.1): Manifest laden, Ed25519 prüfen, `locked` speichern.
@@ -143,9 +145,9 @@ später  macOS, Import aus Fremd-Launchern, SSE
 
 | Block | Funktionen | Lücken / Aufgaben | Abhängigkeit | Aufwand |
 |---|---|---|---|---|
-| v1-1 Instanzen | F-19, F-20, F-32 | Event-Instanz: „Version wechseln“ sperren (AK-20.3), Speicherempfehlung aus Manifest (AK-32.4) | MVP-A | 2–4 PT |
-| v1-2 Inhalte | F-21, F-22, F-23 | 429-Behandlung, Installation in Event-Instanzen nur bei `allowExtraMods`. CurseForge-Proxy ist umgesetzt (12.10.2026) | MVP-A | 2–4 PT |
-| v1-3 Modpacks | F-24, F-25, F-26 | Event-Instanzen vom `.mrpack`-Export ausnehmen (AK-25.3) | MVP-A | 1–2 PT |
+| v1-1 Instanzen | F-19, F-20, F-32 | Abnahme. AK-20.3 und AK-32.4 umgesetzt (Launcher-PR #46) | MVP-A | 2–4 PT |
+| v1-2 Inhalte | F-21, F-22, F-23 | 429-Behandlung. `allowExtraMods` umgesetzt (Launcher-PR #46). CurseForge-Proxy ist umgesetzt (12.10.2026) | MVP-A | 2–4 PT |
+| v1-3 Modpacks | F-24, F-25, F-26 | Abnahme. AK-25.3 umgesetzt (Launcher-PR #46) | MVP-A | 1–2 PT |
 | v1-4 Spielwelt | F-27, F-28, F-29, F-40 | Abnahme | – | 1–2 PT |
 | v1-5 Persönliches | F-30, F-31 | Abnahme, Sync-Packs vs. Pflicht-Mods testen (AK-31.3) | MVP-A | 1–2 PT |
 | v1-6 Konten und Freunde | F-03, F-17 | „Für Freunde unsichtbar“ (AK-17.4), Freunde-Daten löschen (`04` §6.3) | – | 3–5 PT |
