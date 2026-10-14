@@ -326,6 +326,7 @@ Object.assign(api, {
   deleteProfile: async (id: string) => void (profiles = profiles.filter((p) => p.id !== id)),
   openProfileFolder: async () => {},
   openCrashReport: async () => {},
+  wipeLocalData: async () => {},
   eventUpdateNow: async () => null,
   eventIntegrityCheck: async () => (await wait(600), { repaired: [], disabled: [] }),
   lastLog: async (id: string) =>

@@ -2,6 +2,9 @@
 
 ## Unveröffentlicht
 
+- **Alle lokalen Daten löschen:** Unter Einstellungen › Allgemein entfernt ein Knopf nach Bestätigung
+  Konten, Anmeldungen, Instanzen samt Welten, Einstellungen und Caches von diesem Gerät; Pinecone
+  startet danach neu. Daten auf dem Server und bei twogg.app bleiben.
 - **Updates:** Pinecone prüft neben dem Start alle 6 Stunden auf neue Versionen. Läuft gerade ein
   Spiel, wird ein Update erst nach Spielende installiert.
 - **Erinnerung vor Eventstart:** Solange Pinecone läuft, kommt vor angemeldeten Events ein Hinweis

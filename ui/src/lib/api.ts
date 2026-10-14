@@ -77,6 +77,7 @@ export const api = {
   deleteProfile: (id: string) => invoke<void>("delete_profile", { id }),
   openProfileFolder: (id: string) => invoke<void>("open_profile_folder", { id }),
   lastLog: (id: string, maxLines: number) => invoke<string[]>("last_log", { id, maxLines }),
+  wipeLocalData: () => invoke<void>("wipe_local_data"),
   openCrashReport: (id: string, name: string) => invoke<void>("open_crash_report", { id, name }),
   eventUpdateNow: (id: string) => invoke<[string, string] | null>("event_update_now", { id }),
   eventIntegrityCheck: (id: string) => invoke<{ repaired: string[]; disabled: string[] } | null>("event_integrity_check", { id }),

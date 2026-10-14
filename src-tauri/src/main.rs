@@ -107,6 +107,10 @@ fn main() {
         .unwrap_or_else(Paths::default_root)
         .expect("Kein Datenverzeichnis");
     let paths = Paths::new(root);
+    // „Alle lokalen Daten löschen“ abschließen, bevor Logs wieder Dateien öffnen.
+    if let Err(e) = paths.finish_pending_wipe() {
+        eprintln!("Lokale Daten nicht vollständig gelöscht: {e}");
+    }
     // Der Guard muss bis zum Programmende leben, sonst gehen die letzten Logzeilen verloren.
     let _log_guard = init_logging(&paths);
     let downloader = Downloader::new().expect("HTTP-Client");
@@ -189,6 +193,7 @@ fn main() {
             commands::set_profile_hooks,
             commands::open_profile_folder,
             commands::open_crash_report,
+            commands::wipe_local_data,
             commands::event_integrity_check,
             commands::event_update_now,
             commands::list_accounts,
