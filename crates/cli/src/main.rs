@@ -607,6 +607,7 @@ async fn main() -> Result<()> {
                 PrepareEvent::Stage(stage) => {
                     bar.set_prefix(match stage {
                         Stage::Sync => "Sync-Packs",
+                        Stage::Integrity => "Event-Pack prüfen",
                         Stage::Loader => "Mod-Loader",
                         Stage::Version => "Spieldateien",
                         Stage::Java => "Java",
@@ -614,6 +615,14 @@ async fn main() -> Result<()> {
                     });
                 }
                 PrepareEvent::Download(p) => on_progress(p),
+                PrepareEvent::Integrity(r) => {
+                    for f in &r.repaired {
+                        eprintln!("Pflichtdatei wiederhergestellt: {f}");
+                    }
+                    for f in &r.disabled {
+                        eprintln!("Zusatz-Mod abgeschaltet (im Event nicht erlaubt): {f}");
+                    }
+                }
                 PrepareEvent::Java { version, path } => {
                     bar.suspend(|| eprintln!("Java {version} ({})", path.display()));
                 }

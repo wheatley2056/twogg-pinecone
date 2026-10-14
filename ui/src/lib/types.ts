@@ -95,12 +95,13 @@ export interface JavaInstallation {
   managed: boolean;
 }
 
-export type Stage = "backup" | "prelaunch" | "sync" | "loader" | "version" | "java" | "assets";
+export type Stage = "backup" | "prelaunch" | "sync" | "integrity" | "loader" | "version" | "java" | "assets";
 
 export type LaunchEvent =
   | { type: "stage"; stage: Stage }
   | { type: "progress"; done: number; files: number; bytesDone: number; bytes: number }
   | { type: "java"; version: string; path: string }
+  | { type: "integrity"; repaired: string[]; disabled: string[] }
   | { type: "started"; pid: number | null }
   | { type: "log"; lines: string[] }
   | { type: "exited"; code: number | null; success: boolean };
@@ -213,6 +214,8 @@ export interface InstalledContent {
   sync: string | null;
   size: number;
   unidentified: boolean;
+  /** Pflichtdatei eines signierten Event-Packs (vom Backend gesperrt). */
+  locked?: boolean;
 }
 
 export interface InstallReport {

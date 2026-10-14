@@ -522,7 +522,7 @@ impl Launcher {
                             if !was_enabled
                                 && let Some(key) = installed_key(content, &new.id, &project)?
                             {
-                                content.set_enabled(&to, &key, false)?;
+                                content.set_enabled(&new.id, &to, &key, false)?;
                             }
                             Ok(Some(r))
                         }
@@ -531,7 +531,9 @@ impl Launcher {
                 }
                 Action::Missing => {
                     match opts.missing.get(&item.key).copied().unwrap_or_default() {
-                        MissingChoice::Disable => content.set_enabled(&to, &item.key, false)?,
+                        MissingChoice::Disable => {
+                            content.set_enabled(&new.id, &to, &item.key, false)?
+                        }
                         MissingChoice::Drop => content.remove(&new.id, &to, &item.key)?,
                     }
                     Ok(None)

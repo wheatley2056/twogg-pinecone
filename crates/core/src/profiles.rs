@@ -452,6 +452,7 @@ mod tests {
                 version_id: "v1".into(),
             },
             files: Default::default(),
+            event: None,
         });
         std::fs::write(
             inst.join("pack.lock.json"),

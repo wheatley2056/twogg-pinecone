@@ -138,7 +138,7 @@ async fn install_with_dependency_update_and_toggle() {
 
     // Deaktivieren, dann Update: neue Datei bleibt deaktiviert, alte verschwindet.
     manager
-        .set_enabled(&game, "mods/sodium-1.jar", false)
+        .set_enabled("test", &game, "mods/sodium-1.jar", false)
         .unwrap();
     assert!(game.join("mods/sodium-1.jar.disabled").is_file());
     let updates = manager.check_updates(&profile, &game).await.unwrap();

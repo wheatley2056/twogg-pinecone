@@ -56,6 +56,45 @@ pub struct PackInfo {
     /// Was das Pack zuletzt geliefert hat: Pfad → SHA-1 (Basis für Updates).
     #[serde(default)]
     pub files: BTreeMap<String, String>,
+    /// Signiertes Event-Pack (F-10/F-11): Pflichtdateien und Regeln aus dem Manifest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event: Option<EventLock>,
+}
+
+/// Aus dem geprüften Manifest übernommen, damit Sperre und Integritätsprüfung offline gehen.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventLock {
+    pub event_id: String,
+    /// Version laut Manifest.
+    pub version: String,
+    pub channel: String,
+    pub required: bool,
+    pub allow_extra_mods: bool,
+    pub key_id: String,
+    /// SHA-512 des `.mrpack` (für den Pack-Cache bei der Reparatur).
+    pub mrpack_sha512: String,
+    /// Pflichtdateien: Pfad → SHA-512.
+    pub locked: BTreeMap<String, String>,
+}
+
+impl EventLock {
+    pub fn from_manifest(m: &crate::eventpack::Manifest) -> Self {
+        Self {
+            event_id: m.event_id.clone(),
+            version: m.version.clone(),
+            channel: m.channel.clone(),
+            required: m.required,
+            allow_extra_mods: m.allow_extra_mods,
+            key_id: m.key_id.clone(),
+            mrpack_sha512: m.mrpack.sha512.to_ascii_lowercase(),
+            locked: m
+                .locked
+                .iter()
+                .map(|l| (l.path.clone(), l.sha512.to_ascii_lowercase()))
+                .collect(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -119,6 +158,76 @@ impl PackFile {
         match self {
             PackFile::Download { sha1, .. } | PackFile::Archive { sha1, .. } => sha1,
         }
+    }
+}
+
+/// Ergebnis der Integritätsprüfung einer Event-Instanz.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntegrityReport {
+    /// Wiederhergestellte Pflichtdateien.
+    pub repaired: Vec<String>,
+    /// Abgeschaltete Zusatz-Mods.
+    pub disabled: Vec<String>,
+}
+
+fn file_label(path: &str) -> &str {
+    path.rsplit('/').next().unwrap_or(path)
+}
+
+/// SHA-512 je Datei, gemerkt über Größe und Änderungszeit (AK-11.5: schnelle Prüfung ohne
+/// jedes Mal alles neu zu hashen).
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct HashCache {
+    #[serde(default)]
+    files: BTreeMap<String, CachedHash>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CachedHash {
+    size: u64,
+    mtime_ns: u128,
+    sha512: String,
+}
+
+impl HashCache {
+    fn sha512(&mut self, path: &Path) -> Option<String> {
+        let meta = std::fs::metadata(path).ok()?;
+        if !meta.is_file() {
+            return None;
+        }
+        let mtime_ns = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let key = path.to_string_lossy().to_string();
+        if let Some(c) = self.files.get(&key)
+            && c.size == meta.len()
+            && c.mtime_ns == mtime_ns
+            && mtime_ns != 0
+        {
+            return Some(c.sha512.clone());
+        }
+        let sha512 = crate::eventpack::sha512_file(path).ok()?;
+        self.files.insert(
+            key,
+            CachedHash {
+                size: meta.len(),
+                mtime_ns,
+                sha512: sha512.clone(),
+            },
+        );
+        Some(sha512)
+    }
+
+    fn retain(&mut self, keep: &[PathBuf]) {
+        let keep: std::collections::HashSet<String> = keep
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+        self.files.retain(|k, _| keep.contains(k));
     }
 }
 
@@ -624,18 +733,30 @@ impl PackManager {
             .as_ref()
             .ok_or_else(|| Error::Invalid("TwoGG-Server ist nicht eingerichtet".into()))?;
         client.require_launcher_version().await?;
-        let version_id = match version_id {
-            Some(v) => v.to_string(),
-            None => {
-                let pack = client.pack(pack_id).await?;
-                crate::twogg::best_version(pack.versions.as_deref().unwrap_or_default(), None)
+        let pack = client.pack(pack_id).await?;
+        let versions = pack.versions.as_deref().unwrap_or_default();
+        let chosen = match version_id {
+            Some(v) => versions.iter().find(|pv| pv.id == v).cloned(),
+            None => Some(
+                crate::twogg::best_version(versions, None)
                     .ok_or_else(|| Error::Invalid("Dieses Modpack hat noch keine Version".into()))?
-                    .id
-                    .clone()
-            }
+                    .clone(),
+            ),
+        };
+        let version_id = match (&chosen, version_id) {
+            (Some(pv), _) => pv.id.clone(),
+            (None, Some(v)) => v.to_string(),
+            (None, None) => unreachable!(),
+        };
+        // Signiertes Event-Pack: Manifest vor dem Download prüfen (`04` §6.2, Schritte 1–4).
+        let manifest = match &chosen {
+            Some(pv) if pv.signed => Some(self.verified_manifest(client, &pack, pv).await?),
+            _ => None,
         };
         let link = client.download_link(pack_id, &version_id).await?;
         let dest = self.cache_dir().join(format!("twogg-{version_id}.mrpack"));
+        let manifest_path = dest.with_extension("manifest.json");
+        let _ = std::fs::remove_file(&manifest_path);
         self.downloader
             .download(&DownloadTask {
                 url: link.url,
@@ -644,6 +765,16 @@ impl PackManager {
                 size: Some(link.size),
             })
             .await?;
+        if let Some(m) = &manifest {
+            // Schritte 6 und 7: Größe, SHA-512, Minecraft und Loader (AK-10.2).
+            if let Err(e) = crate::eventpack::check_mrpack(m, &dest) {
+                let _ = std::fs::remove_file(&dest);
+                return Err(e);
+            }
+            // Für finalize_lock und die spätere Reparatur: das geprüfte Manifest neben dem Pack.
+            let json = serde_json::to_vec_pretty(m).map_err(Error::json("Event-Pack-Manifest"))?;
+            std::fs::write(&manifest_path, json).map_err(Error::io(&manifest_path))?;
+        }
         Ok((
             dest,
             PackSource::Twogg {
@@ -651,6 +782,192 @@ impl PackManager {
                 version_id,
             },
         ))
+    }
+
+    /// Holt und prüft das signierte Manifest einer TwoGG-Version: Signatur, Format, Pack, Version,
+    /// Event und Mindestversion des Launchers (AK-10.1, AK-10.3).
+    async fn verified_manifest(
+        &self,
+        client: &crate::twogg::TwoggClient,
+        pack: &crate::twogg::Pack,
+        version: &crate::twogg::PackVersion,
+    ) -> Result<crate::eventpack::Manifest> {
+        let keyring = crate::eventpack::Keyring::builtin();
+        if keyring.is_empty() {
+            return Err(Error::Invalid(
+                "Diese Pinecone-Version kann Event-Packs nicht prüfen (keine TwoGG-Schlüssel eingebaut)"
+                    .into(),
+            ));
+        }
+        let signed = client.version_manifest(&pack.id, &version.id).await?;
+        let m = keyring.verify(&signed)?;
+        if m.pack_id != pack.id || m.version != version.version {
+            return Err(Error::Invalid(format!(
+                "{}: das Manifest gehört zu {} {}",
+                crate::eventpack::NOT_SIGNED,
+                m.pack_id,
+                m.version
+            )));
+        }
+        if let Some(event) = pack.event_id.as_deref().filter(|e| !e.is_empty())
+            && event != m.event_id
+        {
+            return Err(Error::Invalid(format!(
+                "Das Event-Pack gehört zu einem anderen Event ({})",
+                m.event_id
+            )));
+        }
+        if crate::twogg::version_older(crate::LAUNCHER_VERSION, &m.min_launcher_version) {
+            return Err(Error::Invalid(format!(
+                "Bitte aktualisiere Pinecone: Für dieses Event-Pack brauchst du mindestens Version {} (installiert: {})",
+                m.min_launcher_version,
+                crate::LAUNCHER_VERSION
+            )));
+        }
+        Ok(m)
+    }
+
+    /// Geprüftes Manifest zu einer heruntergeladenen TwoGG-Version (siehe `download_twogg`).
+    fn cached_manifest(&self, source: &PackSource) -> Option<crate::eventpack::Manifest> {
+        let PackSource::Twogg { version_id, .. } = source else {
+            return None;
+        };
+        let path = self
+            .cache_dir()
+            .join(format!("twogg-{version_id}.manifest.json"));
+        serde_json::from_slice(&std::fs::read(path).ok()?).ok()
+    }
+
+    /// Prüft die Pflichtdateien einer Event-Instanz vor dem Start (F-11) und repariert sie aus dem
+    /// Pack-Cache bzw. neu geladen. Unerlaubte Zusatz-Mods werden abgeschaltet. `None` bei
+    /// Instanzen ohne Event-Pack.
+    pub async fn check_event_integrity(
+        &self,
+        profile: &Profile,
+        offline: bool,
+    ) -> Result<Option<IntegrityReport>> {
+        let lock = self.content.load_lock(&profile.id)?;
+        let Some(info) = lock.pack.as_ref() else {
+            return Ok(None);
+        };
+        let Some(event) = info.event.as_ref() else {
+            return Ok(None);
+        };
+        let game_dir = self.profiles.game_dir(&profile.id);
+        let cache_path = self
+            .profiles
+            .instance_dir(&profile.id)
+            .join("event-hashes.json");
+        let mut cache: HashCache = std::fs::read(&cache_path)
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or_default();
+        let mut report = IntegrityReport::default();
+
+        // Abgeschaltete Pflichtdateien wieder einschalten, dann alle per SHA-512 prüfen.
+        let mut broken = Vec::new();
+        for (path, sha512) in &event.locked {
+            let file = game_dir.join(path);
+            let off = game_dir.join(format!("{path}{}", crate::content::DISABLED_SUFFIX));
+            if !file.exists() && off.exists() {
+                std::fs::rename(&off, &file).map_err(Error::io(&off))?;
+                report.repaired.push(path.clone());
+            }
+            match cache.sha512(&file) {
+                Some(actual) if actual.eq_ignore_ascii_case(sha512) => {}
+                _ => broken.push(path.clone()),
+            }
+        }
+
+        if !broken.is_empty() {
+            let PackSource::Twogg {
+                pack_id,
+                version_id,
+            } = &info.source
+            else {
+                return Err(Error::Invalid("Event-Instanz ohne TwoGG-Quelle".into()));
+            };
+            let archive = self.cache_dir().join(format!("twogg-{version_id}.mrpack"));
+            let cached_ok = crate::eventpack::sha512_file(&archive)
+                .is_ok_and(|h| h.eq_ignore_ascii_case(&event.mrpack_sha512));
+            if !cached_ok {
+                if offline {
+                    return Err(Error::Invalid(format!(
+                        "Pflichtdatei {} fehlt und kann offline nicht geladen werden",
+                        file_label(&broken[0])
+                    )));
+                }
+                self.download_twogg(pack_id, Some(version_id)).await?;
+            }
+            let pack = read_mrpack(&archive)?;
+            let mut targets = Vec::new();
+            for path in &broken {
+                let f = pack.files.get(path).ok_or_else(|| {
+                    Error::Invalid(format!(
+                        "Datei {} fehlt im Event-Pack, bitte melde das dem Bauteam",
+                        file_label(path)
+                    ))
+                })?;
+                if offline && matches!(f, PackFile::Download { .. }) {
+                    return Err(Error::Invalid(format!(
+                        "Pflichtdatei {} fehlt und kann offline nicht geladen werden",
+                        file_label(path)
+                    )));
+                }
+                // Vorhandene, veränderte Datei weg, sonst hält der Downloader sie für fertig.
+                let target = game_dir.join(path);
+                if target.exists() {
+                    std::fs::remove_file(&target).map_err(Error::io(&target))?;
+                }
+                targets.push((path.clone(), f.clone()));
+            }
+            self.write_files(&game_dir, &archive, &pack.extra_hosts, &targets)
+                .await?;
+            for path in &broken {
+                let file = game_dir.join(path);
+                let actual = cache.sha512(&file).unwrap_or_default();
+                if !actual.eq_ignore_ascii_case(&event.locked[path]) {
+                    return Err(Error::HashMismatch {
+                        path: file,
+                        expected: event.locked[path].clone(),
+                        actual,
+                    });
+                }
+                report.repaired.push(path.clone());
+            }
+        }
+
+        // Zusatz-Mods nur, wenn das Manifest es erlaubt (AK-11.3).
+        if !event.allow_extra_mods {
+            let mods = game_dir.join("mods");
+            if let Ok(entries) = std::fs::read_dir(&mods) {
+                for e in entries.flatten() {
+                    let name = e.file_name().to_string_lossy().to_string();
+                    let key = format!("mods/{name}");
+                    if !e.path().is_file()
+                        || !name.to_ascii_lowercase().ends_with(".jar")
+                        || event.locked.contains_key(&key)
+                    {
+                        continue;
+                    }
+                    let off = mods.join(format!("{name}{}", crate::content::DISABLED_SUFFIX));
+                    std::fs::rename(e.path(), &off).map_err(Error::io(e.path()))?;
+                    report.disabled.push(key);
+                }
+            }
+        }
+
+        cache.retain(
+            &event
+                .locked
+                .keys()
+                .map(|p| game_dir.join(p))
+                .collect::<Vec<_>>(),
+        );
+        if let Ok(json) = serde_json::to_vec(&cache) {
+            let _ = std::fs::write(&cache_path, json);
+        }
+        Ok(Some(report))
     }
 
     /// Liest ein Modrinth- (`.mrpack`) oder CurseForge-Pack (ZIP mit `manifest.json`).
@@ -1011,6 +1328,27 @@ impl PackManager {
         for (key, entry) in lock.files.iter_mut() {
             entry.from_pack = pack.files.contains_key(key);
         }
+        let event = self
+            .cached_manifest(&source)
+            .map(|m| EventLock::from_manifest(&m));
+        // Schritt 9: jede Pflichtdatei muss nach der Installation stimmen.
+        if let Some(event) = &event {
+            for (path, sha512) in &event.locked {
+                let file = game_dir.join(path);
+                let actual = crate::eventpack::sha512_file(&file).map_err(|_| {
+                    Error::Invalid(format!(
+                        "Pflichtdatei {path} fehlt nach der Installation, bitte melde das dem Bauteam"
+                    ))
+                })?;
+                if !actual.eq_ignore_ascii_case(sha512) {
+                    return Err(Error::HashMismatch {
+                        path: file,
+                        expected: sha512.clone(),
+                        actual,
+                    });
+                }
+            }
+        }
         lock.pack = Some(PackInfo {
             name: pack.name.clone(),
             version: pack.version.clone(),
@@ -1020,6 +1358,7 @@ impl PackManager {
                 .iter()
                 .map(|(k, f)| (k.clone(), f.sha1().to_string()))
                 .collect(),
+            event,
         });
         self.content.save_lock(profile_id, &lock)
     }
