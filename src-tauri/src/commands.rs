@@ -352,6 +352,29 @@ pub fn open_profile_folder(
         .map_err(err)
 }
 
+/// „Alle lokalen Daten löschen“ (`04` §9.2, Art. 17): Schlüsselbund-Einträge sofort entfernen,
+/// das Datenverzeichnis beim Neustart (siehe `Paths::finish_pending_wipe`). Daten auf dem
+/// Pinecone-Server und bei twogg.app bleiben.
+#[tauri::command]
+pub async fn wipe_local_data(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
+    use pinecone_core::accounts::SecretStore;
+    if !state.running.lock().unwrap().is_empty() {
+        return Err(err("Beende zuerst das laufende Spiel"));
+    }
+    // twogg.app-Sitzung auch serverseitig beenden; offline reicht das lokale Löschen.
+    let _ = state.twogg_app.logout().await;
+    let secrets = pinecone_core::accounts::KeyringStore;
+    for a in state.accounts.load().map_err(err)?.accounts {
+        let _ = secrets.delete(&pinecone_core::accounts::refresh_key(&a.uuid));
+        let _ = secrets.delete(&crate::friends::key(&a.uuid.simple().to_string()));
+    }
+    let marker = state.launcher.paths().wipe_marker();
+    std::fs::create_dir_all(state.launcher.paths().root()).map_err(err)?;
+    std::fs::write(&marker, b"").map_err(err)?;
+    tracing::warn!("Alle lokalen Daten werden beim Neustart gelöscht");
+    app.restart()
+}
+
 /// Öffnet einen Crash-Report der Instanz im Standardprogramm (F-35).
 #[tauri::command]
 pub fn open_crash_report(

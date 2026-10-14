@@ -19,7 +19,7 @@ fn client(state: &AppState) -> CmdResult<&TwoggClient> {
         .ok_or_else(|| "TwoGG-Server ist nicht eingerichtet".to_string())
 }
 
-fn key(uuid: &str) -> String {
+pub(crate) fn key(uuid: &str) -> String {
     format!("pinecone-friends-{uuid}")
 }
 

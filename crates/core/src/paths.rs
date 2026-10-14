@@ -33,6 +33,22 @@ impl Paths {
         &self.root
     }
 
+    /// Markierung für „Alle lokalen Daten löschen“: Beim nächsten Start wird das Datenverzeichnis
+    /// entfernt, bevor Logs oder Caches wieder Dateien öffnen.
+    pub fn wipe_marker(&self) -> PathBuf {
+        self.root.join(".delete-on-start")
+    }
+
+    /// Löscht das Datenverzeichnis, falls die Markierung gesetzt ist. `true`, wenn gelöscht wurde.
+    /// Ohne Markierung passiert nichts, so kann nie ein fremder Ordner gelöscht werden.
+    pub fn finish_pending_wipe(&self) -> std::io::Result<bool> {
+        if !self.wipe_marker().is_file() {
+            return Ok(false);
+        }
+        std::fs::remove_dir_all(&self.root)?;
+        Ok(true)
+    }
+
     pub fn version_manifest(&self) -> PathBuf {
         self.root.join("versions").join("version_manifest_v2.json")
     }
@@ -117,5 +133,21 @@ mod tests {
         assert!(safe_relative("/etc/passwd").is_err());
         assert!(safe_relative("lib/../../evil").is_err());
         assert!(safe_relative("").is_err());
+    }
+
+    #[test]
+    fn wipe_only_with_marker() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("data");
+        std::fs::create_dir_all(root.join("instances/a")).unwrap();
+        let paths = Paths::new(&root);
+        assert!(
+            !paths.finish_pending_wipe().unwrap(),
+            "ohne Markierung bleibt alles"
+        );
+        assert!(root.join("instances/a").is_dir());
+        std::fs::write(paths.wipe_marker(), "").unwrap();
+        assert!(paths.finish_pending_wipe().unwrap());
+        assert!(!root.exists());
     }
 }

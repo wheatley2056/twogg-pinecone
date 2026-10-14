@@ -9,6 +9,7 @@
   import { settings, updateSettings } from "../../lib/settings.svelte";
   import { checkUpdates, installUpdate, updates } from "../../lib/updates.svelte";
   import type { AppInfo, ServerInfo, Settings } from "../../lib/types";
+  import ConfirmDialog from "../ConfirmDialog.svelte";
   import Dropdown from "../ui/Dropdown.svelte";
   import Segmented from "../ui/Segmented.svelte";
   import Switch from "../ui/Switch.svelte";
@@ -19,6 +20,22 @@
   let error = $state<string | null>(null);
   let notice = $state<string | null>(null);
   let diagBusy = $state(false);
+  let wiping = $state(false);
+
+  async function wipe() {
+    error = null;
+    try {
+      try {
+        localStorage.clear();
+      } catch {
+        // Ohne Zugriff bleibt nur, was der Launcher selbst löscht.
+      }
+      await api.wipeLocalData();
+    } catch (e) {
+      error = errorText(e);
+      wiping = false;
+    }
+  }
   const s = $derived(settings.current);
   let legal = $state<ServerInfo["legal"] | null>(null);
 
@@ -104,6 +121,9 @@
         </SettingRow>
       {/if}
       <SettingRow title={t("settings.dataDir")} hint={info?.dataDir ?? "?"} />
+      <SettingRow title={t("settings.wipe")} hint={t("settings.wipeHint")}>
+        <button onclick={() => (wiping = true)}>{t("settings.wipeButton")}</button>
+      </SettingRow>
     </div>
   </section>
 
@@ -219,7 +239,32 @@
 
 {#if error}<p class="error">{error}</p>{/if}
 
+{#if wiping}
+  <ConfirmDialog title={t("settings.wipeTitle")} confirmLabel={t("settings.wipeConfirm")} onConfirm={wipe} onCancel={() => (wiping = false)}>
+    <p>{t("settings.wipeText")}</p>
+    <ul class="wipe-list">
+      <li>{t("settings.wipeAccounts")}</li>
+      <li>{t("settings.wipeInstances")}</li>
+      <li>{t("settings.wipeRest")}</li>
+    </ul>
+    <p class="muted">{t("settings.wipeServer")}</p>
+  </ConfirmDialog>
+{/if}
+
 <style>
+  .wipe-list {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .muted {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
   .leads {
     display: flex;
     gap: 8px;
