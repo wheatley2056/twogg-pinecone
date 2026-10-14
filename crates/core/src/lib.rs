@@ -8,6 +8,7 @@ pub mod curseforge;
 pub mod diagnostics;
 pub mod download;
 pub mod error;
+pub mod eventpack;
 pub mod forge;
 pub mod hooks;
 pub mod install;

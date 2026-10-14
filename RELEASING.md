@@ -19,6 +19,10 @@ npx tauri signer generate -w ~/.tauri/pinecone.key
   Discord-Status. Im [Discord-Entwicklerportal](https://discord.com/developers/applications) eine
   Anwendung „TwoGG Pinecone“ anlegen, die Application-ID übernehmen und unter *Rich Presence → Art
   Assets* ein Bild mit dem Namen `pinecone` hochladen. Ohne ID ist der Schalter ausgeblendet.
+- Für signierte Event-Packs: `PINECONE_EVENTPACK_KEYS` als **Variable** (öffentliche Schlüssel, Format
+  `keyId=Base64`, mehrere durch `;`). Erzeugt mit `pinecone eventpack keygen`, siehe
+  [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md#event-packs-signieren). Der private Schlüssel kommt **nie** nach
+  GitHub. Ohne Variable kann der Launcher keine signierten Event-Packs prüfen.
 - **Kein** `PINECONE_CURSEFORGE_API_KEY`: Die CurseForge-API-Bedingungen verbieten, den Schlüssel
   weiterzugeben. Er liegt nur auf dem Pinecone-Server, der Launcher fragt über dessen Proxy. Ein
   altes Secret dieses Namens bitte in den GitHub-Einstellungen löschen.

@@ -8,6 +8,7 @@ name: Release
 # Benötigte Secrets:  TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 # Optionale Secrets:  PINECONE_MSA_CLIENT_ID
 # Optionale Variable: PINECONE_DISCORD_CLIENT_ID (Discord-Status; Application-ID ist öffentlich)
+# Optionale Variable: PINECONE_EVENTPACK_KEYS (öffentliche Schlüssel für Event-Packs, keyId=Base64;…)
 # CurseForge läuft über den Pinecone-Server; der API-Schlüssel gehört nicht in den Launcher.
 # Variable:           PINECONE_UPDATE_PUBKEY (öffentlicher Schlüssel, Inhalt der .pub-Datei)
 
@@ -87,6 +88,7 @@ jobs:
           # Werden beim Bauen einkompiliert (siehe README).
           PINECONE_MSA_CLIENT_ID: ${{ secrets.PINECONE_MSA_CLIENT_ID }}
           PINECONE_DISCORD_CLIENT_ID: ${{ vars.PINECONE_DISCORD_CLIENT_ID }}
+          PINECONE_EVENTPACK_KEYS: ${{ vars.PINECONE_EVENTPACK_KEYS }}
           PINECONE_UPDATE_PUBKEY: ${{ vars.PINECONE_UPDATE_PUBKEY }}
           # Wo installierte Launcher nach Updates suchen: standardmäßig die Releases dieses Repos
           # (Kanal Release = ohne Pre-release, Beta = alle); mit der Variable PINECONE_UPDATE_URL
