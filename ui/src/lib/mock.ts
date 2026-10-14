@@ -16,6 +16,11 @@ let profiles: Profile[] = [
   { id: "retro", name: "Retro", minecraft: "1.8.9", loader: null, memoryMb: 2048, jvmArgs: [], java: null, color: null, icon: null, running: false, packSource: null, lastPlayed: null, backupOnLaunch: false, backupKeep: 5 },
 ];
 let accounts: Account[] = [{ uuid: "1a70aea0-11fc-356b-8f09-325a0158a7d0", name: "Tobi", kind: "offline", active: true }];
+// `#fresh`: Erststart ohne Instanzen und Konten (für den geführten Erststart).
+if (typeof location !== "undefined" && location.hash === "#fresh") {
+  profiles = [];
+  accounts = [];
+}
 const stopped = new Set<string>();
 let settings: Settings = {
   theme: { name: "rinde", accent: "#e9a23b", pattern: true, pixelTitles: true, reduceMotion: false },

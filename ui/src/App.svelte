@@ -25,6 +25,7 @@
   import NewSyncDialog from "./components/library/NewSyncDialog.svelte";
   import SyncPackView from "./components/library/SyncPackView.svelte";
   import EventsPage from "./components/pages/EventsPage.svelte";
+  import Onboarding from "./components/Onboarding.svelte";
   import LibraryPage from "./components/pages/LibraryPage.svelte";
   import MissingDialog from "./components/MissingDialog.svelte";
   import ProfileDialog from "./components/ProfileDialog.svelte";
@@ -411,11 +412,14 @@
     {/if}
     {#if view === "home"}
       {#if profiles.length === 0}
-        <div class="welcome">
-          <h2>{t("welcome.title")}</h2>
-          <p class="muted">{t("welcome.text")}</p>
-          <button class="primary cut" onclick={() => (creating = true)}>{t("welcome.create")}</button>
-        </div>
+        <Onboarding
+          {info}
+          {accounts}
+          onAccountsChange={reloadAccounts}
+          onCreate={() => (creating = true)}
+          onEvents={() => ((eventId = null), (view = "events"))}
+          onDiscover={() => (view = "discover")}
+        />
       {:else}
         {#key homeKey}
           <PlayPage
