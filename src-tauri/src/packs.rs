@@ -40,6 +40,16 @@ pub struct PackInfoDto {
     version: String,
     /// `modrinth`, `curseforge` oder `file` (dann keine automatischen Updates).
     source: &'static str,
+    /// Nur bei signierten Event-Packs.
+    event: Option<EventInfoDto>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventInfoDto {
+    required: bool,
+    allow_extra_mods: bool,
+    recommended_memory_mb: Option<u32>,
 }
 
 #[tauri::command]
@@ -136,9 +146,14 @@ pub fn pack_info(state: State<'_, AppState>, id: String) -> CmdResult<Option<Pac
         .pack_info(&id)
         .map_err(err)?
         .map(|p| PackInfoDto {
+            source: source_name(&p.source),
+            event: p.event.map(|e| EventInfoDto {
+                required: e.required,
+                allow_extra_mods: e.allow_extra_mods,
+                recommended_memory_mb: e.recommended_memory_mb,
+            }),
             name: p.name,
             version: p.version,
-            source: source_name(&p.source),
         }))
 }
 

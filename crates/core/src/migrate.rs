@@ -154,6 +154,11 @@ impl Launcher {
         profile: &Profile,
         target: &MigrationTarget,
     ) -> Result<(MigrationPlan, Vec<Action>)> {
+        if self.packs().event_lock(&profile.id).is_some() {
+            return Err(Error::Invalid(
+                "Die Version einer Event-Instanz gibt das Event-Pack vor".into(),
+            ));
+        }
         let minecraft = target.minecraft.trim().to_string();
         if minecraft.is_empty() {
             return Err(Error::Invalid("Bitte eine Minecraft-Version wählen".into()));

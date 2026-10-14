@@ -76,6 +76,9 @@ pub struct EventLock {
     pub mrpack_sha512: String,
     /// Pflichtdateien: Pfad → SHA-512.
     pub locked: BTreeMap<String, String>,
+    /// Empfohlener Arbeitsspeicher laut Manifest (AK-32.4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recommended_memory_mb: Option<u32>,
 }
 
 impl EventLock {
@@ -93,6 +96,7 @@ impl EventLock {
                 .iter()
                 .map(|l| (l.path.clone(), l.sha512.to_ascii_lowercase()))
                 .collect(),
+            recommended_memory_mb: m.recommended_memory_mb,
         }
     }
 }
@@ -1471,15 +1475,25 @@ impl PackManager {
         // Logo der Quelle als Instanz-Symbol; fehlt es oder klappt der Abruf nicht, bleiben die
         // Anfangsbuchstaben.
         let mut profile = profile;
+        let mut changed = false;
         match self.source_icon(&icon_source).await {
             Ok(Some(icon)) => {
                 profile.icon = Some(icon);
-                if let Err(e) = self.profiles.save(&profile) {
-                    tracing::warn!("Instanz-Symbol nicht gespeichert: {e}");
-                }
+                changed = true;
             }
             Ok(None) => {}
             Err(e) => tracing::warn!("Pack-Logo nicht geladen: {e}"),
+        }
+        // Event-Packs bringen ihre Speicherempfehlung mit (AK-32.4).
+        if let Some(mb) = self
+            .event_lock(&profile.id)
+            .and_then(|e| e.recommended_memory_mb)
+        {
+            profile.memory_mb = Some(mb);
+            changed = true;
+        }
+        if changed && let Err(e) = self.profiles.save(&profile) {
+            tracing::warn!("Instanz nicht gespeichert: {e}");
         }
         Ok(ImportResult {
             profile,
@@ -1878,6 +1892,14 @@ impl PackManager {
                 "Ungültiger Snapshot {snapshot_id:?}"
             )));
         }
+        if let Some(event) = self.event_lock(&profile.id)
+            && event.required
+        {
+            return Err(Error::Invalid(format!(
+                "Das Event schreibt Version {} vor, ein Rücksprung ist nicht möglich",
+                event.version
+            )));
+        }
         let snap_dir = self.snapshots_dir(&profile.id).join(snapshot_id);
         let manifest_path = snap_dir.join("snapshot.json");
         let bytes = std::fs::read(&manifest_path).map_err(Error::io(&manifest_path))?;
@@ -1925,6 +1947,12 @@ impl PackManager {
         target: &Path,
         opts: &ExportOptions,
     ) -> Result<ExportReport> {
+        if self.event_lock(&profile.id).is_some() {
+            return Err(Error::Invalid(
+                "Event-Instanzen lassen sich nicht als .mrpack exportieren. Teile stattdessen den Link zum Event-Pack."
+                    .into(),
+            ));
+        }
         let version_label = opts.version.trim();
         if version_label.is_empty() {
             return Err(Error::Invalid("Bitte eine Versionsnummer angeben".into()));
@@ -2051,6 +2079,11 @@ impl PackManager {
         .await
         .map_err(|e| Error::Invalid(format!("Export abgebrochen: {e}")))??;
         Ok(report)
+    }
+
+    /// Event-Daten einer Instanz, falls sie aus einem signierten Event-Pack stammt.
+    pub fn event_lock(&self, profile_id: &str) -> Option<EventLock> {
+        self.content.load_lock(profile_id).ok()?.pack?.event
     }
 
     pub fn pack_info(&self, profile_id: &str) -> Result<Option<PackInfo>> {

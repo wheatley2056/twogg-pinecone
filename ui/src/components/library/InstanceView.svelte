@@ -126,7 +126,7 @@
         <div class="menu-pop" role="menu">
           <button role="menuitem" onclick={() => menuAction(() => (sharing = true))}><Icon name="share" size={16} />{t("share.menu")}</button>
           <button role="menuitem" onclick={() => menuAction(onDuplicate)}><Icon name="copy" size={16} />{t("duplicate.menu")}</button>
-          <button role="menuitem" disabled={locked} onclick={() => menuAction(() => (migrating = true))}><Icon name="refresh" size={16} />{t("migrate.menu")}</button>
+          <button role="menuitem" disabled={locked || !!packInfo?.event} title={packInfo?.event ? t("instance.eventVersionFixed") : undefined} onclick={() => menuAction(() => (migrating = true))}><Icon name="refresh" size={16} />{t("migrate.menu")}</button>
           {#if packInfo}
             <button role="menuitem" onclick={() => menuAction(() => (updateDialog = { target: null }))}><Icon name="clock" size={16} />{t("update.snapshots")}</button>
           {/if}
@@ -166,7 +166,7 @@
 
 {#if tab === "content"}
   {#key contentKey}
-    <ContentTable {profile} {locked} {onAddContent} {addSignal} onCount={(n) => (contentCount = n)} />
+    <ContentTable {profile} {locked} {onAddContent} event={packInfo?.event} {addSignal} onCount={(n) => (contentCount = n)} />
   {/key}
 {:else if tab === "worlds"}
   <WorldsTab {profile} {locked} />
@@ -177,10 +177,10 @@
 {:else if tab === "logs"}
   <LogsTab {profile} />
 {:else}
-  <SettingsTab {profile} {locked} {onChanged} {onDeleted} />
+  <SettingsTab {profile} {locked} {onChanged} {onDeleted} event={packInfo?.event} />
 {/if}
 
-{#if sharing}<ShareDialog {profile} onClose={() => (sharing = false)} />{/if}
+{#if sharing}<ShareDialog {profile} event={!!packInfo?.event} onClose={() => (sharing = false)} />{/if}
 
 {#if migrating}
   <MigrateDialog {profile} onClose={() => (migrating = false)} {onCreated} />

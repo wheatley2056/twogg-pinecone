@@ -552,6 +552,24 @@ impl ContentManager {
         Ok(())
     }
 
+    /// Eigene Mods in Event-Instanzen nur, wenn das Manifest sie erlaubt (`allowExtraMods`).
+    fn ensure_extra_allowed(&self, profile_id: &str, kind: ContentKind) -> Result<()> {
+        let lock = self.load_lock(profile_id)?;
+        if kind == ContentKind::Mod
+            && lock
+                .pack
+                .as_ref()
+                .and_then(|p| p.event.as_ref())
+                .is_some_and(|e| !e.allow_extra_mods)
+        {
+            return Err(Error::Invalid(
+                "Dieses Event erlaubt keine eigenen Mods. Ressourcenpakete und Shader gehen."
+                    .into(),
+            ));
+        }
+        Ok(())
+    }
+
     pub fn set_enabled(
         &self,
         profile_id: &str,
@@ -559,9 +577,19 @@ impl ContentManager {
         key: &str,
         enabled: bool,
     ) -> Result<()> {
-        Self::checked_key(key)?;
+        let kind = Self::checked_key(key)?;
         if !enabled {
             self.ensure_not_locked(profile_id, key)?;
+        } else {
+            // Abgeschaltete Zusatz-Mods nicht am Event vorbei wieder einschalten.
+            let locked = self
+                .load_lock(profile_id)?
+                .pack
+                .and_then(|p| p.event)
+                .is_some_and(|e| e.locked.contains_key(key));
+            if !locked {
+                self.ensure_extra_allowed(profile_id, kind)?;
+            }
         }
         let on = game_dir.join(key);
         let off = game_dir.join(format!("{key}{DISABLED_SUFFIX}"));
@@ -611,6 +639,7 @@ impl ContentManager {
                 kind.extensions().join("/")
             )));
         }
+        self.ensure_extra_allowed(profile_id, kind)?;
         let key = format!("{}/{file_name}", kind.folder());
         Self::checked_key(&key)?;
         let target = game_dir.join(&key);
@@ -698,6 +727,7 @@ impl ContentManager {
         if loaders_for(profile, kind).is_none() {
             return Err(not_moddable(profile));
         }
+        self.ensure_extra_allowed(&profile.id, kind)?;
         let mut lock = self.load_lock(&profile.id)?;
         let present: HashSet<String> = Self::scan(game_dir).into_iter().map(|p| p.0).collect();
         let mut by_project: HashMap<u64, String> = lock
@@ -854,6 +884,7 @@ impl ContentManager {
         if loaders_for(profile, kind).is_none() {
             return Err(not_moddable(profile));
         }
+        self.ensure_extra_allowed(&profile.id, kind)?;
         let mut lock = self.load_lock(&profile.id)?;
         let present: HashSet<String> = Self::scan(game_dir).into_iter().map(|p| p.0).collect();
         // Projekt → vorhandener Schlüssel (nur Dateien, die es noch gibt).

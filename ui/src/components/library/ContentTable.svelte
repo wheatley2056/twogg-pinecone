@@ -8,7 +8,7 @@
   import { t } from "../../lib/i18n.svelte";
   import { syncReportText } from "../../lib/sync";
   import { isTwogg } from "../../lib/profiles";
-  import type { ContentKind, InstalledContent, Profile, ProfileSyncPack, UpdateInfo } from "../../lib/types";
+  import type { ContentKind, InstalledContent, Profile, ProfileSyncPack, UpdateInfo, PackInfo } from "../../lib/types";
   import ConfirmDialog from "../ConfirmDialog.svelte";
   import AddContentDialog from "./AddContentDialog.svelte";
   import Icon from "../Icon.svelte";
@@ -24,8 +24,10 @@
     onCount: (count: number) => void;
     /** Zählt hoch, wenn der Hinzufügen-Dialog aufgehen soll (Rechtsklick auf eine Instanz). */
     addSignal?: number;
+    /** Nur bei signierten Event-Packs. */
+    event?: PackInfo["event"];
   }
-  let { profile, locked, onAddContent, onCount, addSignal = 0 }: Props = $props();
+  let { profile, locked, onAddContent, onCount, addSignal = 0, event = null }: Props = $props();
 
   type Filter = "all" | ContentKind;
   let filter = $state<Filter>("all");
@@ -342,6 +344,7 @@
     onClose={() => (adding = null)}
     onAdded={load}
     onDiscover={onAddContent}
+    noMods={!!event && !event.allowExtraMods}
   />
 {/if}
 

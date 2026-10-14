@@ -18,11 +18,13 @@
     onClose: () => void;
     onAdded: () => void;
     onDiscover: (kind: ContentKind) => void;
+    /** Event-Instanz ohne `allowExtraMods`: keine eigenen Mods. */
+    noMods?: boolean;
   }
-  let { profile, kind: initialKind, installed, onClose, onAdded, onDiscover }: Props = $props();
+  let { profile, kind: initialKind, installed, onClose, onAdded, onDiscover, noMods = false }: Props = $props();
 
   let dialog: HTMLDialogElement;
-  let kind = $state<ContentKind>(untrack(() => initialKind));
+  let kind = $state<ContentKind>(untrack(() => (noMods && initialKind === "mod" ? "resourcepack" : initialKind)));
   let query = $state("");
   let hits = $state<SearchHit[]>([]);
   let loading = $state(false);
@@ -40,6 +42,7 @@
   );
   const compact = new Intl.NumberFormat(locale(), { notation: "compact", maximumFractionDigits: 1 });
   const vanilla = $derived(!profile.loader && kind === "mod");
+  const modsBlocked = $derived(noMods && kind === "mod");
 
   onMount(() => dialog.showModal());
 
@@ -123,14 +126,16 @@
   </header>
 
   <div class="results" aria-busy={loading}>
-    {#if vanilla}
+    {#if modsBlocked}
+      <p class="hint">{t("content.eventNoMods")}</p>
+    {:else if vanilla}
       <p class="hint">{t("content.vanillaHint")}</p>
     {:else if error && hits.length === 0}
       <p class="error">{error}</p>
     {:else if !loading && hits.length === 0}
       <p class="hint">{t("addContent.none")}</p>
     {/if}
-    {#if !vanilla}
+    {#if !vanilla && !modsBlocked}
       {#each hits as hit (hit.projectId)}
         {@const s = status[hit.projectId]}
         {@const done = s === "done" || have.has(hit.projectId)}
