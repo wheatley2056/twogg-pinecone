@@ -184,7 +184,8 @@ async fn import_update_with_conflicts_and_rollback() {
         packs.pack_info(&profile.id).unwrap().unwrap().version,
         "2.0"
     );
-    assert_eq!(packs.snapshots(&profile.id).len(), 1);
+    let snapshots = packs.snapshots(&profile.id);
+    assert_eq!(snapshots.len(), 1);
 
     // Ein weiteres Update ohne Pack-Änderung an der Config bringt keinen Konflikt mehr.
     let replan = packs
@@ -705,7 +706,7 @@ async fn signed_event_pack_install_lock_and_repair() {
         min_launcher_version: min_launcher.into(),
         required: true,
         allow_extra_mods: false,
-        recommended_memory_mb: None,
+        recommended_memory_mb: Some(6144),
         mrpack: MrpackRef {
             url: "x".into(),
             size: bytes.len() as u64,
@@ -788,6 +789,45 @@ async fn signed_event_pack_install_lock_and_repair() {
         ("evt-42", "1.4.0")
     );
     assert_eq!(event.locked.len(), 2);
+    // Speicherempfehlung aus dem Manifest (AK-32.4).
+    assert_eq!(event.recommended_memory_mb, Some(6144));
+    assert_eq!(profile.memory_mb, Some(6144));
+
+    // Kein .mrpack-Export (AK-25.3).
+    let err = packs
+        .export(
+            &profile,
+            &dir.path().join("out.mrpack"),
+            &pinecone_core::modpack::ExportOptions::new("1.0"),
+        )
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("nicht als .mrpack"), "{err}");
+
+    // Eigene Mods nur mit allowExtraMods, Ressourcenpakete immer.
+    let own = dir.path().join("own.jar");
+    std::fs::write(&own, "eigene").unwrap();
+    let err = content
+        .add_local(
+            &profile.id,
+            &game,
+            pinecone_core::content::ContentKind::Mod,
+            &own,
+        )
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("keine eigenen Mods"), "{err}");
+    let rp = dir.path().join("rp.zip");
+    std::fs::write(&rp, "pack").unwrap();
+    content
+        .add_local(
+            &profile.id,
+            &game,
+            pinecone_core::content::ContentKind::Resourcepack,
+            &rp,
+        )
+        .await
+        .unwrap();
 
     // Pflicht-Mods lassen sich nicht abschalten oder entfernen (AK-11.1), Configs schon frei.
     assert!(
@@ -938,7 +978,14 @@ async fn signed_event_pack_install_lock_and_repair() {
         .event
         .unwrap();
     assert_eq!(event.version, "1.5.0");
-    assert_eq!(packs.snapshots(&profile.id).len(), 1);
+    let snapshots = packs.snapshots(&profile.id);
+    assert_eq!(snapshots.len(), 1);
+    // Pflicht-Version: kein Rücksprung (AK-12.4).
+    let err = packs.rollback(&profile, &snapshots[0].id).unwrap_err();
+    assert!(
+        err.to_string().contains("schreibt Version 1.5.0 vor"),
+        "{err}"
+    );
     assert_eq!(packs.required_event_update(&profile).await.unwrap(), None);
 
     // Server nicht erreichbar: Start mit dem bisherigen Stand.

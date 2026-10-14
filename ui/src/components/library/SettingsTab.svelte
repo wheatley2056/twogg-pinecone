@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { api, errorText } from "../../lib/api";
   import { t } from "../../lib/i18n.svelte";
-  import type { Account, Profile } from "../../lib/types";
+  import type { Account, PackInfo, Profile } from "../../lib/types";
   import ConfirmDialog from "../ConfirmDialog.svelte";
   import SettingRow from "../settings/SettingRow.svelte";
   import Dropdown from "../ui/Dropdown.svelte";
@@ -14,8 +14,9 @@
     locked: boolean;
     onChanged: () => void;
     onDeleted: () => void;
+    event?: PackInfo["event"];
   }
-  let { profile, locked, onChanged, onDeleted }: Props = $props();
+  let { profile, locked, onChanged, onDeleted, event = null }: Props = $props();
 
   let confirmDelete = $state(false);
   let error = $state<string | null>(null);
@@ -85,7 +86,7 @@
 <div class="tab">
   <section class="block">
     <h3 class="section-label">{t("instance.general")}</h3>
-    <InstanceForm {profile} {locked} id="instance-{profile.id}" onSaved={onChanged}>
+    <InstanceForm {profile} {locked} {event} id="instance-{profile.id}" onSaved={onChanged}>
       {#snippet actions({ saving, canSave })}
         <div class="actions">
           <button type="submit" class="primary cut" disabled={!canSave}>{saving ? t("dialog.saving") : t("common.save")}</button>

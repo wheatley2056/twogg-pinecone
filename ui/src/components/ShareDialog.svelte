@@ -7,7 +7,8 @@
   import Icon from "./Icon.svelte";
   import Segmented from "./ui/Segmented.svelte";
 
-  let { profile, onClose }: { profile: Profile; onClose: () => void } = $props();
+  // Event-Instanzen nur per Link auf das Event-Pack teilen, nicht als .mrpack (AK-25.3).
+  let { profile, event = false, onClose }: { profile: Profile; event?: boolean; onClose: () => void } = $props();
 
   let dialog: HTMLDialogElement;
   let link = $state<string | null>(null);
@@ -137,7 +138,9 @@
       </section>
     {/if}
 
-    {#if mode === "share"}
+    {#if mode === "share" && event}
+      <p class="muted">{t("share.eventOnlyLink")}</p>
+    {:else if mode === "share"}
     <section>
       <h3><Icon name="file" size={16} />{t("share.fileTitle")}</h3>
       <p class="muted">{t("pack.exportHint")}</p>
@@ -169,7 +172,7 @@
     <button onclick={onClose} disabled={busy}>{t("common.close")}</button>
     {#if mode === "full"}
       <button class="primary" onclick={exportFull} disabled={busy}>{busy ? t("share.fullBusy") : t("share.fullButton")}</button>
-    {:else}
+    {:else if !event}
       <button class="primary" onclick={exportPack} disabled={busy || !options.version.trim()}>{busy ? t("common.loading") : t("pack.exportButton")}</button>
     {/if}
   </div>

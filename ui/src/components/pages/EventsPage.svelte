@@ -52,6 +52,19 @@
   const eventPack = $derived(current ? (packs.find((p) => p.eventId === current.id) ?? null) : null);
   const packInstance = $derived(eventPack ? (profiles.find((p) => p.packId === eventPack.id) ?? null) : null);
 
+  // Stand der installierten Event-Instanz: Version und ggf. verfügbares Update (AK-12.1).
+  let installed = $state<{ version: string; update: string | null } | null>(null);
+  $effect(() => {
+    const id = packInstance?.id;
+    installed = null;
+    if (!id) return;
+    Promise.all([api.packInfo(id), api.packCheckUpdate(id).catch(() => null)])
+      .then(([info, update]) => {
+        if (packInstance?.id === id && info) installed = { version: info.version, update: update && !update.withdrawn ? update.latest : null };
+      })
+      .catch(() => {});
+  });
+
   async function installPack(pack: TwoggPack) {
     installing = true;
     packError = null;
@@ -166,7 +179,14 @@
                 {:else}
                   <span class="title">{eventPack.title}</span>
                 {/if}
-                <span class="hint">{eventPack.latest ? `${eventPack.latest.version} · ${eventPack.latest.loader ?? "Vanilla"} ${eventPack.latest.minecraft}` : eventPack.summary}</span>
+                {#if installed}
+                  <span class="hint">
+                    {t("events.packInstalled", { version: installed.version })}
+                    {#if installed.update}· <span class="update">{t("events.packUpdate", { version: installed.update })}</span>{/if}
+                  </span>
+                {:else}
+                  <span class="hint">{eventPack.latest ? `${eventPack.latest.version} · ${eventPack.latest.loader ?? "Vanilla"} ${eventPack.latest.minecraft}` : eventPack.summary}</span>
+                {/if}
               </span>
               {#if packInstance}
                 <button onclick={() => onOpenInstance(packInstance.id)}>{t("events.openInstance")}</button>
@@ -502,6 +522,11 @@
     margin: 0;
     font-size: 12px;
     color: var(--text-muted);
+  }
+
+  .hint .update {
+    color: var(--accent);
+    font-weight: 600;
   }
 
   .row .primary {

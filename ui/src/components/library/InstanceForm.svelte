@@ -8,7 +8,7 @@
   import { t } from "../../lib/i18n.svelte";
   import { NO_PRESET, mergePresets } from "../../lib/jvm";
   import { settings } from "../../lib/settings.svelte";
-  import type { JvmPreset, JavaInstallation, LoaderKind, LoaderVersion, Profile, VersionInfo } from "../../lib/types";
+  import type { JvmPreset, JavaInstallation, LoaderKind, LoaderVersion, Profile, VersionInfo, PackInfo } from "../../lib/types";
   import ProfileIcon, { MOTIFS, imageOf, keptIcon, type Motif } from "../ProfileIcon.svelte";
   import Segmented from "../ui/Segmented.svelte";
 
@@ -21,8 +21,12 @@
     /** Buttons unter dem Formular (Speichern ist immer dabei). */
     actions?: Snippet<[{ saving: boolean; canSave: boolean; dirty: boolean }]>;
     id?: string;
+    /** Event-Instanz: Version und Loader gibt das Event-Pack vor (AK-20.3). */
+    event?: PackInfo["event"];
   }
-  let { profile, locked = false, onSaved, actions, id = "instance-form" }: Props = $props();
+  let { profile, locked = false, onSaved, actions, id = "instance-form", event = null }: Props = $props();
+  const fixed = $derived(locked || !!event);
+  const gb = (mb: number) => (mb / 1024).toFixed(1).replace(".0", "");
 
   const initial = untrack(() => profile);
   let name = $state(initial?.name ?? "");
@@ -186,15 +190,19 @@
 
     <label>
       {t("dialog.version")}
-      <select bind:value={minecraft} disabled={versions.length === 0 || locked}>
+      <select bind:value={minecraft} disabled={versions.length === 0 || fixed}>
         {#each versionOptions as v (v.id)}
           <option value={v.id}>{v.id}{v.kind === "snapshot" ? ` (${t("dialog.snapshot")})` : ""}</option>
         {/each}
       </select>
-      <span class="inline-check">
-        <input type="checkbox" bind:checked={snapshots} onchange={toggleSnapshots} id="{id}-snapshots" />
-        <label for="{id}-snapshots">{t("dialog.snapshots")}</label>
-      </span>
+      {#if event}
+        <span class="hint">{t("instance.eventVersionFixed")}</span>
+      {:else}
+        <span class="inline-check">
+          <input type="checkbox" bind:checked={snapshots} onchange={toggleSnapshots} id="{id}-snapshots" />
+          <label for="{id}-snapshots">{t("dialog.snapshots")}</label>
+        </span>
+      {/if}
     </label>
 
     <div class="field">
@@ -210,8 +218,9 @@
         value={loader}
         label={t("dialog.loader")}
         variant="soft"
+        disabled={fixed}
         onchange={(v) => {
-          if (locked) return;
+          if (fixed) return;
           if (loader !== v) loaderVersion = "";
           loader = v as LoaderKind | "none";
         }}
@@ -222,7 +231,7 @@
         {:else if loaderVersions.length === 0}
           <p class="warning">{t("dialog.loaderUnsupported", { loader: loaderName, version: minecraft })}</p>
         {:else}
-          <select bind:value={loaderVersion} aria-label={t("dialog.loaderVersion", { loader: loaderName })} disabled={locked}>
+          <select bind:value={loaderVersion} aria-label={t("dialog.loaderVersion", { loader: loaderName })} disabled={fixed}>
             <option value="">
               {t(recommended?.stable ? "dialog.recommended" : "dialog.recommendedPre", { version: recommended?.version ?? "" })}
             </option>
@@ -235,7 +244,12 @@
     </div>
 
     <label>
-      <span class="memory">{t("dialog.memoryLabel")} <span class="mono value">{(memoryMb / 1024).toFixed(1).replace(".0", "")} GB</span></span>
+      <span class="memory">
+        {t("dialog.memoryLabel")}
+        <span class="mono value">
+          {#if event?.recommendedMemoryMb}<span class="recommended">{t("instance.recommendedMemory", { gb: gb(event.recommendedMemoryMb) })}{" · "}</span>{/if}{gb(memoryMb)} GB
+        </span>
+      </span>
       <input type="range" min="1024" max="16384" step="512" bind:value={memoryMb} />
     </label>
 
@@ -345,6 +359,15 @@
 
   .value {
     color: var(--text);
+  }
+
+  .recommended {
+    color: var(--text-muted);
+  }
+
+  .hint {
+    color: var(--text-muted);
+    font-size: 12.5px;
   }
 
   input[type="range"] {

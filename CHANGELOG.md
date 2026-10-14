@@ -7,6 +7,9 @@
   vor jedem Start werden veränderte oder fehlende Pflichtdateien wiederhergestellt und unerlaubte
   Zusatz-Mods abgeschaltet. Ein Hinweis nennt, was repariert wurde. Ist ein Update als Pflicht
   markiert, spielt SPIELEN es vor dem Start ein; ersetzte Dateien bleiben im Snapshot.
+  Event-Instanzen übernehmen die Speicherempfehlung des Packs. Version und Loader gibt das Event-Pack
+  vor, eigene Mods gehen nur, wenn das Event sie erlaubt, und geteilt wird über den Link statt als
+  `.mrpack`. Die Event-Seite zeigt die installierte Version und ein verfügbares Update.
 - **Skin-Animationen neu:** Ruhe, Gehen, Laufen, Winken, Jubeln und Tanzen sind neu gestaltet, mit
   Ausholen und Nachfedern, nachschwingendem Umhang und leicht schräger Ansicht beim Gehen und Laufen.
   Neu sind **Schleichen** und **Abbauen** wie im Spiel. Tanzen wechselt zwischen drei Figuren im Takt.

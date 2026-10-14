@@ -290,6 +290,8 @@ export interface PackInfo {
   name: string;
   version: string;
   source: "modrinth" | "curseforge" | "twogg" | "file";
+  /** Nur bei signierten Event-Packs. */
+  event?: { required: boolean; allowExtraMods: boolean; recommendedMemoryMb: number | null } | null;
 }
 
 export interface PackUpdate {

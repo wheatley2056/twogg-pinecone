@@ -7,8 +7,10 @@
     /** "accent": aktive Fläche in Akzentfarbe; "soft": dunkler (in Detailseiten). */
     variant?: "accent" | "soft";
     onchange: (id: T) => void;
+    /** Nur die aktive Auswahl bleibt bedienbar sichtbar. */
+    disabled?: boolean;
   }
-  let { items, value, label, variant = "accent", onchange }: Props = $props();
+  let { items, value, label, variant = "accent", onchange, disabled = false }: Props = $props();
 </script>
 
 <div class="segmented {variant}" role="tablist" aria-label={label}>
@@ -18,6 +20,7 @@
       role="tab"
       aria-selected={value === item.id}
       class:active={value === item.id}
+      disabled={disabled && value !== item.id}
       onclick={() => onchange(item.id)}
     >
       {item.label}
