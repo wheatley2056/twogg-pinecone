@@ -2,6 +2,10 @@
 
 ## Unveröffentlicht
 
+- **Absturz-Analyse:** Stürzt Minecraft ab, zeigt der Logs-Tab eine Absturztafel mit der erkannten
+  Ursache (fehlende Abhängigkeit, falsche Java-Version, zu wenig Speicher, doppelte Mod), dem
+  Crash-Report und den Knöpfen „Diagnose exportieren“, „Crash-Report öffnen“ und „Im Discord melden“.
+  Bei Event-Instanzen lässt sich dort das Event-Pack prüfen. Die Benachrichtigung führt direkt dorthin.
 - **Signierte Event-Packs:** Event-Packs mit TwoGG-Signatur prüft Pinecone vor der Installation
   (Signatur, Event, Mindestversion, SHA-512). Pflicht-Mods lassen sich nicht abschalten oder löschen,
   vor jedem Start werden veränderte oder fehlende Pflichtdateien wiederhergestellt und unerlaubte

@@ -187,6 +187,8 @@ fn main() {
             commands::set_profile_group,
             commands::set_profile_hooks,
             commands::open_profile_folder,
+            commands::open_crash_report,
+            commands::event_integrity_check,
             commands::list_accounts,
             commands::add_offline_account,
             commands::set_active_account,
