@@ -970,6 +970,74 @@ impl PackManager {
         Ok(Some(report))
     }
 
+    /// Spielt ein als Pflicht markiertes Event-Pack-Update vor dem Start ein (F-12, AK-12.1).
+    /// Gesperrte Dateien kommen immer aus dem Pack, eigene Einstellungen bleiben; was ersetzt
+    /// wird, liegt im Snapshot. Liefert `(alt, neu)`, wenn aktualisiert wurde. Ist der Server
+    /// nicht erreichbar, startet die Instanz mit dem bisherigen Stand.
+    pub async fn required_event_update(
+        &self,
+        profile: &Profile,
+    ) -> Result<Option<(String, String)>> {
+        let lock = self.content.load_lock(&profile.id)?;
+        let Some(info) = lock.pack else {
+            return Ok(None);
+        };
+        let (
+            Some(event),
+            PackSource::Twogg {
+                pack_id,
+                version_id,
+            },
+        ) = (info.event, info.source)
+        else {
+            return Ok(None);
+        };
+        let Some(client) = &self.twogg else {
+            return Ok(None);
+        };
+        let keyring = crate::eventpack::Keyring::builtin();
+        let latest = async {
+            let signed = client.latest_manifest(&pack_id, &event.channel).await?;
+            let m = keyring.verify(&signed)?;
+            let pack = client.pack(&pack_id).await?;
+            Ok::<_, Error>((m, pack))
+        };
+        let (m, pack) = match latest.await {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!("Event-Pack-Update für {} nicht geprüft: {e}", profile.id);
+                return Ok(None);
+            }
+        };
+        if !m.required || m.pack_id != pack_id || m.version == event.version {
+            return Ok(None);
+        }
+        // Nur vorwärts: die Liste kommt neueste zuerst.
+        let versions = pack.versions.unwrap_or_default();
+        let position = |pred: &dyn Fn(&crate::twogg::PackVersion) -> bool| {
+            versions.iter().position(pred).unwrap_or(usize::MAX)
+        };
+        let target = position(&|v| v.version == m.version);
+        if target == usize::MAX || target > position(&|v| v.id == version_id) {
+            return Ok(None);
+        }
+        let target_id = versions[target].id.clone();
+
+        let (archive, source) = self.download_twogg(&pack_id, Some(&target_id)).await?;
+        let new = self.read_archive(&archive).await?;
+        let plan = self.plan_update(profile, &new).await?;
+        let locked: BTreeSet<&str> = m.locked.iter().map(|l| l.path.as_str()).collect();
+        let resolutions: HashMap<String, Resolution> = plan
+            .conflicts
+            .iter()
+            .filter(|c| locked.contains(c.path.as_str()))
+            .map(|c| (c.path.clone(), Resolution::TakePack))
+            .collect();
+        self.apply_update(profile, &archive, source, &resolutions)
+            .await?;
+        Ok(Some((event.version, m.version)))
+    }
+
     /// Liest ein Modrinth- (`.mrpack`) oder CurseForge-Pack (ZIP mit `manifest.json`).
     pub async fn read_archive(&self, path: &Path) -> Result<PackArchive> {
         match archive_kind(path)? {

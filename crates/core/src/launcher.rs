@@ -28,6 +28,8 @@ pub const DEFAULT_MEMORY_MB: u32 = 4096;
 pub enum Stage {
     /// Eingeschaltete Sync-Packs abgleichen.
     Sync,
+    /// Pflicht-Update eines Event-Packs einspielen (F-12).
+    Update,
     /// Pflichtdateien eines Event-Packs prüfen und reparieren (F-11).
     Integrity,
     Loader,
@@ -42,6 +44,11 @@ pub enum PrepareEvent {
     Download(Progress),
     /// Ergebnis der Integritätsprüfung, wenn etwas repariert oder abgeschaltet wurde.
     Integrity(crate::modpack::IntegrityReport),
+    /// Pflicht-Update des Event-Packs eingespielt (alte, neue Version).
+    Updated {
+        from: String,
+        to: String,
+    },
     /// Gewähltes Java (Version, Pfad).
     Java {
         version: String,
@@ -239,14 +246,30 @@ impl Launcher {
                 Err(e) => tracing::warn!("Sync-Packs nicht abgeglichen: {e}"),
             }
         }
-        // Event-Pack: Pflichtdateien prüfen. Ein Fehler hier verhindert den Start (AK-11.2).
-        if !profile.id.is_empty()
+        // Event-Pack: erst ein Pflicht-Update einspielen (F-12), dann die Pflichtdateien prüfen.
+        // Ein Fehler hier verhindert den Start (AK-11.2).
+        let is_event = !profile.id.is_empty()
             && self
                 .content
                 .load_lock(&profile.id)?
                 .pack
-                .is_some_and(|p| p.event.is_some())
-        {
+                .is_some_and(|p| p.event.is_some());
+        let updated;
+        let profile = if is_event && !offline {
+            on_event(PrepareEvent::Stage(Stage::Update));
+            match self.packs.required_event_update(profile).await? {
+                Some((from, to)) => {
+                    on_event(PrepareEvent::Updated { from, to });
+                    // Minecraft- oder Loader-Version kann sich geändert haben.
+                    updated = self.profiles.get(&profile.id)?;
+                    &updated
+                }
+                None => profile,
+            }
+        } else {
+            profile
+        };
+        if is_event {
             on_event(PrepareEvent::Stage(Stage::Integrity));
             if let Some(report) = self.packs.check_event_integrity(profile, offline).await?
                 && (!report.repaired.is_empty() || !report.disabled.is_empty())

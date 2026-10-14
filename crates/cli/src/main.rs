@@ -607,6 +607,7 @@ async fn main() -> Result<()> {
                 PrepareEvent::Stage(stage) => {
                     bar.set_prefix(match stage {
                         Stage::Sync => "Sync-Packs",
+                        Stage::Update => "Event-Pack-Update",
                         Stage::Integrity => "Event-Pack prüfen",
                         Stage::Loader => "Mod-Loader",
                         Stage::Version => "Spieldateien",
@@ -615,6 +616,9 @@ async fn main() -> Result<()> {
                     });
                 }
                 PrepareEvent::Download(p) => on_progress(p),
+                PrepareEvent::Updated { from, to } => {
+                    bar.suspend(|| eprintln!("Event-Pack aktualisiert: {from} → {to}"));
+                }
                 PrepareEvent::Integrity(r) => {
                     for f in &r.repaired {
                         eprintln!("Pflichtdatei wiederhergestellt: {f}");
