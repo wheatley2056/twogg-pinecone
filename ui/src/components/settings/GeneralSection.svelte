@@ -36,6 +36,10 @@
     await updateSettings(fn).catch((e) => (error = errorText(e)));
   }
 
+  function leadLabel(m: number) {
+    return m >= 60 ? t(m === 60 ? "reminder.hour" : "reminder.hours", { count: m / 60 }) : t("reminder.minutes", { count: m });
+  }
+
   async function diagnose() {
     diagBusy = true;
     error = notice = null;
@@ -100,6 +104,46 @@
         </SettingRow>
       {/if}
       <SettingRow title={t("settings.dataDir")} hint={info?.dataDir ?? "?"} />
+    </div>
+  </section>
+
+  <!-- Benachrichtigungen (F-14, F-37) -->
+  {@const n = s.notifications}
+  <section>
+    <h3 class="section-label">{t("settings.notifications")}</h3>
+    <div class="rows">
+      <SettingRow title={t("settings.eventReminders")} hint={t("settings.eventRemindersHint")}>
+        <Switch checked={n.eventReminders} label={t("settings.eventReminders")} onchange={(on) => change((x) => (x.notifications.eventReminders = on))} />
+      </SettingRow>
+      {#if n.eventReminders}
+        <SettingRow title={t("settings.reminderTimes")}>
+          <div class="leads">
+            {#each [0, 1] as i (i)}
+              <Dropdown
+                label=""
+                value={String(n.leadMinutes[i] ?? 0)}
+                options={(i === 0 ? [180, 120, 60, 30] : [30, 15, 10, 5, 0]).map((m) => ({ value: String(m), label: m ? leadLabel(m) : t("settings.reminderOff") }))}
+                align="right"
+                onchange={(v) =>
+                  change((x) => {
+                    const leads = [x.notifications.leadMinutes[0] ?? 60, x.notifications.leadMinutes[1] ?? 0];
+                    leads[i] = Number(v);
+                    x.notifications.leadMinutes = leads.filter((m) => m > 0);
+                  })}
+              />
+            {/each}
+          </div>
+        </SettingRow>
+        <SettingRow title={t("settings.allEvents")} hint={t("settings.allEventsHint")}>
+          <Switch checked={n.allEvents} label={t("settings.allEvents")} onchange={(on) => change((x) => (x.notifications.allEvents = on))} />
+        </SettingRow>
+      {/if}
+      <SettingRow title={t("settings.osCrash")}>
+        <Switch checked={n.osCrash} label={t("settings.osCrash")} onchange={(on) => change((x) => (x.notifications.osCrash = on))} />
+      </SettingRow>
+      <SettingRow title={t("settings.osFriends")} hint={t("settings.osHint")}>
+        <Switch checked={n.osFriends} label={t("settings.osFriends")} onchange={(on) => change((x) => (x.notifications.osFriends = on))} />
+      </SettingRow>
     </div>
   </section>
 {/if}
@@ -176,6 +220,11 @@
 {#if error}<p class="error">{error}</p>{/if}
 
 <style>
+  .leads {
+    display: flex;
+    gap: 8px;
+  }
+
   .disclaimer {
     margin: 0;
     font-size: 12px;

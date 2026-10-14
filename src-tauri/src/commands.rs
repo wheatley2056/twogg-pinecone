@@ -377,6 +377,25 @@ pub fn open_crash_report(
         .map_err(err)
 }
 
+/// Spielt ein Pflicht-Update des Event-Packs schon vor dem Start ein (F-14, beim ersten Hinweis).
+/// Läuft die Instanz gerade, passiert nichts; beim nächsten Start greift ohnehin F-12.
+#[tauri::command]
+pub async fn event_update_now(
+    state: State<'_, AppState>,
+    id: String,
+) -> CmdResult<Option<(String, String)>> {
+    if is_running(&state, &id) {
+        return Ok(None);
+    }
+    let profile = state.launcher.profiles().get(&id).map_err(err)?;
+    state
+        .launcher
+        .packs()
+        .required_event_update(&profile)
+        .await
+        .map_err(err)
+}
+
 /// Prüft die Pflichtdateien einer Event-Instanz und repariert sie (F-11, aus der Absturztafel).
 #[tauri::command]
 pub async fn event_integrity_check(

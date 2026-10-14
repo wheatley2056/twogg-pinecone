@@ -4,6 +4,8 @@
   import { api, errorText } from "./lib/api";
   import { t } from "./lib/i18n.svelte";
   import { notify } from "./lib/notifications.svelte";
+  import { osNotify } from "./lib/osNotify";
+  import { startReminders } from "./lib/reminders.svelte";
   import { hasUnread } from "./lib/notifications.svelte";
   import { friends, refreshFriends, startFriends } from "./lib/friends.svelte";
   import { byRecent, versionLabel } from "./lib/profiles";
@@ -171,6 +173,25 @@
     return run.status === "running" && run.server ? { server: run.server, instance: selected.name, profileId: selected.id } : null;
   });
 
+  // Neue Freundschaftsanfragen (F-37): Panel und, falls gewünscht, Desktop-Benachrichtigung.
+  // Beim ersten Laden gelten vorhandene Anfragen als bekannt.
+  let seenRequests: Set<string> | null = null;
+  $effect(() => {
+    const incoming = friends.state?.incoming;
+    if (!incoming) return;
+    if (!seenRequests) {
+      seenRequests = new Set(incoming.map((r) => r.uuid));
+      return;
+    }
+    for (const r of incoming) {
+      if (seenRequests.has(r.uuid)) continue;
+      seenRequests.add(r.uuid);
+      const title = t("friends.requestNotice", { name: r.name });
+      notify({ id: `friend-request-${r.uuid}`, kind: "friend", title });
+      if (settings.current?.notifications.osFriends) osNotify(title);
+    }
+  });
+
   // Neue Einladungen als Benachrichtigung mit „Beitreten“.
   const seenInvites = new Set<string>();
   $effect(() => {
@@ -221,6 +242,11 @@
     await api.onOpenPack(openExternal).catch(() => {});
     for (const r of await api.takeOpenRequests().catch(() => [])) openExternal(r);
     if (info?.updatesConfigured) checkUpdates(true);
+    // Hinweise vor Eventstart (F-14).
+    startReminders({
+      onOpen: (id) => ((eventId = id), (view = "events"), void appWindow.restore()?.catch(() => {})),
+      profileIdOfPack: (packId) => profiles.find((p) => p.packId === packId)?.id ?? null,
+    });
     // Ältere Pack-Instanzen ohne Symbol bekommen das Logo ihres Packs.
     api
       .packFillIcons()
@@ -273,6 +299,7 @@
     const run = runOf(id);
     if (run.error) {
       const name = profiles.find((p) => p.id === id)?.name ?? id;
+      if (run.crash && settings.current?.notifications.osCrash) osNotify(t("notice.crashed", { name }), crashText(run.crash.cause));
       notify({
         id: `game-${id}-${Date.now()}`,
         kind: "error",

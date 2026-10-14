@@ -150,6 +150,7 @@ fn main() {
         .manage(update::PendingUpdate::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(state)
         .setup(|app| {
             dashboard::allow_assets(app.handle());
@@ -189,6 +190,7 @@ fn main() {
             commands::open_profile_folder,
             commands::open_crash_report,
             commands::event_integrity_check,
+            commands::event_update_now,
             commands::list_accounts,
             commands::add_offline_account,
             commands::set_active_account,
