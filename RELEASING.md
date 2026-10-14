@@ -27,6 +27,33 @@ npx tauri signer generate -w ~/.tauri/pinecone.key
   weiterzugeben. Er liegt nur auf dem Pinecone-Server, der Launcher fragt über dessen Proxy. Ein
   altes Secret dieses Namens bitte in den GitHub-Einstellungen löschen.
 
+## Einmalig: Windows-Installer signieren (SignPath Foundation)
+
+Ohne Signatur warnt Windows SmartScreen mit „Unbekannter Herausgeber“. Die
+[SignPath Foundation](https://signpath.org) signiert Open-Source-Projekte kostenlos; als Herausgeber
+steht dann „SignPath Foundation“ im Zertifikat. Bis alles eingerichtet ist, baut der Release-Workflow
+wie bisher unsignierte Installer.
+
+1. **Antrag stellen** unter [signpath.org/apply.html](https://signpath.org/apply.html). Angaben:
+   Repository `wheatley2056/twogg-pinecone`, Lizenz MIT/Apache-2.0, Build über GitHub Actions
+   (`.github/workflows/release.yml`), Signier-Regeln unter
+   `https://wheatley2056.github.io/twogg-pinecone/code-signing.html`.
+2. **Zwei-Faktor-Anmeldung** für alle mit Schreibrechten bei GitHub und SignPath einschalten
+   (Voraussetzung der Foundation).
+3. Nach der Zusage in **SignPath**:
+   - das GitHub-Repository als *Trusted Build System* verbinden (SignPath-App in GitHub installieren),
+   - im Projekt die *Artifact Configuration* aus `.signpath/artifact-configuration.xml` anlegen,
+   - einen *CI-Benutzer* anlegen und dessen API-Token kopieren.
+4. **In GitHub** (Umgebung „TAURI“):
+   - Secret `SIGNPATH_API_TOKEN` (Token des CI-Benutzers),
+   - Variablen `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_POLICY_SLUG`
+     (meist `release-signing`) und optional `SIGNPATH_ARTIFACT_CONFIGURATION_SLUG`.
+
+Danach läuft nach jedem Release-Build der Job „Windows-Installer signieren“: Er schickt die
+Installer an SignPath, wartet auf deine **Freigabe in SignPath** (bis zu 3 Stunden), erzeugt die
+Updater-Signaturen neu und ersetzt Installer, `.sig` und `latest.json` im Release-Entwurf.
+Den Entwurf erst veröffentlichen, wenn dieser Job grün ist.
+
 ## Neue Version
 
 Versionsschema: `0.9.x` während der Beta, danach `1.0.0` usw. Keine Vorab-Kennungen wie `-beta.1`
