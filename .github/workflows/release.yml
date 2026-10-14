@@ -102,3 +102,98 @@ jobs:
           releaseDraft: true
           includeUpdaterJson: true
           args: --config src-tauri/tauri.release.conf.json
+
+  # Windows-Installer über die SignPath Foundation signieren (kostenlos für Open Source, siehe
+  # site/code-signing.html und RELEASING.md). Läuft nur, wenn SIGNPATH_ORGANIZATION_ID gesetzt ist;
+  # bis dahin bleiben die Installer wie bisher unsigniert.
+  #
+  # Ablauf: die unsignierten Installer aus dem Release-Entwurf holen, bei SignPath signieren
+  # lassen (Freigabe von Hand in SignPath), Updater-Signaturen (.sig) für die neuen Dateien
+  # erzeugen und Installer, .sig und latest.json im Entwurf ersetzen. Die Dateinamen bleiben
+  # gleich, die Update-Adressen in latest.json also auch.
+  #
+  # Variablen: SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG, SIGNPATH_POLICY_SLUG
+  #            (z. B. release-signing), optional SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
+  # Secret:    SIGNPATH_API_TOKEN (Token eines CI-Benutzers in SignPath)
+  windows-signieren:
+    name: Windows-Installer signieren
+    needs: build
+    if: vars.SIGNPATH_ORGANIZATION_ID != ''
+    runs-on: ubuntu-22.04
+    environment: TAURI
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Unsignierte Installer aus dem Entwurf holen
+        run: |
+          mkdir -p unsigned
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D unsigned -p '*_x64-setup.exe' -p '*_x64_*.msi'
+          ls -l unsigned
+
+      - name: Für SignPath hochladen
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-unsigniert
+          path: unsigned/*
+          if-no-files-found: error
+
+      - name: Bei SignPath signieren
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.upload.outputs.artifact-id }}
+          wait-for-completion: true
+          # Die Freigabe passiert von Hand; bis zu 3 Stunden warten.
+          wait-for-completion-timeout-in-seconds: 10800
+          output-artifact-directory: signed
+
+      - name: Updater-Signaturen neu erzeugen
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          shopt -s nullglob
+          files=(signed/*.exe signed/*.msi)
+          [ ${#files[@]} -gt 0 ] || { echo "::error::SignPath hat keine Installer geliefert"; exit 1; }
+          for f in "${files[@]}"; do
+            cmp -s "$f" "unsigned/$(basename "$f")" && { echo "::error::$f ist unverändert, also nicht signiert"; exit 1; }
+            rm -f "$f.sig"
+            npx tauri signer sign "$f"
+          done
+          ls -l signed
+
+      - name: Installer, .sig und latest.json im Entwurf ersetzen
+        run: |
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber signed/*
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p latest.json -O latest.json --clobber
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const manifest = JSON.parse(fs.readFileSync("latest.json", "utf8"));
+            let replaced = 0;
+            for (const [platform, entry] of Object.entries(manifest.platforms)) {
+              if (!platform.startsWith("windows-")) continue;
+              const name = decodeURIComponent(entry.url.split("/").pop());
+              const sig = path.join("signed", name + ".sig");
+              if (!fs.existsSync(sig)) throw new Error(`Keine neue Signatur für ${platform} (${name})`);
+              entry.signature = fs.readFileSync(sig, "utf8").trim();
+              replaced++;
+            }
+            if (!replaced) throw new Error("latest.json enthält keine Windows-Einträge");
+            fs.writeFileSync("latest.json", JSON.stringify(manifest, null, 2));
+            console.log(`${replaced} Windows-Signaturen in latest.json ersetzt`);
+          '
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber latest.json

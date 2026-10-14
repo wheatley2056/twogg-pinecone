@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vorlage für die Artifact Configuration in SignPath (Projekt › Artifact Configurations).
+  Der Workflow lädt die Installer als GitHub-Artefakt hoch; GitHub verpackt sie als ZIP.
+  Signiert werden der NSIS-Installer und die MSI-Pakete (deutsch und englisch).
+  Beim Einfügen prüft SignPath die Datei; Anpassungen dort vornehmen und hier nachziehen.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="*_x64-setup.exe" max-occurs="1">
+      <authenticode-sign />
+    </pe-file>
+    <msi-file path="*_x64_*.msi" max-occurs="unbounded">
+      <authenticode-sign />
+    </msi-file>
+  </zip-file>
+</artifact-configuration>
