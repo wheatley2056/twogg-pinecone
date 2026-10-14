@@ -174,6 +174,11 @@ pub enum LaunchEvent {
         version: String,
         path: String,
     },
+    /// Pflicht-Update des Event-Packs eingespielt (F-12).
+    Updated {
+        from: String,
+        to: String,
+    },
     /// Pflichtdateien wiederhergestellt bzw. Zusatz-Mods abgeschaltet (Event-Pack, F-11).
     Integrity {
         repaired: Vec<String>,

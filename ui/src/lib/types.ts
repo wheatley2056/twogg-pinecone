@@ -95,12 +95,13 @@ export interface JavaInstallation {
   managed: boolean;
 }
 
-export type Stage = "backup" | "prelaunch" | "sync" | "integrity" | "loader" | "version" | "java" | "assets";
+export type Stage = "backup" | "prelaunch" | "sync" | "update" | "integrity" | "loader" | "version" | "java" | "assets";
 
 export type LaunchEvent =
   | { type: "stage"; stage: Stage }
   | { type: "progress"; done: number; files: number; bytesDone: number; bytes: number }
   | { type: "java"; version: string; path: string }
+  | { type: "updated"; from: string; to: string }
   | { type: "integrity"; repaired: string[]; disabled: string[] }
   | { type: "started"; pid: number | null }
   | { type: "log"; lines: string[] }

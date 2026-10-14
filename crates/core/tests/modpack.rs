@@ -835,4 +835,113 @@ async fn signed_event_pack_install_lock_and_repair() {
         .await
         .unwrap_err();
     assert!(err.to_string().contains("offline nicht geladen"), "{err}");
+    packs.check_event_integrity(&profile, false).await.unwrap();
+
+    // Pflicht-Update (F-12): Neueste Version ist die installierte → nichts zu tun.
+    server.on(
+        "GET",
+        "/api/v1/packs/avalon/manifest/latest",
+        200,
+        signed(&manifest("0.1.0")),
+    );
+    assert_eq!(packs.required_event_update(&profile).await.unwrap(), None);
+
+    // 1.5.0 als Pflicht: a1 → a2, core.jar neu; Spieler hat core.jar und Config verändert.
+    let file2 = dir.path().join("event2.mrpack");
+    mrpack(
+        &file2,
+        &server,
+        "1.5.0",
+        &["a2.jar"],
+        &[("mods/core.jar", "core2"), ("config/c.toml", "x=2")],
+        json!({ "minecraft": "1.21.1" }),
+    );
+    let bytes2 = std::fs::read(&file2).unwrap();
+    let mut m2 = manifest("0.1.0");
+    m2.version = "1.5.0".into();
+    m2.mrpack.size = bytes2.len() as u64;
+    m2.mrpack.sha512 = sha512(&bytes2);
+    m2.locked = vec![
+        LockedFile {
+            path: "mods/a2.jar".into(),
+            sha512: sha512(b"inhalt-a2.jar"),
+        },
+        LockedFile {
+            path: "mods/core.jar".into(),
+            sha512: sha512(b"core2"),
+        },
+    ];
+    let mut v2 = version.clone();
+    v2["id"] = json!("v2");
+    v2["version"] = json!("1.5.0");
+    v2["size"] = json!(bytes2.len());
+    v2["sha1"] = json!(format!(
+        "{:x}",
+        <sha1::Sha1 as sha1::Digest>::digest(&bytes2)
+    ));
+    server.replace(
+        "GET",
+        "/api/v1/packs/avalon",
+        200,
+        json!({ "id": "avalon", "title": "Avalon", "summary": "", "iconUrl": null, "featured": false,
+                "updatedAt": 0, "downloads": 0, "latest": v2, "versions": [v2, version], "eventId": "evt-42" })
+        .to_string(),
+    );
+    server.on(
+        "GET",
+        "/api/v1/packs/avalon/versions/v2/manifest",
+        200,
+        signed(&m2),
+    );
+    server.on(
+        "POST",
+        "/api/v1/packs/avalon/versions/v2/download",
+        200,
+        json!({ "url": format!("{}/dl/v2", server.base), "expires": 0, "size": bytes2.len(),
+                "sha1": v2["sha1"], "sha512": sha512(&bytes2), "fileName": "avalon.mrpack" })
+        .to_string(),
+    );
+    server.on("GET", "/dl/v2", 200, bytes2.clone());
+    std::fs::write(game.join("mods/core.jar"), "eigener core").unwrap();
+    std::fs::write(game.join("config/c.toml"), "x=5").unwrap();
+
+    // Nicht als Pflicht markiert: bleibt beim Hinweis (AK-12.2).
+    let mut optional = m2.clone();
+    optional.required = false;
+    server.replace(
+        "GET",
+        "/api/v1/packs/avalon/manifest/latest",
+        200,
+        signed(&optional),
+    );
+    assert_eq!(packs.required_event_update(&profile).await.unwrap(), None);
+
+    server.replace(
+        "GET",
+        "/api/v1/packs/avalon/manifest/latest",
+        200,
+        signed(&m2),
+    );
+    assert_eq!(
+        packs.required_event_update(&profile).await.unwrap(),
+        Some(("1.4.0".into(), "1.5.0".into()))
+    );
+    assert!(!game.join("mods/a1.jar").exists());
+    assert_eq!(read(&game, "mods/a2.jar").as_deref(), Some("inhalt-a2.jar"));
+    assert_eq!(read(&game, "mods/core.jar").as_deref(), Some("core2"));
+    assert_eq!(read(&game, "config/c.toml").as_deref(), Some("x=5"));
+    let event = content
+        .load_lock(&profile.id)
+        .unwrap()
+        .pack
+        .unwrap()
+        .event
+        .unwrap();
+    assert_eq!(event.version, "1.5.0");
+    assert_eq!(packs.snapshots(&profile.id).len(), 1);
+    assert_eq!(packs.required_event_update(&profile).await.unwrap(), None);
+
+    // Server nicht erreichbar: Start mit dem bisherigen Stand.
+    server.replace("GET", "/api/v1/packs/avalon/manifest/latest", 503, "");
+    assert_eq!(packs.required_event_update(&profile).await.unwrap(), None);
 }

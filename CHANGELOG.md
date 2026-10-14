@@ -5,7 +5,8 @@
 - **Signierte Event-Packs:** Event-Packs mit TwoGG-Signatur prüft Pinecone vor der Installation
   (Signatur, Event, Mindestversion, SHA-512). Pflicht-Mods lassen sich nicht abschalten oder löschen,
   vor jedem Start werden veränderte oder fehlende Pflichtdateien wiederhergestellt und unerlaubte
-  Zusatz-Mods abgeschaltet. Ein Hinweis nennt, was repariert wurde.
+  Zusatz-Mods abgeschaltet. Ein Hinweis nennt, was repariert wurde. Ist ein Update als Pflicht
+  markiert, spielt SPIELEN es vor dem Start ein; ersetzte Dateien bleiben im Snapshot.
 - **Skin-Animationen neu:** Ruhe, Gehen, Laufen, Winken, Jubeln und Tanzen sind neu gestaltet, mit
   Ausholen und Nachfedern, nachschwingendem Umhang und leicht schräger Ansicht beim Gehen und Laufen.
   Neu sind **Schleichen** und **Abbauen** wie im Spiel. Tanzen wechselt zwischen drei Figuren im Takt.

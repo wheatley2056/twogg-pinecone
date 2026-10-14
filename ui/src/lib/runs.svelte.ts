@@ -71,6 +71,9 @@ export async function startGame(id: string, onExit: () => void, server: string |
       case "java":
         run.java = `Java ${e.version}`;
         break;
+      case "updated":
+        notify({ id: `updated-${id}-${Date.now()}`, kind: "info", title: t("eventUpdate.title"), text: t("eventUpdate.text", { from: e.from, to: e.to }) });
+        break;
       case "integrity": {
         const name = (p: string) => p.split("/").pop() ?? p;
         const parts = [
