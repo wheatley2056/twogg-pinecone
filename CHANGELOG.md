@@ -2,6 +2,9 @@
 
 ## Unveröffentlicht
 
+- **Geführter Erststart:** Beim ersten Start führen drei Schritte zum Spiel: Konto (Microsoft oder
+  offline), TwoGG verknüpfen (überspringbar) und Loslegen mit Event, eigener Instanz oder Modpack.
+  Wird Pinecone zwischendurch geschlossen, geht es beim nächsten Start am selben Schritt weiter.
 - **Alle lokalen Daten löschen:** Unter Einstellungen › Allgemein entfernt ein Knopf nach Bestätigung
   Konten, Anmeldungen, Instanzen samt Welten, Einstellungen und Caches von diesem Gerät; Pinecone
   startet danach neu. Daten auf dem Server und bei twogg.app bleiben.
