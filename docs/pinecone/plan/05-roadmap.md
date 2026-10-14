@@ -121,6 +121,8 @@ später  macOS, Import aus Fremd-Launchern, SSE
 
 ### MVP-D – Release-Härtung
 
+**Großteils umgesetzt (14.10.2026, Launcher-PR #49–#51):** Update-Prüfung alle 6 h und keine Installation während des Spiels, User-Agent mit Kontakt, Kontrastprüfung im CI (AK-38.3), „Alle lokalen Daten löschen“, geführter Erststart (AK-06.4/06.5); Datenschutz-Link war schon vorhanden. Offen: Freigabe der Azure-App-ID (H-01), Windows-Authenticode (Zertifikat bestellen), Tastatur-Prüfliste (`03` §5).
+
 - **Funktionen:** F-01, F-06, F-34, F-38
 - **Aufgaben:**
   - Freigabe der Azure-App-ID für die Minecraft-Services bestätigen (`06` H-01).
