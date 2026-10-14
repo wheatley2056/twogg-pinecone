@@ -170,6 +170,8 @@ pub struct InstalledContent {
     pub size: u64,
     /// Noch nicht per Hash geprüft (`identify` aufrufen).
     pub unidentified: bool,
+    /// Pflichtdatei eines signierten Event-Packs: nicht abschaltbar, nicht entfernbar (F-11).
+    pub locked: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -391,9 +393,16 @@ impl ContentManager {
     /// Installierte Inhalte, ohne Netzwerk. Unbekannte Dateien sind als `unidentified` markiert.
     pub fn list(&self, profile_id: &str, game_dir: &Path) -> Result<Vec<InstalledContent>> {
         let lock = self.load_lock(profile_id)?;
+        let event_locked = |key: &str| {
+            lock.pack
+                .as_ref()
+                .and_then(|p| p.event.as_ref())
+                .is_some_and(|e| e.locked.contains_key(key))
+        };
         Ok(Self::scan(game_dir)
             .into_iter()
             .map(|(key, file_name, kind, enabled, size)| {
+                let locked = event_locked(&key);
                 match lock.files.get(&key).filter(|e| e.size == size) {
                     Some(e) => InstalledContent {
                         key,
@@ -408,6 +417,7 @@ impl ContentManager {
                         sync: e.sync.clone(),
                         size,
                         unidentified: false,
+                        locked,
                     },
                     None => InstalledContent {
                         name: file_stem(&key),
@@ -422,6 +432,7 @@ impl ContentManager {
                         sync: None,
                         size,
                         unidentified: true,
+                        locked,
                     },
                 }
             })
@@ -528,8 +539,30 @@ impl ContentManager {
         Ok(kind)
     }
 
-    pub fn set_enabled(&self, game_dir: &Path, key: &str, enabled: bool) -> Result<()> {
+    /// Pflichtdateien eines Event-Packs lassen sich weder abschalten noch löschen (AK-11.1).
+    fn ensure_not_locked(&self, profile_id: &str, key: &str) -> Result<()> {
+        let lock = self.load_lock(profile_id)?;
+        if let Some(event) = lock.pack.as_ref().and_then(|p| p.event.as_ref())
+            && event.locked.contains_key(key)
+        {
+            return Err(Error::Invalid(format!(
+                "{key} gehört zum Event-Pack und lässt sich nicht abschalten oder entfernen"
+            )));
+        }
+        Ok(())
+    }
+
+    pub fn set_enabled(
+        &self,
+        profile_id: &str,
+        game_dir: &Path,
+        key: &str,
+        enabled: bool,
+    ) -> Result<()> {
         Self::checked_key(key)?;
+        if !enabled {
+            self.ensure_not_locked(profile_id, key)?;
+        }
         let on = game_dir.join(key);
         let off = game_dir.join(format!("{key}{DISABLED_SUFFIX}"));
         let (from, to) = if enabled { (off, on) } else { (on, off) };
@@ -541,6 +574,7 @@ impl ContentManager {
 
     pub fn remove(&self, profile_id: &str, game_dir: &Path, key: &str) -> Result<()> {
         Self::checked_key(key)?;
+        self.ensure_not_locked(profile_id, key)?;
         for path in [
             game_dir.join(key),
             game_dir.join(format!("{key}{DISABLED_SUFFIX}")),

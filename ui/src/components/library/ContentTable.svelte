@@ -70,7 +70,7 @@
   ]);
 
   function isLocked(i: InstalledContent) {
-    return eventPack && i.fromPack;
+    return !!i.locked || (eventPack && i.fromPack);
   }
 
   async function load() {

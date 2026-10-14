@@ -662,3 +662,177 @@ async fn withdrawn_twogg_version_is_reported_with_alternative() {
         ("v1", "1.0")
     );
 }
+
+// ---------- Signierte Event-Packs (F-10, F-11) ----------
+
+fn sha512(data: &[u8]) -> String {
+    pinecone_core::eventpack::sha512_hex(data)
+}
+
+#[tokio::test]
+async fn signed_event_pack_install_lock_and_repair() {
+    use pinecone_core::eventpack::{self, LockedFile, Manifest, MrpackRef};
+
+    let (server, dir, packs) = setup().await;
+    let packs = packs.with_twogg(Some(
+        pinecone_core::twogg::TwoggClient::with_base(&server.base).unwrap(),
+    ));
+    // Testschlüssel: in Debug-Builds gilt die Variable auch zur Laufzeit.
+    let (private, public) = eventpack::generate_key();
+    // SAFETY: nur dieser Test liest die Variable; andere Tests prüfen keine Event-Packs.
+    unsafe { std::env::set_var("PINECONE_EVENTPACK_KEYS", format!("evt-test={public}")) };
+    let key = eventpack::signing_key(&private).unwrap();
+
+    let file = dir.path().join("event.mrpack");
+    mrpack(
+        &file,
+        &server,
+        "1.4.0",
+        &["a1.jar"],
+        &[("mods/core.jar", "core"), ("config/c.toml", "x=1")],
+        json!({ "minecraft": "1.21.1" }),
+    );
+    let bytes = std::fs::read(&file).unwrap();
+    let manifest = |min_launcher: &str| Manifest {
+        schema: eventpack::SCHEMA.into(),
+        pack_id: "avalon".into(),
+        version: "1.4.0".into(),
+        channel: "release".into(),
+        event_id: "evt-42".into(),
+        title: "REVIVAL: Avalon".into(),
+        minecraft: "1.21.1".into(),
+        loader: None,
+        min_launcher_version: min_launcher.into(),
+        required: true,
+        allow_extra_mods: false,
+        recommended_memory_mb: None,
+        mrpack: MrpackRef {
+            url: "x".into(),
+            size: bytes.len() as u64,
+            sha512: sha512(&bytes),
+        },
+        locked: vec![
+            LockedFile {
+                path: "mods/a1.jar".into(),
+                sha512: sha512(b"inhalt-a1.jar"),
+            },
+            LockedFile {
+                path: "mods/core.jar".into(),
+                sha512: sha512(b"core"),
+            },
+        ],
+        published_at: "2026-10-14T00:00:00Z".into(),
+        key_id: "evt-test".into(),
+    };
+    let signed = |m: &Manifest| serde_json::to_string(&eventpack::sign(m, &key).unwrap()).unwrap();
+    let version = json!({ "id": "v1", "version": "1.4.0", "minecraft": "1.21.1", "loader": null,
+        "loaderVersion": null, "channel": "release", "changelogHtml": "", "size": bytes.len(),
+        "sha1": format!("{:x}", <sha1::Sha1 as sha1::Digest>::digest(&bytes)), "publishedAt": 0, "signed": true });
+    server.on(
+        "GET",
+        "/api/v1/packs/avalon",
+        200,
+        json!({ "id": "avalon", "title": "Avalon", "summary": "", "iconUrl": null, "featured": false,
+                "updatedAt": 0, "downloads": 0, "latest": version, "versions": [version], "eventId": "evt-42" })
+        .to_string(),
+    );
+    server.on(
+        "POST",
+        "/api/v1/packs/avalon/versions/v1/download",
+        200,
+        json!({ "url": format!("{}/dl/v1", server.base), "expires": 0, "size": bytes.len(),
+                "sha1": version["sha1"], "sha512": sha512(&bytes), "fileName": "avalon.mrpack" })
+        .to_string(),
+    );
+    server.on("GET", "/dl/v1", 200, bytes.clone());
+
+    // Veränderte Signatur: abgelehnt, nichts installiert (AK-10.1).
+    let mut tampered = eventpack::sign(&manifest("0.1.0"), &key).unwrap();
+    tampered.manifest["allowExtraMods"] = json!(true);
+    server.on(
+        "GET",
+        "/api/v1/packs/avalon/versions/v1/manifest",
+        200,
+        serde_json::to_string(&tampered).unwrap(),
+    );
+    let err = packs.download_twogg("avalon", None).await.unwrap_err();
+    assert!(err.to_string().contains(eventpack::NOT_SIGNED), "{err}");
+
+    // Zu alter Launcher (AK-10.3).
+    server.replace(
+        "GET",
+        "/api/v1/packs/avalon/versions/v1/manifest",
+        200,
+        signed(&manifest("99.0.0")),
+    );
+    let err = packs.download_twogg("avalon", None).await.unwrap_err();
+    assert!(err.to_string().contains("aktualisiere Pinecone"), "{err}");
+
+    // Echt: installieren, Event-Daten im Lock (AK-10.4).
+    server.replace(
+        "GET",
+        "/api/v1/packs/avalon/versions/v1/manifest",
+        200,
+        signed(&manifest("0.1.0")),
+    );
+    let (archive, source) = packs.download_twogg("avalon", None).await.unwrap();
+    let profile = packs.import(&archive, source, None).await.unwrap().profile;
+    let paths = Paths::new(dir.path().join("data"));
+    let game = paths.instance_dir(&profile.id).join(".minecraft");
+    let modrinth = Modrinth::with_base(format!("{}/v2", server.base)).unwrap();
+    let content = ContentManager::new(paths.clone(), Downloader::new().unwrap(), modrinth);
+    let lock = content.load_lock(&profile.id).unwrap();
+    let event = lock.pack.unwrap().event.expect("Event-Lock");
+    assert_eq!(
+        (event.event_id.as_str(), event.version.as_str()),
+        ("evt-42", "1.4.0")
+    );
+    assert_eq!(event.locked.len(), 2);
+
+    // Pflicht-Mods lassen sich nicht abschalten oder entfernen (AK-11.1), Configs schon frei.
+    assert!(
+        content
+            .set_enabled(&profile.id, &game, "mods/a1.jar", false)
+            .is_err()
+    );
+    assert!(content.remove(&profile.id, &game, "mods/core.jar").is_err());
+    assert!(game.join("mods/a1.jar").is_file());
+
+    // Nichts zu tun: leerer Bericht.
+    let r = packs
+        .check_event_integrity(&profile, false)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(r.repaired.is_empty() && r.disabled.is_empty(), "{r:?}");
+
+    // Verändert, gelöscht, Zusatz-Mod: repariert bzw. abgeschaltet (AK-11.2, AK-11.3).
+    std::fs::write(game.join("mods/a1.jar"), "manipuliert").unwrap();
+    std::fs::remove_file(game.join("mods/core.jar")).unwrap();
+    std::fs::write(game.join("mods/extra.jar"), "eigene Mod").unwrap();
+    let r = packs
+        .check_event_integrity(&profile, false)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(r.repaired, vec!["mods/a1.jar", "mods/core.jar"]);
+    assert_eq!(r.disabled, vec!["mods/extra.jar"]);
+    assert_eq!(read(&game, "mods/a1.jar").as_deref(), Some("inhalt-a1.jar"));
+    assert_eq!(read(&game, "mods/core.jar").as_deref(), Some("core"));
+    assert!(game.join("mods/extra.jar.disabled").is_file());
+
+    // Offline: Datei aus dem Archiv geht, Download-Datei nicht.
+    std::fs::remove_file(game.join("mods/core.jar")).unwrap();
+    let r = packs
+        .check_event_integrity(&profile, true)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(r.repaired, vec!["mods/core.jar"]);
+    std::fs::remove_file(game.join("mods/a1.jar")).unwrap();
+    let err = packs
+        .check_event_integrity(&profile, true)
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("offline nicht geladen"), "{err}");
+}

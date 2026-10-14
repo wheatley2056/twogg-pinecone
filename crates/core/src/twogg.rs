@@ -47,6 +47,9 @@ pub struct PackVersion {
     pub size: u64,
     pub sha1: String,
     pub published_at: i64,
+    /// Signiertes Event-Pack-Manifest vorhanden (F-10).
+    #[serde(default)]
+    pub signed: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -541,6 +544,38 @@ impl TwoggClient {
         self.send(self.http.get(&url), &url).await
     }
 
+    /// Signiertes Manifest einer Version (F-10). Geprüft wird es vom Aufrufer.
+    pub async fn version_manifest(
+        &self,
+        pack: &str,
+        version: &str,
+    ) -> Result<crate::eventpack::SignedManifest> {
+        if !valid_id(pack) || !valid_id(version) {
+            return Err(Error::Invalid("Ungültige Pack- oder Versions-ID".into()));
+        }
+        let url = format!(
+            "{}/api/v1/packs/{pack}/versions/{version}/manifest",
+            self.base
+        );
+        self.send(self.http.get(&url), &url).await
+    }
+
+    /// Neuestes signiertes Manifest eines Packs im Kanal (`release`, `beta`, `alpha`).
+    pub async fn latest_manifest(
+        &self,
+        pack: &str,
+        channel: &str,
+    ) -> Result<crate::eventpack::SignedManifest> {
+        if !valid_id(pack) || !matches!(channel, "release" | "beta" | "alpha") {
+            return Err(Error::Invalid("Ungültige Pack-ID oder Kanal".into()));
+        }
+        let url = format!(
+            "{}/api/v1/packs/{pack}/manifest/latest?channel={channel}",
+            self.base
+        );
+        self.send(self.http.get(&url), &url).await
+    }
+
     pub async fn download_link(&self, pack: &str, version: &str) -> Result<DownloadLink> {
         if !valid_id(pack) || !valid_id(version) {
             return Err(Error::Invalid("Ungültige Pack- oder Versions-ID".into()));
@@ -609,6 +644,7 @@ mod tests {
             size: 0,
             sha1: String::new(),
             published_at: 0,
+            signed: false,
         }
     }
 

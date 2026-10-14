@@ -45,6 +45,7 @@ impl Drop for RunningGuard {
 fn stage_name(stage: Stage) -> &'static str {
     match stage {
         Stage::Sync => "sync",
+        Stage::Integrity => "integrity",
         Stage::Loader => "loader",
         Stage::Version => "version",
         Stage::Java => "java",
@@ -113,6 +114,10 @@ pub async fn launch(
         let event = match e {
             PrepareEvent::Stage(s) => LaunchEvent::Stage {
                 stage: stage_name(s),
+            },
+            PrepareEvent::Integrity(r) => LaunchEvent::Integrity {
+                repaired: r.repaired,
+                disabled: r.disabled,
             },
             PrepareEvent::Java { version, path } => LaunchEvent::Java {
                 version,

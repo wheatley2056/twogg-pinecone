@@ -55,7 +55,7 @@ pub fn content_set_enabled(
     state
         .launcher
         .content()
-        .set_enabled(&dir, &key, enabled)
+        .set_enabled(&id, &dir, &key, enabled)
         .map_err(err)
 }
 

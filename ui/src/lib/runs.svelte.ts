@@ -2,6 +2,7 @@
 
 import { api, errorText } from "./api";
 import { t } from "./i18n.svelte";
+import { notify } from "./notifications.svelte";
 import type { LaunchEvent, Stage } from "./types";
 
 export type RunStatus = "idle" | "preparing" | "running";
@@ -70,6 +71,15 @@ export async function startGame(id: string, onExit: () => void, server: string |
       case "java":
         run.java = `Java ${e.version}`;
         break;
+      case "integrity": {
+        const name = (p: string) => p.split("/").pop() ?? p;
+        const parts = [
+          e.repaired.length ? t("integrity.repaired", { files: e.repaired.map(name).join(", ") }) : "",
+          e.disabled.length ? t("integrity.disabled", { files: e.disabled.map(name).join(", ") }) : "",
+        ].filter(Boolean);
+        notify({ id: `integrity-${id}-${Date.now()}`, kind: "info", title: t("integrity.title"), text: parts.join(" ") });
+        break;
+      }
       case "started":
         run.status = "running";
         onStarted?.();

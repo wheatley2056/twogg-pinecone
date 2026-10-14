@@ -174,6 +174,11 @@ pub enum LaunchEvent {
         version: String,
         path: String,
     },
+    /// Pflichtdateien wiederhergestellt bzw. Zusatz-Mods abgeschaltet (Event-Pack, F-11).
+    Integrity {
+        repaired: Vec<String>,
+        disabled: Vec<String>,
+    },
     Started {
         pid: Option<u32>,
     },
