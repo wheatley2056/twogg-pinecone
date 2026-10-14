@@ -295,6 +295,7 @@ const de = {
   "pack.exportButton": "Exportieren …",
   "pack.filter": "Modrinth-Modpack",
   "pack.filterAny": "Modpack (Modrinth oder CurseForge)",
+  "appUpdate.deferred": "Ein Spiel läuft: Das Update wird nach Spielende installiert.",
   "appUpdate.title": "Updates",
   "appUpdate.channel": "Update-Kanal",
   "appUpdate.channelRelease": "Release",

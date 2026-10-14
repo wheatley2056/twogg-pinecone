@@ -44,3 +44,8 @@ pub use error::{Error, Result};
 /// Name und Version, die dem Spiel als `${launcher_name}` / `${launcher_version}` übergeben werden.
 pub const LAUNCHER_NAME: &str = "twogg-pinecone";
 pub const LAUNCHER_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// User-Agent für alle HTTP-Anfragen: Name, Version und Kontakt (`02` §5, Modrinth-Vorgabe).
+pub fn user_agent() -> String {
+    format!("TwoGG-Pinecone/{LAUNCHER_VERSION} (+https://twogg.de; legal@twogg.de)")
+}

@@ -1,5 +1,8 @@
 // Zustand des Selbst-Updates (gemeinsam für Start-Hinweis und Einstellungen).
 import { api, errorText } from "./api";
+import { t } from "./i18n.svelte";
+import { notify } from "./notifications.svelte";
+import { runs } from "./runs.svelte";
 import type { AppUpdate } from "./types";
 
 export const updates = $state({
@@ -11,7 +14,31 @@ export const updates = $state({
   progress: null as number | null,
   installing: false,
   dismissed: false,
+  /** Während eines Spiels angefordert: wird nach Spielende installiert (AK-34.3). */
+  deferred: false,
 });
+
+/** Erneut prüfen, solange Pinecone läuft (F-34). */
+const CHECK_EVERY_MS = 6 * 60 * 60_000;
+
+function gameActive(): boolean {
+  return Object.values(runs).some((r) => r.status !== "idle");
+}
+
+/** Prüft beim Start und danach alle 6 Stunden still auf Updates. */
+export function startUpdateChecks() {
+  checkUpdates(true);
+  const timer = setInterval(() => checkUpdates(true), CHECK_EVERY_MS);
+  return () => clearInterval(timer);
+}
+
+/** Nach Spielende: ein aufgeschobenes Update jetzt installieren. */
+export function afterGameExit() {
+  if (updates.deferred && !gameActive()) {
+    updates.deferred = false;
+    installUpdate();
+  }
+}
 
 export async function checkUpdates(silent = false) {
   updates.checking = true;
@@ -28,6 +55,11 @@ export async function checkUpdates(silent = false) {
 }
 
 export async function installUpdate() {
+  if (gameActive()) {
+    updates.deferred = true;
+    notify({ id: "app-update-deferred", kind: "update", title: t("appUpdate.deferred") });
+    return;
+  }
   updates.error = null;
   updates.progress = 0;
   try {

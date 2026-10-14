@@ -185,9 +185,14 @@ pub enum UpdateEvent {
 #[tauri::command]
 pub async fn update_install(
     app: AppHandle,
+    state: State<'_, crate::AppState>,
     pending: State<'_, PendingUpdate>,
     on_event: Channel<UpdateEvent>,
 ) -> CmdResult<()> {
+    // Nie während eines Spiels neu starten (AK-34.3); die Oberfläche holt es nach Spielende nach.
+    if !state.running.lock().unwrap().is_empty() {
+        return Err("Ein Spiel läuft gerade. Das Update wird nach Spielende installiert.".into());
+    }
     let update = pending
         .0
         .lock()

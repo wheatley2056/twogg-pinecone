@@ -229,7 +229,7 @@ impl CurseForge {
 
     pub fn with_base(base: impl Into<String>, key: impl Into<String>) -> Result<Self> {
         let http = reqwest::Client::builder()
-            .user_agent(format!("TwoGG/pinecone/{LAUNCHER_VERSION} (twogg.de)"))
+            .user_agent(crate::user_agent())
             .connect_timeout(Duration::from_secs(15))
             .timeout(Duration::from_secs(30))
             .build()

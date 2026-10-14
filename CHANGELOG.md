@@ -2,6 +2,8 @@
 
 ## Unveröffentlicht
 
+- **Updates:** Pinecone prüft neben dem Start alle 6 Stunden auf neue Versionen. Läuft gerade ein
+  Spiel, wird ein Update erst nach Spielende installiert.
 - **Erinnerung vor Eventstart:** Solange Pinecone läuft, kommt vor angemeldeten Events ein Hinweis
   im Panel und auf dem Desktop (Standard 60 und 10 Minuten vorher, einstellbar unter Einstellungen ›
   Allgemein). Beim ersten Hinweis lädt Pinecone ein Pflicht-Update des Event-Packs schon vorab.

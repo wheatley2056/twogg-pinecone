@@ -272,7 +272,7 @@ impl TwoggClient {
 
     pub fn with_base(base: impl Into<String>) -> Result<Self> {
         let http = reqwest::Client::builder()
-            .user_agent(format!("pinecone/{LAUNCHER_VERSION}"))
+            .user_agent(crate::user_agent())
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(20))
             .build()

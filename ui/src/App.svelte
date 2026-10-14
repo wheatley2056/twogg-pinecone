@@ -14,7 +14,7 @@
   import type { MenuEntry } from "./lib/contextmenu.svelte";
   import { loadSettings, settings } from "./lib/settings.svelte";
   import { appWindow } from "./lib/window";
-  import { checkUpdates, installUpdate, updates } from "./lib/updates.svelte";
+  import { afterGameExit, installUpdate, startUpdateChecks, updates } from "./lib/updates.svelte";
   import type { Account, AppInfo, ContentKind, ImportResult, Invite, OpenRequest, Profile, ProjectType, SyncPack } from "./lib/types";
   import DiscoverPage from "./components/pages/DiscoverPage.svelte";
   import PlayPage from "./components/pages/PlayPage.svelte";
@@ -241,7 +241,7 @@
     await Promise.all([reloadProfiles(), reloadAccounts()]);
     await api.onOpenPack(openExternal).catch(() => {});
     for (const r of await api.takeOpenRequests().catch(() => [])) openExternal(r);
-    if (info?.updatesConfigured) checkUpdates(true);
+    if (info?.updatesConfigured) startUpdateChecks();
     // Hinweise vor Eventstart (F-14).
     startReminders({
       onOpen: (id) => ((eventId = id), (view = "events"), void appWindow.restore()?.catch(() => {})),
@@ -310,6 +310,7 @@
     }
     reloadProfiles();
     homeKey++;
+    afterGameExit();
   }
 
   /** Wie das Fenster nach dem letzten Start verändert wurde (F-52); `null` = gar nicht. */
