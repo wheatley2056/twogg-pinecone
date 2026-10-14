@@ -324,6 +324,8 @@ Object.assign(api, {
   },
   deleteProfile: async (id: string) => void (profiles = profiles.filter((p) => p.id !== id)),
   openProfileFolder: async () => {},
+  openCrashReport: async () => {},
+  eventIntegrityCheck: async () => (await wait(600), { repaired: [], disabled: [] }),
   lastLog: async (id: string) =>
     id === "fabric-test" ? ["[12:00:01] [main/INFO]: Loading Minecraft 1.21.11 with Fabric Loader 0.16.5", "[12:00:09] [Render thread/INFO]: Stopping!"] : [],
   accounts: async () => accounts,

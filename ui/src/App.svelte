@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { crashText } from "./lib/crash";
   import { api, errorText } from "./lib/api";
   import { t } from "./lib/i18n.svelte";
   import { notify } from "./lib/notifications.svelte";
@@ -275,9 +276,9 @@
       notify({
         id: `game-${id}-${Date.now()}`,
         kind: "error",
-        title: t("notice.gameError", { name }),
-        text: run.error,
-        action: { label: t("profile.tabLog"), run: () => openProfile(id, "logs") },
+        title: run.crash ? t("notice.crashed", { name }) : t("notice.gameError", { name }),
+        text: run.crash ? crashText(run.crash.cause) : run.error,
+        action: { label: run.crash ? t("crash.view") : t("profile.tabLog"), run: () => openProfile(id, "logs") },
       });
     }
     reloadProfiles();

@@ -352,6 +352,46 @@ pub fn open_profile_folder(
         .map_err(err)
 }
 
+/// Öffnet einen Crash-Report der Instanz im Standardprogramm (F-35).
+#[tauri::command]
+pub fn open_crash_report(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+    name: String,
+) -> CmdResult<()> {
+    if !name.ends_with(".txt") || name.contains(['/', '\\']) || name.starts_with('.') {
+        return Err(err("Ungültiger Crash-Report"));
+    }
+    let profile = state.launcher.profiles().get(&id).map_err(err)?;
+    let path = state
+        .launcher
+        .game_dir(&profile)
+        .join("crash-reports")
+        .join(name);
+    if !path.is_file() {
+        return Err(err("Crash-Report nicht gefunden"));
+    }
+    app.opener()
+        .open_path(path.display().to_string(), None::<&str>)
+        .map_err(err)
+}
+
+/// Prüft die Pflichtdateien einer Event-Instanz und repariert sie (F-11, aus der Absturztafel).
+#[tauri::command]
+pub async fn event_integrity_check(
+    state: State<'_, AppState>,
+    id: String,
+) -> CmdResult<Option<pinecone_core::modpack::IntegrityReport>> {
+    let profile = state.launcher.profiles().get(&id).map_err(err)?;
+    state
+        .launcher
+        .packs()
+        .check_event_integrity(&profile, false)
+        .await
+        .map_err(err)
+}
+
 #[tauri::command]
 pub fn list_accounts(state: State<'_, AppState>) -> CmdResult<Vec<AccountDto>> {
     let accounts = state.accounts.load().map_err(err)?;

@@ -193,5 +193,7 @@ pub enum LaunchEvent {
     Exited {
         code: Option<i32>,
         success: bool,
+        /// Analyse bei einem Absturz (F-35).
+        crash: Option<pinecone_core::crash::CrashInfo>,
     },
 }

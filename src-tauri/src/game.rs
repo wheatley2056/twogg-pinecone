@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
+use pinecone_core::crash;
 use pinecone_core::download::Progress;
 use pinecone_core::hooks::{self, HookContext};
 use pinecone_core::launcher::{PrepareEvent, Stage};
@@ -216,9 +217,11 @@ pub async fn launch(
         let exited = Arc::new(AtomicBool::new(false));
         let tail =
             tauri::async_runtime::spawn(tail_log(log.clone(), on_event.clone(), exited.clone()));
+        let mut stopped = false;
         let status = tokio::select! {
             status = child.wait() => status,
             _ = stop.notified() => {
+                stopped = true;
                 let _ = child.kill().await;
                 child.wait().await
             }
@@ -245,7 +248,15 @@ pub async fn launch(
                 Err(e) => tracing::warn!("Befehl nach dem Ende: {e}"),
             }
         }
-        let _ = on_event.send(LaunchEvent::Exited { code, success });
+        // Absturz (F-35): Fehlercode oder neuer Crash-Report, nicht beim Beenden durch den Nutzer.
+        let crash = (!stopped
+            && (!success || !crash::session_reports(&game_dir, started).is_empty()))
+        .then(|| crash::analyze(&game_dir, started, &output));
+        let _ = on_event.send(LaunchEvent::Exited {
+            code,
+            success,
+            crash,
+        });
         drop(guard);
     });
     Ok(())

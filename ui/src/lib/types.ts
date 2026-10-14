@@ -105,7 +105,24 @@ export type LaunchEvent =
   | { type: "integrity"; repaired: string[]; disabled: string[] }
   | { type: "started"; pid: number | null }
   | { type: "log"; lines: string[] }
-  | { type: "exited"; code: number | null; success: boolean };
+  | { type: "exited"; code: number | null; success: boolean; crash?: CrashInfo | null };
+
+/** Erkannte Absturzursache (F-35). */
+export type CrashCause =
+  | { kind: "missingDependency"; mod: string; dependency: string }
+  | { kind: "javaVersion"; required: number | null; actual: number | null }
+  | { kind: "outOfMemory" }
+  | { kind: "duplicateMod"; id: string }
+  | { kind: "unknown" };
+
+export interface CrashInfo {
+  cause: CrashCause;
+  trigger: string | null;
+  report: string | null;
+  reportText: string | null;
+  others: string[];
+  logTail: string[];
+}
 
 export interface ProfileStats {
   playtimeSecs: number;

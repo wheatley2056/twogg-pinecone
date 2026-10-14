@@ -4,6 +4,7 @@ pub mod accounts;
 pub mod archive;
 pub mod auth;
 pub mod content;
+pub mod crash;
 pub mod curseforge;
 pub mod diagnostics;
 pub mod download;

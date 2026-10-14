@@ -3,7 +3,7 @@
 import { api, errorText } from "./api";
 import { t } from "./i18n.svelte";
 import { notify } from "./notifications.svelte";
-import type { LaunchEvent, Stage } from "./types";
+import type { LaunchEvent, Stage, CrashInfo } from "./types";
 
 export type RunStatus = "idle" | "preparing" | "running";
 
@@ -22,6 +22,8 @@ export interface RunState {
   stopping: boolean;
   /** Quick-Join-Ziel des laufenden Starts. */
   server: string | null;
+  /** Analyse des letzten Absturzes (F-35); weg beim nächsten Start oder per Schließen. */
+  crash: CrashInfo | null;
 }
 
 const MAX_LINES = 5000;
@@ -29,7 +31,7 @@ const MAX_LINES = 5000;
 export const runs: Record<string, RunState> = $state({});
 
 function idle(): RunState {
-  return { status: "idle", stage: null, done: 0, files: 0, bytesDone: 0, bytes: 0, java: null, lines: [], error: null, exitCode: null, stopping: false, server: null };
+  return { status: "idle", stage: null, done: 0, files: 0, bytesDone: 0, bytes: 0, java: null, lines: [], error: null, exitCode: null, stopping: false, server: null, crash: null };
 }
 
 const IDLE: RunState = Object.freeze(idle()) as RunState;
@@ -54,7 +56,7 @@ function appendLines(run: RunState, lines: string[]) {
  *  `onExit` nach Spielende bzw. Fehler. */
 export async function startGame(id: string, onExit: () => void, server: string | null = null, onStarted?: () => void) {
   const run = ensureRun(id);
-  Object.assign(run, { status: "preparing", stage: null, done: 0, files: 0, bytesDone: 0, bytes: 0, error: null, exitCode: null, stopping: false, server });
+  Object.assign(run, { status: "preparing", stage: null, done: 0, files: 0, bytesDone: 0, bytes: 0, error: null, exitCode: null, stopping: false, server, crash: null });
   run.lines = [];
   const handle = (e: LaunchEvent) => {
     switch (e.type) {
@@ -94,6 +96,10 @@ export async function startGame(id: string, onExit: () => void, server: string |
         run.status = "idle";
         run.exitCode = e.code;
         if (!e.success && e.code !== null && !run.stopping) run.error = t("profile.exitError", { code: e.code });
+        if (e.crash && !run.stopping) {
+          run.crash = e.crash;
+          run.error = t("crash.title");
+        }
         onExit();
         break;
     }

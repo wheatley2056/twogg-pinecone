@@ -77,6 +77,8 @@ export const api = {
   deleteProfile: (id: string) => invoke<void>("delete_profile", { id }),
   openProfileFolder: (id: string) => invoke<void>("open_profile_folder", { id }),
   lastLog: (id: string, maxLines: number) => invoke<string[]>("last_log", { id, maxLines }),
+  openCrashReport: (id: string, name: string) => invoke<void>("open_crash_report", { id, name }),
+  eventIntegrityCheck: (id: string) => invoke<{ repaired: string[]; disabled: string[] } | null>("event_integrity_check", { id }),
 
   accounts: () => invoke<Account[]>("list_accounts"),
   addOfflineAccount: (name: string) => invoke<Account>("add_offline_account", { name }),
