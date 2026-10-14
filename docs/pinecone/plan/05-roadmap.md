@@ -105,7 +105,7 @@ später  macOS, Import aus Fremd-Launchern, SSE
 
 ### MVP-C – Hinweise und Absturz
 
-**Absturz-Teil umgesetzt (14.10.2026, Launcher-PR #47):** F-35 mit Ursachenerkennung und Absturztafel. Offen sind die Erinnerungen (F-14, F-37) und das Vorab-Laden von Pflicht-Updates.
+**Umgesetzt (14.10.2026, Launcher-PR #47 und #48):** F-35 mit Ursachenerkennung und Absturztafel, F-14 und F-37 mit Erinnerungen, Desktop-Benachrichtigungen und Vorab-Laden von Pflicht-Updates. Grenze: Ein Klick auf die Desktop-Benachrichtigung öffnet das Event nicht (Plugin ohne Klick-Aktionen auf dem Desktop); dafür gibt es den Panel-Eintrag.
 
 - **Funktionen:** F-14, F-37, F-35
 - **Aufgaben:**
