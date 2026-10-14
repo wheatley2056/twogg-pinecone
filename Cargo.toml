@@ -32,6 +32,9 @@ indicatif = "0.17"
 tempfile = "3"
 hickory-resolver = "0.26"
 base64 = "0.22"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+sha2 = "0.10"
+rand_core = { version = "0.6", features = ["getrandom"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 notify = "8"
 tauri = { version = "2.12", features = ["protocol-asset"] }

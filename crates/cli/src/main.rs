@@ -133,6 +133,67 @@ enum Command {
     /// Accounts verwalten.
     #[command(subcommand)]
     Account(AccountCommand),
+    /// Event-Packs signieren (für das Orga-Team, siehe Plan `04` §6).
+    #[command(subcommand)]
+    Eventpack(EventpackCommand),
+}
+
+#[derive(Subcommand)]
+enum EventpackCommand {
+    /// Neues Schlüsselpaar erzeugen. Der private Schlüssel landet in der Datei (nur für den
+    /// Besitzer lesbar), der öffentliche wird ausgegeben und kommt in `PINECONE_EVENTPACK_KEYS`.
+    Keygen {
+        /// Datei für den privaten Schlüssel; sie darf noch nicht existieren.
+        private_key: PathBuf,
+        /// Kennung des Schlüssels, z. B. `twogg-2026`.
+        #[arg(long)]
+        key_id: String,
+    },
+    /// Manifest zu einem `.mrpack` erzeugen und signieren: `<mrpack>.manifest.json` und
+    /// `<mrpack>.manifest.json.sig`. Beides wird zusammen mit dem Pack im Admin hochgeladen.
+    Sign {
+        mrpack: PathBuf,
+        /// Datei mit dem privaten Schlüssel (aus `keygen`).
+        #[arg(long)]
+        key: PathBuf,
+        #[arg(long)]
+        key_id: String,
+        /// Pack-ID auf dem Pinecone-Server.
+        #[arg(long)]
+        pack: String,
+        /// Event-ID auf twogg.app.
+        #[arg(long)]
+        event: String,
+        /// Anzeigename, z. B. „REVIVAL: Avalon“.
+        #[arg(long)]
+        title: String,
+        #[arg(long, default_value = "release", value_parser = ["release", "beta", "alpha"])]
+        channel: String,
+        /// Ältere Launcher installieren das Pack nicht.
+        #[arg(long, default_value = pinecone_core::LAUNCHER_VERSION)]
+        min_launcher: String,
+        /// Spieler müssen vor dem Start auf diese Version aktualisieren.
+        #[arg(long)]
+        required: bool,
+        /// Eigene Zusatz-Mods in der Event-Instanz erlauben.
+        #[arg(long)]
+        allow_extra_mods: bool,
+        /// Empfohlener Arbeitsspeicher in MB.
+        #[arg(long)]
+        memory: Option<u32>,
+        #[arg(long, default_value = "https://pinecone.twogg.app")]
+        server_url: String,
+    },
+    /// Signiertes Manifest prüfen (mit den eingebauten oder angegebenen Schlüsseln).
+    Verify {
+        manifest: PathBuf,
+        /// Öffentliche Schlüssel `keyId=Base64;…`; sonst die eingebauten.
+        #[arg(long)]
+        keys: Option<String>,
+        /// Zusätzlich prüfen, ob dieses `.mrpack` zum Manifest passt.
+        #[arg(long)]
+        mrpack: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -640,6 +701,7 @@ async fn main() -> Result<()> {
         Command::Content(cmd) => content_command(cmd, &launcher).await,
         Command::Pack(cmd) => pack_command(cmd, &launcher).await,
         Command::Sync(cmd) => sync_command(cmd, &launcher).await,
+        Command::Eventpack(cmd) => eventpack_command(cmd),
         Command::Diag { target, profile } => {
             let only = match profile {
                 Some(p) => Some(vec![launcher.profiles().get(&p)?.id]),
@@ -1669,4 +1731,152 @@ async fn run(cmd: launch::LaunchCommand) -> Result<(String, std::process::ExitSt
     }
     let status = child.wait().await?;
     Ok((connections, status))
+}
+
+fn sig_path(manifest: &std::path::Path) -> PathBuf {
+    let mut s = manifest.as_os_str().to_owned();
+    s.push(".sig");
+    PathBuf::from(s)
+}
+
+fn eventpack_command(cmd: EventpackCommand) -> Result<()> {
+    use pinecone_core::eventpack;
+    match cmd {
+        EventpackCommand::Keygen {
+            private_key,
+            key_id,
+        } => {
+            anyhow::ensure!(
+                !private_key.exists(),
+                "{} existiert schon; vorhandene Schlüssel werden nie überschrieben",
+                private_key.display()
+            );
+            let (private, public) = eventpack::generate_key();
+            let mut options = std::fs::OpenOptions::new();
+            options.write(true).create_new(true);
+            #[cfg(unix)]
+            std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+            let mut file = options
+                .open(&private_key)
+                .with_context(|| format!("{} anlegen", private_key.display()))?;
+            std::io::Write::write_all(&mut file, format!("{private}\n").as_bytes())?;
+            println!(
+                "Privater Schlüssel: {} (sicher aufbewahren, nie weitergeben)",
+                private_key.display()
+            );
+            println!("Öffentlicher Schlüssel für PINECONE_EVENTPACK_KEYS:");
+            println!("{key_id}={public}");
+            Ok(())
+        }
+        EventpackCommand::Sign {
+            mrpack,
+            key,
+            key_id,
+            pack,
+            event,
+            title,
+            channel,
+            min_launcher,
+            required,
+            allow_extra_mods,
+            memory,
+            server_url,
+        } => {
+            let secret = std::fs::read_to_string(&key)
+                .with_context(|| format!("{} lesen", key.display()))?;
+            let signing = eventpack::signing_key(&secret)?;
+            let opts = eventpack::ManifestOptions {
+                pack_id: pack,
+                event_id: event,
+                title,
+                channel,
+                min_launcher_version: min_launcher,
+                required,
+                allow_extra_mods,
+                recommended_memory_mb: memory,
+                server_url,
+                key_id: key_id.clone(),
+                published_at: rfc3339_now(),
+            };
+            let manifest = eventpack::build_manifest(&mrpack, &opts)?;
+            let signed = eventpack::sign(&manifest, &signing)?;
+            // Selbstprüfung mit dem eigenen öffentlichen Schlüssel.
+            let own = eventpack::Keyring::parse(&format!(
+                "{key_id}={}",
+                eventpack::public_key(&signing)
+            ))?;
+            own.verify(&signed)?;
+            let mut out = mrpack.as_os_str().to_owned();
+            out.push(".manifest.json");
+            let out = PathBuf::from(out);
+            std::fs::write(&out, serde_json::to_string_pretty(&signed.manifest)? + "\n")?;
+            std::fs::write(sig_path(&out), signed.signature.clone() + "\n")?;
+            println!(
+                "{} {} für Event {}: {} Pflichtdateien",
+                manifest.pack_id,
+                manifest.version,
+                manifest.event_id,
+                manifest.locked.len()
+            );
+            println!("Manifest: {}", out.display());
+            println!("Signatur: {}", sig_path(&out).display());
+            Ok(())
+        }
+        EventpackCommand::Verify {
+            manifest,
+            keys,
+            mrpack,
+        } => {
+            let value: serde_json::Value = serde_json::from_str(
+                &std::fs::read_to_string(&manifest)
+                    .with_context(|| format!("{} lesen", manifest.display()))?,
+            )?;
+            let signature = std::fs::read_to_string(sig_path(&manifest))
+                .with_context(|| format!("{} lesen", sig_path(&manifest).display()))?;
+            let keyring = match keys {
+                Some(k) => eventpack::Keyring::parse(&k)?,
+                None => eventpack::Keyring::builtin(),
+            };
+            anyhow::ensure!(
+                !keyring.is_empty(),
+                "Keine Schlüssel: --keys angeben oder PINECONE_EVENTPACK_KEYS beim Bauen setzen"
+            );
+            let m = keyring.verify(&eventpack::SignedManifest {
+                manifest: value,
+                signature: signature.trim().to_string(),
+            })?;
+            if let Some(path) = mrpack {
+                eventpack::check_mrpack(&m, &path)?;
+                println!("{} passt zum Manifest.", path.display());
+            }
+            println!(
+                "Signatur gültig: {} {} ({}), Schlüssel {}",
+                m.pack_id, m.version, m.channel, m.key_id
+            );
+            Ok(())
+        }
+    }
+}
+
+/// Aktuelle Zeit als RFC 3339 in UTC, ohne zusätzliche Abhängigkeit.
+fn rfc3339_now() -> String {
+    let secs = now_secs() as i64;
+    let days = secs.div_euclid(86_400);
+    let rem = secs.rem_euclid(86_400);
+    // Kalenderdatum aus Tagen seit 1970 (Algorithmus von Howard Hinnant).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60
+    )
 }

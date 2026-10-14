@@ -180,6 +180,32 @@ cargo run -p pinecone-cli -- sync option basics fov 0.25
 cargo run -p pinecone-cli -- sync enable Fabric basics      # bzw. disable, run, list --profile Fabric
 ```
 
+## Event-Packs signieren
+
+Event-Packs bekommen ein signiertes Manifest (Plan `04` §6): Event, Minecraft und Loader, SHA-512 des
+`.mrpack` und die Pflichtdateien (`locked`), die Pinecone nach der Installation und vor jedem Start
+prüft. Signiert wird mit Ed25519 über die kanonische JSON-Form (RFC 8785). Die öffentlichen Schlüssel
+sind in den Launcher kompiliert, damit die Echtheit nicht vom Pinecone-Server abhängt.
+
+```sh
+# Einmalig: Schlüsselpaar erzeugen (privater Schlüssel nur offline/verschlüsselt aufbewahren)
+cargo run -p pinecone-cli -- eventpack keygen ~/twogg-eventpack.key --key-id twogg-2026
+# Ausgegebene Zeile `twogg-2026=<Base64>` als GitHub-Variable PINECONE_EVENTPACK_KEYS setzen.
+
+# Je Pack-Version: Manifest erzeugen und signieren
+cargo run -p pinecone-cli -- eventpack sign avalon-1.4.0.mrpack --key ~/twogg-eventpack.key \
+  --key-id twogg-2026 --pack avalon --event <twogg-event-id> --title "REVIVAL: Avalon" --required
+# → avalon-1.4.0.mrpack.manifest.json und .manifest.json.sig, beides im Admin mit hochladen
+
+cargo run -p pinecone-cli -- eventpack verify avalon-1.4.0.mrpack.manifest.json \
+  --keys "twogg-2026=<Base64>" --mrpack avalon-1.4.0.mrpack
+```
+
+Pflichtdateien sind alle Dateien aus `modrinth.index.json`, die der Client braucht, und die Mods aus
+`overrides/mods/`. Configs und `options.txt` bleiben frei, damit Spieler ihre Einstellungen behalten.
+Schlüsselwechsel: neuen `keyId` per Launcher-Update ausliefern, ab dann damit signieren, den alten nach
+Ablauf der Mindestversion entfernen. In Debug-Builds gilt `PINECONE_EVENTPACK_KEYS` auch zur Laufzeit.
+
 ## Skins
 
 Unter „Skins“ liegt eine eigene Skin-Bibliothek (`<data-dir>/skins/`): Skins per Spielername von
