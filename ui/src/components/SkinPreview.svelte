@@ -27,7 +27,7 @@
   onMount(async () => {
     // Erst hier laden: skinview3d bringt eine eigene three.js-Version mit.
     const { SkinViewer, FunctionAnimation } = await import("skinview3d");
-    viewer = new SkinViewer({ canvas, width, height, zoom: 0.85 });
+    viewer = new SkinViewer({ canvas, width, height, zoom: 0.8 });
     viewer.animation = new FunctionAnimation((player, _progress, delta) => animator.apply(player, delta));
     viewer.autoRotateSpeed = 0.6;
   });

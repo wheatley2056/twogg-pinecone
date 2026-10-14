@@ -1,5 +1,10 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- **Skins:** Die 3D-Vorschau füllt die ganze Bühne, und der Kopf wird bei Animationen nicht mehr
+  abgeschnitten.
+
 ## 0.9.9
 
 - **Geführter Erststart:** Beim ersten Start führen drei Schritte zum Spiel: Konto (Microsoft oder

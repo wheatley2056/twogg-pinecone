@@ -103,6 +103,13 @@
     renaming = null;
     if (name && selected && name !== selected.name) run(() => api.skinRename(selected.id, name), reload);
   }
+
+  // Die Vorschau nutzt die ganze Bühne; unten bleibt Platz für die Animationsauswahl.
+  let stageW = $state(0);
+  let stageH = $state(0);
+  const MOTION_SPACE = 96;
+  const previewW = $derived(Math.max(240, Math.round(stageW)));
+  const previewH = $derived(Math.max(300, Math.round(stageH - MOTION_SPACE)));
 </script>
 
 <div class="skins">
@@ -131,15 +138,15 @@
     <button class="dashed" onclick={importFile} disabled={busy}><Icon name="file" size={16} />{t("skins.importFile")}</button>
   </section>
 
-  <main class="stage scales">
+  <main class="stage scales" bind:clientWidth={stageW} bind:clientHeight={stageH}>
     {#if selected}
       <div class="preview">
         <SkinPreview
           skin={images[selected.id] ?? null}
           model={selected.model}
           cape={activeCape}
-          width={320}
-          height={420}
+          width={previewW}
+          height={previewH}
           {animation}
           {rotate}
           calm={settings.current?.theme.reduceMotion ?? false}
@@ -367,7 +374,9 @@
   }
 
   .preview {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
   }
 
   .motion {
