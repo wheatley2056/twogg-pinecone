@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 0.9.9
 
 - **Geführter Erststart:** Beim ersten Start führen drei Schritte zum Spiel: Konto (Microsoft oder
   offline), TwoGG verknüpfen (überspringbar) und Loslegen mit Event, eigener Instanz oder Modpack.
