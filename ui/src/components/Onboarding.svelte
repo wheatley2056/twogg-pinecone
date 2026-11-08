@@ -41,8 +41,6 @@
 
   const account = $derived(accounts.find((a) => a.active) ?? accounts[0] ?? null);
   let loggingIn = $state(false);
-  let offlineName = $state("");
-  const validName = $derived(/^[A-Za-z0-9_]{1,16}$/.test(offlineName));
   let error = $state<string | null>(null);
   let busy = $state(false);
 
@@ -76,16 +74,6 @@
     } finally {
       busy = false;
     }
-  }
-
-  function addOffline(e: SubmitEvent) {
-    e.preventDefault();
-    if (!validName) return;
-    run(async () => {
-      await api.addOfflineAccount(offlineName);
-      onAccountsChange();
-      go(2);
-    });
   }
 
   function discord() {
@@ -130,14 +118,6 @@
           {t("account.loginMicrosoft")}
         </button>
       </div>
-      <form class="offline" onsubmit={addOffline}>
-        <label for="onb-offline">{t("onboarding.offline")}</label>
-        <div class="row">
-          <input id="onb-offline" bind:value={offlineName} placeholder={t("account.offlineName")} maxlength="16" spellcheck="false" />
-          <button type="submit" disabled={!validName || busy}>{t("onboarding.offlineAdd")}</button>
-        </div>
-        {#if offlineName && !validName}<p class="hint">{t("account.nameRule")}</p>{/if}
-      </form>
       <button class="link skip" onclick={() => go(2)}>{t("onboarding.later")}</button>
     {:else if step === 2}
       <h2>{t("onboarding.twoggTitle")}</h2>
@@ -290,7 +270,6 @@
   }
 
   .actions,
-  .row,
   .nav {
     display: flex;
     flex-wrap: wrap;
@@ -302,21 +281,10 @@
     justify-content: space-between;
   }
 
-  .offline,
   .email {
     display: flex;
     flex-direction: column;
     gap: 8px;
-  }
-
-  .offline label {
-    font-size: 13px;
-    color: var(--text-soft);
-  }
-
-  .row input {
-    flex: 1;
-    min-width: 180px;
   }
 
   .skip {

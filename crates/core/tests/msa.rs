@@ -290,6 +290,52 @@ async fn account_store_keeps_tokens_out_of_json_and_refreshes() {
     assert_eq!(accounts.active_account().unwrap().name, "Zweitname");
 }
 
+#[tokio::test]
+#[cfg_attr(
+    feature = "dev-offline",
+    ignore = "dev-offline schaltet die Prüfung ab"
+)]
+async fn offline_accounts_need_a_microsoft_account() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = AccountStore::new(dir.path().join("accounts.json"), MemoryStore::default());
+    let needs_microsoft =
+        |err: &Error| matches!(err, Error::Auth(m) if m.contains("Microsoft-Konto"));
+
+    // Ohne Microsoft-Account: weder anlegen noch spontan spielen.
+    let err = store.add_offline("Zweitname").unwrap_err();
+    assert!(needs_microsoft(&err), "{err}");
+    let err = store.offline_session("Zweitname").unwrap_err();
+    assert!(needs_microsoft(&err), "{err}");
+    assert!(store.load().unwrap().accounts.is_empty());
+
+    // Mit Microsoft-Account (Login nur mit Minecraft-Profil möglich) geht beides.
+    let server = happy_server().await;
+    let login = client(&server)
+        .login_minecraft(pinecone_core::msa::MicrosoftTokens {
+            access_token: "a".into(),
+            refresh_token: "r".into(),
+        })
+        .await
+        .unwrap();
+    store.add_microsoft(&login).unwrap();
+    store.add_offline("Zweitname").unwrap();
+    assert_eq!(
+        store.offline_session("Spontan").unwrap().kind,
+        AccountKind::Offline
+    );
+    assert_eq!(
+        store.session(Some("Zweitname"), None).await.unwrap().kind,
+        AccountKind::Offline
+    );
+
+    // Microsoft-Account entfernt: der Offline-Account bleibt gespeichert, startet aber nicht mehr.
+    store.remove("Tobi").unwrap();
+    let err = store.session(Some("Zweitname"), None).await.unwrap_err();
+    assert!(needs_microsoft(&err), "{err}");
+    let err = store.offline_session("Spontan").unwrap_err();
+    assert!(needs_microsoft(&err), "{err}");
+}
+
 #[test]
 fn memory_store_roundtrip() {
     let s = MemoryStore::default();

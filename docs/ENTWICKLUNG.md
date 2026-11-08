@@ -83,7 +83,7 @@ cargo run -p pinecone-cli -- pack share "Fabulously Optimized"    # pinecone://m
 cargo run -p pinecone-cli -- pack preview pinecone://modrinth/fabulously-optimized   # oder Datei
 cargo run -p pinecone-cli -- pack import pinecone://modrinth/1KVo5zza/ssWn7YI0
 cargo run -p pinecone-cli -- account login           # Microsoft-Login (siehe unten)
-cargo run -p pinecone-cli -- account offline Tobi     # Offline-Account für Tests/LAN
+cargo run -p pinecone-cli -- account offline Tobi     # Offline-Account für Tests/LAN (braucht Microsoft-Account)
 cargo run -p pinecone-cli -- account list             # Accounts, * = aktiv
 cargo run -p pinecone-cli -- run 1.21.1               # Version ohne Profil starten
 cargo run -p pinecone-cli -- run 1.8.9 --offline Tobi # einmalig offline, ohne zu speichern
@@ -130,7 +130,17 @@ Dafür braucht Pinecone eine eigene Azure-App:
    Beim Bauen gesetzt, wird sie fest einkompiliert.
 4. Neue Apps müssen von Mojang für die Minecraft-API freigeschaltet werden. Bis dahin antwortet
    `login_with_xbox` mit 403 (Pinecone meldet das so); Infos unter https://aka.ms/AppRegInfo.
-   Bis zur Freischaltung mit Offline-Accounts testen.
+
+Offline-Accounts gibt es nur zusätzlich zu einem Microsoft-Account mit Minecraft: Java Edition.
+Ohne ihn lassen sie sich weder anlegen noch starten (auch nicht per `run --offline`). Das ist eine
+Voraussetzung für die Freischaltung durch Mojang. Bis zur Freischaltung lässt sich lokal mit dem
+Feature `dev-offline` testen, das diese Prüfung abschaltet:
+
+```sh
+cargo run -p pinecone-cli --features pinecone-core/dev-offline -- account offline Tobi
+```
+
+Das Feature ist standardmäßig aus und darf in Release-Builds nie eingeschaltet werden.
 
 ## Modpacks
 

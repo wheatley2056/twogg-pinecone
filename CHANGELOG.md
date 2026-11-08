@@ -2,6 +2,10 @@
 
 ## 0.9.10
 
+- **Offline-Konten nur mit Microsoft-Konto:** Offline-Konten lassen sich nur noch anlegen und
+  starten, wenn ein Microsoft-Konto mit Minecraft: Java Edition angemeldet ist. Der Erststart bietet
+  kein Offline-Konto mehr an. Bestehende Offline-Konten bleiben gespeichert, starten aber erst wieder,
+  sobald ein Microsoft-Konto angemeldet ist.
 - **Packs mit Freunden teilen und abonnieren:** Im Teilen-Dialog einer Instanz veröffentlicht
   „Für Freunde“ die Instanz auf dem Pinecone-Server (wie der Datei-Export, auch mit eigenen
   Mod-Dateien, höchstens 100 MB). Freunde öffnen den Link `pinecone://pack/<code>`, sehen vorher,

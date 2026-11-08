@@ -16,6 +16,8 @@
   let deletingFriends = $state(false);
   let friendsNotice = $state<string | null>(null);
   const valid = $derived(/^[A-Za-z0-9_]{1,16}$/.test(offlineName));
+  // Offline-Konten nur zusätzlich zu einem Microsoft-Konto (prüft auch der Core).
+  const offlineAllowed = $derived(accounts.some((a) => a.kind === "microsoft"));
 
   async function run(action: () => Promise<unknown>) {
     error = null;
@@ -60,13 +62,16 @@
   <h3 class="section-label">{t("settings.accountsAdd")}</h3>
   <div class="add">
     <button class="primary cut" disabled={!info?.msaConfigured} onclick={() => (loggingIn = true)}>{t("account.loginMicrosoft")}</button>
-    <form class="offline" onsubmit={(e) => (e.preventDefault(), valid && run(async () => (await api.addOfflineAccount(offlineName), (offlineName = ""))))}>
-      <input bind:value={offlineName} placeholder={t("account.offlineName")} maxlength="16" spellcheck="false" aria-label={t("account.offlineName")} />
-      <button disabled={!valid}>{t("account.add")}</button>
-    </form>
+    {#if offlineAllowed}
+      <form class="offline" onsubmit={(e) => (e.preventDefault(), valid && run(async () => (await api.addOfflineAccount(offlineName), (offlineName = ""))))}>
+        <input bind:value={offlineName} placeholder={t("account.offlineName")} maxlength="16" spellcheck="false" aria-label={t("account.offlineName")} />
+        <button disabled={!valid}>{t("account.add")}</button>
+      </form>
+    {/if}
   </div>
   {#if !info?.msaConfigured}<p class="hint">{t("account.msaMissing")}</p>{/if}
-  {#if offlineName && !valid}<p class="hint">{t("account.nameRule")}</p>{/if}
+  {#if !offlineAllowed}<p class="hint">{t("account.offlineNeedsMicrosoft")}</p>{/if}
+  {#if offlineAllowed && offlineName && !valid}<p class="hint">{t("account.nameRule")}</p>{/if}
   {#if error}<p class="error">{error}</p>{/if}
 </section>
 

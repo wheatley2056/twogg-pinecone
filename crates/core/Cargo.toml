@@ -31,3 +31,8 @@ image.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+
+[features]
+# Nur für lokale Tests, solange die Azure-App noch nicht von Mojang freigeschaltet ist:
+# erlaubt Offline-Accounts ohne Microsoft-Account. Nie in Release-Builds einschalten.
+dev-offline = []
