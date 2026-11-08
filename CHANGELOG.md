@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 0.9.10
 
 - **Packs mit Freunden teilen und abonnieren:** Im Teilen-Dialog einer Instanz veröffentlicht
   „Für Freunde“ die Instanz auf dem Pinecone-Server (wie der Datei-Export, auch mit eigenen
