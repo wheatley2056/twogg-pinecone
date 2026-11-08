@@ -234,7 +234,7 @@ speichern unter, im Ordner zeigen, öffnen, löschen.
 
 ## Modpacks teilen
 
-„Teilen …“ im Menü einer Instanz bietet zwei Wege:
+„Teilen …“ im Menü einer Instanz bietet drei Wege:
 
 - **Link** (nur für Packs von Modrinth oder CurseForge): `pinecone://modrinth/<projekt>/<version>` bzw.
   `pinecone://curseforge/<projekt>/<datei>`. Der Link verweist auf genau die installierte Version bei
@@ -244,12 +244,19 @@ speichern unter, im Ordner zeigen, öffnen, löschen.
 - **Datei** (`.mrpack`): für eigene Zusammenstellungen. Aktive Mods sind immer dabei,
   Ressourcenpakete, Shader, `config/` und `options.txt` sind wählbar. Welten, `servers.dat`,
   Screenshots, Logs und Accounts werden nie exportiert. Mods von Modrinth werden nur verlinkt.
+- **Für Freunde** (abonnierbar, `crates/core/src/sharedpacks.rs`): Pinecone exportiert die Instanz
+  wie oben als `.mrpack` und lädt sie auf den Pinecone-Server (`/api/v1/shared-packs`, Anmeldung
+  wie bei der Freundesliste). Der Link `pinecone://pack/<id>` installiert die neueste Version; die
+  Instanz hat dann die Pack-Quelle `shared` und bekommt neue Versionen als Update (gleiche
+  Minecraft-Version, normaler Update-Ablauf mit Snapshot). Welche eigene Instanz zu welchem
+  geteilten Pack gehört, steht in `<data-dir>/shared-packs.json`, nicht im Profil, damit eine
+  duplizierte Instanz nicht in dasselbe Pack veröffentlicht. Ohne Microsoft-Konto prüft Pinecone
+  geteilte Packs nicht auf Updates.
 
 Vor jeder Installation aus Datei oder Link zeigt Pinecone eine Vorschau (Version, Loader, Anzahl der
 Inhalte, Download-Größe) und warnt bei Dateien von Dritten sowie bei Download-Quellen, die Pinecone
 nicht lädt. Die App registriert sich für `pinecone://`-Links und `.mrpack`-Dateien; läuft sie schon,
-übernimmt das offene Fenster den Link. `pinecone://pack/<code>` ist für einen späteren Share-Dienst
-reserviert.
+übernimmt das offene Fenster den Link.
 
 ## CurseForge
 

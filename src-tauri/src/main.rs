@@ -13,6 +13,7 @@ mod migrate;
 mod open;
 mod packs;
 mod screenshots;
+mod sharedpacks;
 mod skins;
 mod splash;
 mod syncpacks;
@@ -273,6 +274,9 @@ fn main() {
             packs::twogg_news,
             packs::pack_preview_file,
             packs::pack_preview_link,
+            sharedpacks::shared_pack_status,
+            sharedpacks::shared_pack_publish,
+            sharedpacks::shared_pack_unpublish,
             packs::pack_preview_cancel,
             packs::pack_import_pending,
             packs::instance_export,

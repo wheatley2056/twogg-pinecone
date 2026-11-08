@@ -974,6 +974,11 @@ async fn pack_command(cmd: PackCommand, launcher: &Launcher) -> Result<()> {
                     };
                     packs.download_twogg(pack_id, Some(&target)).await?
                 }
+                (None, PackSource::Shared { .. }) => {
+                    bail!(
+                        "Geteilte Packs brauchen die Freunde-Anmeldung: Update in der App oder mit --file"
+                    )
+                }
                 (None, PackSource::File) => {
                     bail!("Pack ohne Online-Quelle: neue Version mit --file angeben")
                 }
