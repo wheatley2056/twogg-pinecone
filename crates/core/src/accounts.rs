@@ -1,4 +1,9 @@
 //! Gespeicherte Accounts: Liste in `accounts.json`, Microsoft-Refresh-Tokens im OS-Schlüsselbund.
+//!
+//! Offline-Accounts gibt es nur zusätzlich zu einem Microsoft-Account: Anlegen und Starten
+//! setzen voraus, dass ein Microsoft-Account gespeichert ist. Gespeichert wird ein
+//! Microsoft-Account erst nach erfolgreichem Login samt Minecraft-Profil, also nur, wenn das
+//! Konto Minecraft: Java Edition besitzt. So spielt niemand über Pinecone ohne gekauftes Spiel.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -105,6 +110,22 @@ impl Accounts {
             .find(|a| Some(a.uuid) == uuid || a.name.eq_ignore_ascii_case(selector))
     }
 
+    /// Mindestens ein Microsoft-Account (mit Minecraft-Profil) ist gespeichert.
+    pub fn has_microsoft(&self) -> bool {
+        self.accounts
+            .iter()
+            .any(|a| a.kind == AccountKind::Microsoft)
+    }
+
+    /// Fehler, wenn Offline-Accounts gerade nicht erlaubt sind (kein Microsoft-Account).
+    pub fn ensure_offline_allowed(&self) -> Result<()> {
+        if self.has_microsoft() || cfg!(feature = "dev-offline") {
+            Ok(())
+        } else {
+            Err(Error::Auth(OFFLINE_NEEDS_MICROSOFT.into()))
+        }
+    }
+
     fn upsert(&mut self, account: StoredAccount) {
         self.active = Some(account.uuid);
         match self.accounts.iter_mut().find(|a| a.uuid == account.uuid) {
@@ -113,6 +134,10 @@ impl Accounts {
         }
     }
 }
+
+/// Meldung, wenn ein Offline-Account ohne Microsoft-Account angelegt oder gestartet werden soll.
+pub const OFFLINE_NEEDS_MICROSOFT: &str = "Offline-Konten gibt es nur zusätzlich zu einem Microsoft-Konto, \
+     das Minecraft: Java Edition besitzt. Bitte zuerst mit Microsoft anmelden.";
 
 /// Schlüssel des Refresh-Tokens im Schlüsselbund.
 pub fn refresh_key(uuid: &Uuid) -> String {
@@ -186,7 +211,10 @@ impl<S: SecretStore> AccountStore<S> {
         Ok(account)
     }
 
+    /// Legt einen Offline-Account an. Nur erlaubt, wenn ein Microsoft-Account gespeichert ist.
     pub fn add_offline(&self, name: &str) -> Result<StoredAccount> {
+        let mut accounts = self.load()?;
+        accounts.ensure_offline_allowed()?;
         let session = Account::offline(name)?;
         let account = StoredAccount {
             uuid: offline_uuid(name),
@@ -195,10 +223,16 @@ impl<S: SecretStore> AccountStore<S> {
             skin_url: None,
             skin_variant: None,
         };
-        let mut accounts = self.load()?;
         accounts.upsert(account.clone());
         self.save(&accounts)?;
         Ok(account)
+    }
+
+    /// Spontane Offline-Sitzung ohne gespeicherten Account (z. B. `pinecone play --offline`).
+    /// Wie beim Anlegen nur erlaubt, wenn ein Microsoft-Account gespeichert ist.
+    pub fn offline_session(&self, name: &str) -> Result<Account> {
+        self.load()?.ensure_offline_allowed()?;
+        Account::offline(name)
     }
 
     pub fn set_active(&self, selector: &str) -> Result<StoredAccount> {
@@ -237,13 +271,16 @@ impl<S: SecretStore> AccountStore<S> {
         .cloned()
         .ok_or_else(|| match selector {
             Some(sel) => Error::Invalid(format!("Kein Account {sel:?} gespeichert")),
-            None => Error::Invalid(
-                "Kein aktiver Account. Erst `account login` oder `account offline <name>`".into(),
-            ),
+            None => Error::Invalid("Kein aktiver Account. Erst `account login`".into()),
         })?;
 
         match account.kind {
-            AccountKind::Offline => Account::offline(&account.name),
+            AccountKind::Offline => {
+                // Auch beim Start prüfen: sonst bliebe ein Offline-Account nutzbar,
+                // nachdem der Microsoft-Account entfernt wurde.
+                accounts.ensure_offline_allowed()?;
+                Account::offline(&account.name)
+            }
             AccountKind::Microsoft => {
                 let msa = msa.ok_or_else(|| {
                     Error::Auth(

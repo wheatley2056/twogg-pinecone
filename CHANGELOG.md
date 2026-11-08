@@ -2,6 +2,10 @@
 
 ## Unveröffentlicht
 
+- **Offline-Konten nur mit Microsoft-Konto:** Offline-Konten lassen sich nur noch anlegen und
+  starten, wenn ein Microsoft-Konto mit Minecraft: Java Edition angemeldet ist. Der Erststart bietet
+  kein Offline-Konto mehr an. Bestehende Offline-Konten bleiben gespeichert, starten aber erst wieder,
+  sobald ein Microsoft-Konto angemeldet ist.
 - **Skins:** Die 3D-Vorschau füllt die ganze Bühne, und der Kopf wird bei Animationen nicht mehr
   abgeschnitten.
 

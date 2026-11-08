@@ -6,7 +6,7 @@ use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle};
 use pinecone_core::accounts::{AccountStore, KeyringStore};
-use pinecone_core::auth::{Account, AccountKind};
+use pinecone_core::auth::AccountKind;
 use pinecone_core::content::{ContentKind, Source, loaders_for};
 use pinecone_core::download::{Downloader, Progress};
 use pinecone_core::install::Installer;
@@ -284,7 +284,7 @@ enum LoaderCommand {
 enum AccountCommand {
     /// Mit Microsoft anmelden (Code im Browser bestätigen).
     Login,
-    /// Offline-Account anlegen (nur für Tests und LAN).
+    /// Offline-Account anlegen (nur für Tests und LAN; braucht einen Microsoft-Account).
     Offline { name: String },
     /// Gespeicherte Accounts anzeigen.
     List,
@@ -591,7 +591,7 @@ async fn main() -> Result<()> {
 
             // Erst anmelden, damit ein abgelaufener Login nicht erst nach dem Download auffällt.
             let session = match offline {
-                Some(name) => Account::offline(&name)?,
+                Some(name) => accounts.offline_session(&name)?,
                 None => accounts.session(account.as_deref(), msa.as_ref()).await?,
             };
             eprintln!(

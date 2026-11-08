@@ -25,6 +25,8 @@
 
   const active = $derived(accounts.find((a) => a.active) ?? null);
   const validName = $derived(/^[A-Za-z0-9_]{1,16}$/.test(offlineName));
+  // Offline-Konten nur zusätzlich zu einem Microsoft-Konto (prüft auch der Core).
+  const offlineAllowed = $derived(accounts.some((a) => a.kind === "microsoft"));
 
   $effect(() => {
     const a = active;
@@ -108,12 +110,14 @@
         <p class="hint">{t("account.msaMissing")}</p>
       {/if}
 
-      <form onsubmit={addOffline}>
-        <input bind:value={offlineName} placeholder={t("account.offlineName")} maxlength="16" spellcheck="false" />
-        <button type="submit" disabled={!validName}>{t("account.add")}</button>
-      </form>
-      {#if offlineName && !validName}
-        <p class="hint">{t("account.nameRule")}</p>
+      {#if offlineAllowed}
+        <form onsubmit={addOffline}>
+          <input bind:value={offlineName} placeholder={t("account.offlineName")} maxlength="16" spellcheck="false" />
+          <button type="submit" disabled={!validName}>{t("account.add")}</button>
+        </form>
+        {#if offlineName && !validName}
+          <p class="hint">{t("account.nameRule")}</p>
+        {/if}
       {/if}
       {#if error}<p class="error">{error}</p>{/if}
     </div>
