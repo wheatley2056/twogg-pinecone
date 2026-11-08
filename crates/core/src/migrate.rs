@@ -424,7 +424,7 @@ impl Launcher {
                     version: best.version.clone(),
                 })
             }
-            PackSource::File => None,
+            PackSource::Shared { .. } | PackSource::File => None,
         }
     }
 
