@@ -992,3 +992,256 @@ async fn signed_event_pack_install_lock_and_repair() {
     server.replace("GET", "/api/v1/packs/avalon/manifest/latest", 503, "");
     assert_eq!(packs.required_event_update(&profile).await.unwrap(), None);
 }
+
+// ---------- Geteilte Packs zum Abonnieren ----------
+
+fn shared_pack(id: &str, mine: bool, versions: &[(&str, &str, &str)]) -> String {
+    let versions: Vec<serde_json::Value> = versions
+        .iter()
+        .map(|(vid, v, mc)| {
+            json!({ "id": vid, "version": v, "minecraft": mc, "loader": null, "loaderVersion": null,
+                    "changelog": "Neu", "size": 1, "sha1": "x", "sha512": "y", "publishedAt": 0 })
+        })
+        .collect();
+    json!({ "id": id, "name": "Freunde-Pack", "owner": "Alice", "mine": mine,
+            "link": format!("pinecone://pack/{id}"), "createdAt": 0, "updatedAt": 0, "expiresAt": 9,
+            "versions": versions })
+    .to_string()
+}
+
+#[tokio::test]
+async fn shared_pack_subscribe_and_update_check() {
+    let (server, dir, packs) = setup().await;
+    let packs = packs.with_twogg(Some(
+        pinecone_core::twogg::TwoggClient::with_base(&server.base).unwrap(),
+    ));
+    // Freund lädt die neueste Version über einen signierten Link.
+    let file = dir.path().join("v1.mrpack");
+    mrpack(
+        &file,
+        &server,
+        "1.0",
+        &["a1.jar"],
+        &[],
+        json!({ "minecraft": "1.21.1" }),
+    );
+    let bytes = std::fs::read(&file).unwrap();
+    server
+        .on(
+            "GET",
+            "/api/v1/shared-packs/AB23CD45EF",
+            200,
+            shared_pack("AB23CD45EF", false, &[("v1", "1.0", "1.21.1")]),
+        )
+        .on(
+            "POST",
+            "/api/v1/shared-packs/AB23CD45EF/versions/v1/download",
+            200,
+            json!({ "url": format!("{}/dl/shared/t1", server.base), "expires": 9,
+                    "size": bytes.len(), "sha1": format!("{:x}", <sha1::Sha1 as sha1::Digest>::digest(&bytes)),
+                    "sha512": "y", "fileName": "p.mrpack" })
+            .to_string(),
+        )
+        .on("GET", "/dl/shared/t1", 200, bytes);
+    let (archive, source, pack) = packs
+        .download_shared("tok", "AB23CD45EF", None)
+        .await
+        .unwrap();
+    assert_eq!(pack.owner, "Alice");
+    assert_eq!(
+        source,
+        PackSource::Shared {
+            pack_id: "AB23CD45EF".into(),
+            version_id: "v1".into()
+        }
+    );
+    let link = &server.requests("/api/v1/shared-packs/AB23CD45EF/versions/v1/download")[0];
+    assert_eq!(
+        link.headers.get("authorization").map(String::as_str),
+        Some("Bearer tok")
+    );
+    let profile = packs.import(&archive, source, None).await.unwrap().profile;
+    // Geteilt wird der Link aufs Pack, nicht auf die Version.
+    let info = packs.pack_info(&profile.id).unwrap().unwrap();
+    assert_eq!(
+        pinecone_core::share::ShareLink::for_source(&info.source)
+            .unwrap()
+            .to_string(),
+        "pinecone://pack/AB23CD45EF"
+    );
+    // Ohne Anmeldung prüft `check_update` geteilte Packs nicht.
+    assert!(packs.check_update(&profile).await.unwrap().is_none());
+    assert!(
+        packs
+            .check_shared_update("tok", &profile)
+            .await
+            .unwrap()
+            .is_none()
+    );
+
+    // Neue Version für dieselbe Minecraft-Version → Update; andere Version zählt nicht.
+    server.replace(
+        "GET",
+        "/api/v1/shared-packs/AB23CD45EF",
+        200,
+        shared_pack(
+            "AB23CD45EF",
+            false,
+            &[
+                ("v3", "3.0", "1.21.4"),
+                ("v2", "2.0", "1.21.1"),
+                ("v1", "1.0", "1.21.1"),
+            ],
+        ),
+    );
+    let update = packs
+        .check_shared_update("tok", &profile)
+        .await
+        .unwrap()
+        .expect("Update");
+    assert_eq!(
+        (
+            update.current.as_str(),
+            update.latest.as_str(),
+            update.version_id.as_str()
+        ),
+        ("1.0", "2.0", "v2")
+    );
+    // Installierte Version vom Server gelöscht: die neueste passende ist trotzdem ein Update.
+    server.replace(
+        "GET",
+        "/api/v1/shared-packs/AB23CD45EF",
+        200,
+        shared_pack("AB23CD45EF", false, &[("v2", "2.0", "1.21.1")]),
+    );
+    assert_eq!(
+        packs
+            .check_shared_update("tok", &profile)
+            .await
+            .unwrap()
+            .unwrap()
+            .version_id,
+        "v2"
+    );
+    // Pack gelöscht: kein Update, kein Fehler.
+    server.replace(
+        "GET",
+        "/api/v1/shared-packs/AB23CD45EF",
+        404,
+        r#"{"error":"weg"}"#,
+    );
+    assert!(
+        packs
+            .check_shared_update("tok", &profile)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        packs
+            .download_shared("tok", "AB23CD45EF", None)
+            .await
+            .is_err()
+    );
+}
+
+#[tokio::test]
+async fn publish_creates_pack_then_new_versions() {
+    use pinecone_core::sharedpacks::{PublishRequest, PublishStore, publish, unpublish};
+    let (server, dir, packs) = setup().await;
+    let packs = packs.with_twogg(Some(
+        pinecone_core::twogg::TwoggClient::with_base(&server.base).unwrap(),
+    ));
+    let file = dir.path().join("own.mrpack");
+    mrpack(
+        &file,
+        &server,
+        "1.0",
+        &["a1.jar"],
+        &[("config/x.toml", "x=1")],
+        json!({ "minecraft": "1.21.1" }),
+    );
+    let profile = packs
+        .import(&file, PackSource::File, None)
+        .await
+        .unwrap()
+        .profile;
+    let store = PublishStore::new(&dir.path().join("data"));
+    let cache = dir.path().join("cache");
+    let req = |version: &str| PublishRequest {
+        name: "Unser Pack".into(),
+        changelog: "Erste Version".into(),
+        options: ExportOptions::new(version),
+    };
+
+    server.on(
+        "POST",
+        "/api/v1/shared-packs",
+        201,
+        shared_pack("AB23CD45EF", true, &[("v1", "1.0", "1.21.1")]),
+    );
+    let pack = publish(&packs, &store, &cache, "tok", &profile, &req("1.0"))
+        .await
+        .unwrap();
+    assert_eq!(pack.link, "pinecone://pack/AB23CD45EF");
+    let upload = &server.requests("/api/v1/shared-packs")[0];
+    assert!(
+        upload.body.contains("name=\"name\"\r\n\r\nUnser Pack"),
+        "{}",
+        upload.body
+    );
+    assert!(upload.body.contains("modrinth.index.json"));
+    assert_eq!(
+        upload.headers.get("authorization").map(String::as_str),
+        Some("Bearer tok")
+    );
+    let published = store.get(&profile.id).unwrap();
+    assert_eq!(
+        (published.pack_id.as_str(), published.version.as_str()),
+        ("AB23CD45EF", "1.0")
+    );
+    assert!(
+        !cache
+            .join(format!("publish-{}.mrpack", profile.id))
+            .exists()
+    );
+
+    // Zweites Mal: neue Version desselben Packs.
+    server
+        .on(
+            "GET",
+            "/api/v1/shared-packs/AB23CD45EF",
+            200,
+            shared_pack("AB23CD45EF", true, &[("v1", "1.0", "1.21.1")]),
+        )
+        .on(
+            "POST",
+            "/api/v1/shared-packs/AB23CD45EF/versions",
+            201,
+            shared_pack(
+                "AB23CD45EF",
+                true,
+                &[("v2", "1.1", "1.21.1"), ("v1", "1.0", "1.21.1")],
+            ),
+        );
+    publish(&packs, &store, &cache, "tok", &profile, &req("1.1"))
+        .await
+        .unwrap();
+    assert_eq!(
+        server
+            .requests("/api/v1/shared-packs/AB23CD45EF/versions")
+            .len(),
+        1
+    );
+    assert_eq!(
+        server.requests("/api/v1/shared-packs").len(),
+        1,
+        "kein neues Pack"
+    );
+    assert_eq!(store.get(&profile.id).unwrap().version, "1.1");
+
+    // Löschen entfernt Pack und Zuordnung (204 ohne Körper).
+    server.on("DELETE", "/api/v1/shared-packs/AB23CD45EF", 204, "");
+    unpublish(&packs, &store, "tok", &profile.id).await.unwrap();
+    assert!(store.get(&profile.id).is_none());
+}

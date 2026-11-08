@@ -6,6 +6,13 @@
   starten, wenn ein Microsoft-Konto mit Minecraft: Java Edition angemeldet ist. Der Erststart bietet
   kein Offline-Konto mehr an. Bestehende Offline-Konten bleiben gespeichert, starten aber erst wieder,
   sobald ein Microsoft-Konto angemeldet ist.
+- **Packs mit Freunden teilen und abonnieren:** Im Teilen-Dialog einer Instanz veröffentlicht
+  „Für Freunde“ die Instanz auf dem Pinecone-Server (wie der Datei-Export, auch mit eigenen
+  Mod-Dateien, höchstens 100 MB). Freunde öffnen den Link `pinecone://pack/<code>`, sehen vorher,
+  wer das Pack geteilt hat, und installieren es mit einem Klick. Jede neue Version, die du
+  veröffentlichst, erscheint bei ihnen als „Update verfügbar“ und läuft über den normalen
+  Update-Ablauf mit Snapshot; eigene Einstellungen bleiben. „Nicht mehr teilen“ löscht das Pack auf
+  dem Server, installierte Instanzen bleiben. Braucht ein Microsoft-Konto.
 - **Skins:** Die 3D-Vorschau füllt die ganze Bühne, und der Kopf wird bei Animationen nicht mehr
   abgeschnitten.
 

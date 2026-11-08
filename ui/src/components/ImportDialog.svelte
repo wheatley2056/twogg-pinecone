@@ -120,7 +120,10 @@
         <dd>{size(p.downloadSize + p.archiveSize)}</dd>
       </dl>
 
-      {#if result.source === "file"}
+      {#if result.source === "shared"}
+        <p class="muted">{t("import.sharedBy", { owner: result.owner ?? "?" })}</p>
+      {/if}
+      {#if result.source === "file" || result.source === "shared"}
         <p class="warn"><Icon name="file" size={16} />{t("import.thirdParty")}</p>
       {/if}
       {#if p.missing.length > 0}

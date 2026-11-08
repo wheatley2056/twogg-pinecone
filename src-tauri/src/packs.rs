@@ -162,6 +162,7 @@ pub fn source_name(source: &PackSource) -> &'static str {
         PackSource::Modrinth { .. } => "modrinth",
         PackSource::Curseforge { .. } => "curseforge",
         PackSource::Twogg { .. } => "twogg",
+        PackSource::Shared { .. } => "shared",
         PackSource::File => "file",
     }
 }
@@ -173,8 +174,10 @@ pub fn source_name(source: &PackSource) -> &'static str {
 pub struct PreviewDto {
     token: String,
     preview: PackPreview,
-    /// `modrinth`, `curseforge` oder `file`.
+    /// `modrinth`, `curseforge`, `twogg`, `shared`, `instance` oder `file`.
     source: &'static str,
+    /// Bei geteilten Packs: Spielername des Erstellers.
+    owner: Option<String>,
 }
 
 async fn preview(state: &AppState, archive: PathBuf, source: PackSource) -> CmdResult<PreviewDto> {
@@ -210,6 +213,7 @@ async fn preview(state: &AppState, archive: PathBuf, source: PackSource) -> CmdR
         } else {
             source_name(&source)
         },
+        owner: None,
     };
     state
         .pending_imports
@@ -241,8 +245,19 @@ pub async fn pack_preview_link(state: State<'_, AppState>, link: String) -> CmdR
             .download_twogg(&pack, version.as_deref())
             .await
             .map_err(err)?,
-        ShareLink::Code(_) => {
-            return Err("Share-Codes funktionieren erst mit dem Share-Dienst. Bitte das Pack als Datei schicken lassen.".into());
+        ShareLink::Code(code) => {
+            let (archive, source, pack) = crate::friends::with_session!(&state, |token| packs
+                .download_shared(&token, &code, None))
+            .map_err(|e| {
+                if e == "OFFLINE" {
+                    "Geteilte Packs von Freunden brauchen ein Microsoft-Konto.".to_string()
+                } else {
+                    e
+                }
+            })?;
+            let mut dto = preview(&state, archive, source).await?;
+            dto.owner = Some(pack.owner);
+            return Ok(dto);
         }
     };
     preview(&state, archive, source).await
@@ -302,18 +317,43 @@ pub fn pack_share_link(state: State<'_, AppState>, id: String) -> CmdResult<Opti
         .map(|l| l.to_string()))
 }
 
+/// Update-Prüfung für alle Quellen. Geteilte Packs brauchen die Freunde-Anmeldung; ohne
+/// (Offline-Konto, kein Konto) gibt es für sie still kein Update.
+pub(crate) async fn check_update(
+    state: &AppState,
+    profile: &pinecone_core::profiles::Profile,
+) -> CmdResult<Option<PackUpdate>> {
+    let packs = state.launcher.packs();
+    let shared = packs
+        .pack_info(&profile.id)
+        .ok()
+        .flatten()
+        .is_some_and(|i| matches!(i.source, PackSource::Shared { .. }));
+    if !shared {
+        return packs.check_update(profile).await.map_err(err);
+    }
+    let Ok(token) = crate::friends::session(state, false).await else {
+        return Ok(None);
+    };
+    match packs.check_shared_update(&token, profile).await {
+        Err(pinecone_core::Error::Auth(_)) => {
+            let token = crate::friends::session(state, true).await?;
+            packs
+                .check_shared_update(&token, profile)
+                .await
+                .map_err(err)
+        }
+        other => other.map_err(err),
+    }
+}
+
 #[tauri::command]
 pub async fn pack_check_update(
     state: State<'_, AppState>,
     id: String,
 ) -> CmdResult<Option<PackUpdate>> {
     let profile = state.launcher.profiles().get(&id).map_err(err)?;
-    state
-        .launcher
-        .packs()
-        .check_update(&profile)
-        .await
-        .map_err(err)
+    check_update(&state, &profile).await
 }
 
 #[derive(Serialize)]
@@ -328,7 +368,7 @@ pub struct ProfilePackUpdate {
 pub async fn pack_updates_all(state: State<'_, AppState>) -> CmdResult<Vec<ProfilePackUpdate>> {
     let mut found = Vec::new();
     for profile in state.launcher.profiles().list().map_err(err)? {
-        match state.launcher.packs().check_update(&profile).await {
+        match check_update(&state, &profile).await {
             Ok(Some(update)) => found.push(ProfilePackUpdate {
                 profile: ProfileDto::new(profile, false),
                 update,
@@ -371,10 +411,8 @@ pub async fn pack_plan_update(
             let target = match version {
                 Some(v) => v,
                 None => {
-                    packs
-                        .check_update(&profile)
-                        .await
-                        .map_err(err)?
+                    check_update(&state, &profile)
+                        .await?
                         .ok_or("Das Modpack ist aktuell")?
                         .version_id
                 }
@@ -387,10 +425,8 @@ pub async fn pack_plan_update(
         (None, PackSource::Curseforge { project_id, .. }) => {
             let target: u64 = match version {
                 Some(v) => v.parse().map_err(err)?,
-                None => packs
-                    .check_update(&profile)
-                    .await
-                    .map_err(err)?
+                None => check_update(&state, &profile)
+                    .await?
                     .ok_or("Das Modpack ist aktuell")?
                     .version_id
                     .parse()
@@ -405,10 +441,8 @@ pub async fn pack_plan_update(
             let target = match version {
                 Some(v) => v,
                 None => {
-                    packs
-                        .check_update(&profile)
-                        .await
-                        .map_err(err)?
+                    check_update(&state, &profile)
+                        .await?
                         .ok_or("Das Modpack ist aktuell")?
                         .version_id
                 }
@@ -417,6 +451,20 @@ pub async fn pack_plan_update(
                 .download_twogg(pack_id, Some(&target))
                 .await
                 .map_err(err)?
+        }
+        (None, PackSource::Shared { pack_id, .. }) => {
+            let target = match version {
+                Some(v) => v,
+                None => {
+                    check_update(&state, &profile)
+                        .await?
+                        .ok_or("Das Modpack ist aktuell")?
+                        .version_id
+                }
+            };
+            let (archive, source, _) = crate::friends::with_session!(&state, |token| packs
+                .download_shared(&token, pack_id, Some(&target)))?;
+            (archive, source)
         }
         (None, PackSource::File) => {
             return Err("Für dieses Modpack bitte die neue Version als Datei wählen".into());

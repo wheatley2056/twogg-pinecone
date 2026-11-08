@@ -44,6 +44,12 @@ pub enum PackSource {
         pack_id: String,
         version_id: String,
     },
+    /// Von einem Spieler geteiltes Pack (`pinecone://pack/<id>`); neue Versionen kommen vom
+    /// Pinecone-Server und brauchen die Freunde-Anmeldung (siehe `download_shared`).
+    Shared {
+        pack_id: String,
+        version_id: String,
+    },
     /// Aus einer Datei importiert, ohne Update-Quelle.
     File,
 }
@@ -1546,7 +1552,7 @@ impl PackManager {
                 Some(client) => client.pack(pack_id).await?.icon_url,
                 None => None,
             },
-            PackSource::File => None,
+            PackSource::Shared { .. } | PackSource::File => None,
         };
         let Some(url) = url.filter(|u| u.starts_with("https://") || u.starts_with("http://"))
         else {
@@ -1669,8 +1675,94 @@ impl PackManager {
                     withdrawn: None,
                 }))
             }
-            PackSource::File => Ok(None),
+            // Braucht die Freunde-Anmeldung: `check_shared_update`.
+            PackSource::Shared { .. } | PackSource::File => Ok(None),
         }
+    }
+
+    /// Geteiltes Pack eines Spielers (bestimmte oder neueste Version) laden. `token` ist die
+    /// Sitzung der Freunde-Anmeldung.
+    pub async fn download_shared(
+        &self,
+        token: &str,
+        pack_id: &str,
+        version_id: Option<&str>,
+    ) -> Result<(PathBuf, PackSource, crate::twogg::SharedPack)> {
+        let client = self
+            .twogg
+            .as_ref()
+            .ok_or_else(|| Error::Invalid("TwoGG-Server ist nicht eingerichtet".into()))?;
+        let pack = client.shared_pack(token, pack_id).await?.ok_or_else(|| {
+            Error::Invalid(
+                "Dieses Pack gibt es nicht mehr. Vielleicht hat es der Ersteller gelöscht.".into(),
+            )
+        })?;
+        let version = match version_id {
+            Some(v) => pack.versions.iter().find(|pv| pv.id == v).ok_or_else(|| {
+                Error::Invalid("Diese Version gibt es nicht mehr, es gibt eine neuere".into())
+            })?,
+            None => pack
+                .versions
+                .first()
+                .ok_or_else(|| Error::Invalid("Dieses Pack hat noch keine Version".into()))?,
+        }
+        .clone();
+        let link = client
+            .shared_download_link(token, &pack.id, &version.id)
+            .await?;
+        let dest = self
+            .cache_dir()
+            .join(format!("shared-{}.mrpack", version.id));
+        self.downloader
+            .download(&DownloadTask {
+                url: link.url,
+                dest: dest.clone(),
+                sha1: Some(link.sha1),
+                size: Some(link.size),
+            })
+            .await?;
+        Ok((
+            dest,
+            PackSource::Shared {
+                pack_id: pack.id.clone(),
+                version_id: version.id,
+            },
+            pack,
+        ))
+    }
+
+    /// Neuere Version eines abonnierten Packs für dieselbe Minecraft-Version? Hat der Ersteller
+    /// das Pack gelöscht, gibt es kein Update.
+    pub async fn check_shared_update(
+        &self,
+        token: &str,
+        profile: &Profile,
+    ) -> Result<Option<PackUpdate>> {
+        let lock = self.content.load_lock(&profile.id)?;
+        let Some(PackInfo {
+            version: current,
+            source:
+                PackSource::Shared {
+                    pack_id,
+                    version_id,
+                },
+            ..
+        }) = lock.pack
+        else {
+            return Ok(None);
+        };
+        let Some(client) = &self.twogg else {
+            return Ok(None);
+        };
+        let Some(pack) = client.shared_pack(token, &pack_id).await? else {
+            return Ok(None);
+        };
+        Ok(shared_update(
+            &pack,
+            &version_id,
+            &current,
+            &profile.minecraft,
+        ))
     }
 
     /// Plant ein Update gegen das neue Pack, ohne etwas zu ändern.
@@ -2134,6 +2226,29 @@ const ICON_SIZE: u32 = 96;
 
 /// Bild (PNG, JPEG, WebP, GIF) auf höchstens [`ICON_SIZE`] verkleinern und als PNG-`data:`-URL
 /// liefern. Kleine Pixel-Logos werden nicht weichgezeichnet.
+/// Neueste Version für dieselbe Minecraft-Version, wenn sie neuer ist als die installierte
+/// (Liste: neueste zuerst; eine vom Server gelöschte ältere Version zählt als älter).
+fn shared_update(
+    pack: &crate::twogg::SharedPack,
+    installed: &str,
+    current: &str,
+    minecraft: &str,
+) -> Option<PackUpdate> {
+    let best = pack.versions.iter().find(|v| v.minecraft == minecraft)?;
+    let position = |id: &str| {
+        pack.versions
+            .iter()
+            .position(|v| v.id == id)
+            .unwrap_or(usize::MAX)
+    };
+    (best.id != installed && position(&best.id) < position(installed)).then(|| PackUpdate {
+        current: current.to_string(),
+        latest: best.version.clone(),
+        version_id: best.id.clone(),
+        withdrawn: None,
+    })
+}
+
 pub fn icon_data_url(bytes: &[u8]) -> Result<String> {
     use base64::Engine;
     if bytes.len() > 8 * 1024 * 1024 {

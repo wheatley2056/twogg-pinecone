@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import { save } from "@tauri-apps/plugin-dialog";
   import { api, errorText } from "../lib/api";
-  import { t } from "../lib/i18n.svelte";
-  import type { ExportOptions, InstanceExportOptions, Profile } from "../lib/types";
+  import { locale, t } from "../lib/i18n.svelte";
+  import type { ExportOptions, InstanceExportOptions, Profile, SharedStatus } from "../lib/types";
   import Icon from "./Icon.svelte";
   import Segmented from "./ui/Segmented.svelte";
 
@@ -17,8 +17,13 @@
   let busy = $state(false);
   let error = $state<string | null>(null);
   let result = $state<string | null>(null);
-  // „Teilen“ = .mrpack für andere, „Umzug“ = alles für den eigenen anderen Rechner (F-54).
-  let mode = $state<"share" | "full">("share");
+  // „Teilen“ = .mrpack für andere, „Für Freunde“ = abonnierbar auf dem Pinecone-Server,
+  // „Umzug“ = alles für den eigenen anderen Rechner (F-54).
+  let mode = $state<"share" | "friends" | "full">("share");
+  let shared = $state<SharedStatus | null>(null);
+  let sharedName = $state("");
+  let changelog = $state("");
+  let confirmStop = $state(false);
   let full = $state<InstanceExportOptions>({ worlds: true, screenshots: false, resourcepacks: true, shaderpacks: true });
   let fullSize = $state<number | null>(null);
 
@@ -60,6 +65,70 @@
     dialog.showModal();
     api.packShareLink(profile.id).then((l) => (link = l)).catch(() => {});
   });
+
+  async function loadShared() {
+    shared = null;
+    try {
+      shared = await api.sharedPackStatus(profile.id);
+      sharedName = shared.published?.name ?? profile.name;
+      options.version = shared.suggestedVersion;
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+
+  $effect(() => {
+    if (mode === "friends" && !event && !shared) loadShared();
+  });
+
+  async function publish() {
+    error = result = null;
+    busy = true;
+    try {
+      const first = !shared?.published;
+      const pack = await api.sharedPackPublish(profile.id, {
+        name: sharedName.trim(),
+        changelog: changelog.trim(),
+        options: { ...$state.snapshot(options), summary: options.summary?.trim() || null },
+      });
+      changelog = "";
+      result = first ? t("shared.published", { link: pack.link }) : t("shared.publishedVersion", { version: options.version });
+      await loadShared();
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function stopSharing() {
+    error = result = null;
+    busy = true;
+    try {
+      await api.sharedPackUnpublish(profile.id);
+      confirmStop = false;
+      result = t("shared.stopped");
+      await loadShared();
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  function date(secs: number) {
+    return new Date(secs * 1000).toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" });
+  }
+
+  async function copyText(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
 
   async function copyLink() {
     if (!link) return;
@@ -104,13 +173,77 @@
     <Segmented
       items={[
         { id: "share", label: t("share.modeShare") },
+        { id: "friends", label: t("shared.mode") },
         { id: "full", label: t("share.modeFull") },
       ]}
       value={mode}
       label={t("share.mode")}
       variant="soft"
-      onchange={(m) => ((mode = m as "share" | "full"), (error = result = null))}
+      onchange={(m) => ((mode = m as "share" | "friends" | "full"), (error = result = null), (confirmStop = false))}
     />
+
+    {#if mode === "friends" && event}
+      <p class="muted">{t("share.eventOnlyLink")}</p>
+    {:else if mode === "friends" && !shared}
+      {#if !error}<p class="muted">{t("common.loading")}</p>{/if}
+    {:else if mode === "friends" && shared && !shared.available}
+      <p class="muted">{t("shared.needsMicrosoft")}</p>
+    {:else if mode === "friends" && shared}
+      {#if shared.published}
+        <section>
+          <h3><Icon name="link" size={16} />{t("shared.linkTitle")}</h3>
+          <div class="link-row">
+            <input value={shared.published.link} readonly aria-label={t("shared.linkTitle")} onfocus={(e) => e.currentTarget.select()} />
+            <button onclick={() => copyText(shared!.published!.link)}>{copied ? t("share.copied") : t("share.copy")}</button>
+          </div>
+          <p class="muted">
+            {t("shared.status", { version: shared.published.version, date: date(shared.published.publishedAt) })}
+            {#if shared.remote}{" "}{t("shared.expires", { date: date(shared.remote.expiresAt) })}{/if}
+          </p>
+          {#if shared.available && !shared.remote}
+            <p class="warn">{t("shared.gone")}</p>
+          {/if}
+        </section>
+      {:else}
+        <p class="muted">{t("shared.hint")}</p>
+      {/if}
+      <section>
+        <h3><Icon name="share" size={16} />{shared.published ? t("shared.newVersion") : t("shared.publishTitle")}</h3>
+        <div class="row">
+          <label>
+            {t("pack.exportVersion")}
+            <input bind:value={options.version} maxlength="32" spellcheck="false" />
+          </label>
+          <label class="grow">
+            {t("shared.name")}
+            <input bind:value={sharedName} maxlength="64" />
+          </label>
+        </div>
+        <label>
+          {t("shared.changelog")}
+          <textarea bind:value={changelog} maxlength="4000" rows="2" placeholder={t("shared.changelogPlaceholder")}></textarea>
+        </label>
+        <fieldset>
+          <legend>{t("share.include")}</legend>
+          <span class="check fixed"><input type="checkbox" checked disabled />{t("share.mods")}</span>
+          {#each folders as [key, label] (key)}
+            <label class="check"><input type="checkbox" bind:checked={options[key]} />{label()}</label>
+          {/each}
+        </fieldset>
+        <p class="muted small">{t("shared.never")}</p>
+      </section>
+      {#if shared.published}
+        {#if confirmStop}
+          <p class="warn">{t("shared.stopConfirm")}</p>
+          <div class="row">
+            <button onclick={() => (confirmStop = false)} disabled={busy}>{t("common.cancel")}</button>
+            <button class="danger" onclick={stopSharing} disabled={busy}>{t("shared.stop")}</button>
+          </div>
+        {:else}
+          <button class="link stop" onclick={() => (confirmStop = true)} disabled={busy}>{t("shared.stop")}</button>
+        {/if}
+      {/if}
+    {/if}
 
     {#if mode === "full"}
       <section>
@@ -134,7 +267,7 @@
           <input value={link} readonly aria-label={t("share.linkTitle")} onfocus={(e) => e.currentTarget.select()} />
           <button onclick={copyLink}>{copied ? t("share.copied") : t("share.copy")}</button>
         </div>
-        <p class="muted">{t("share.linkHint")}</p>
+        <p class="muted">{link.startsWith("pinecone://pack/") ? t("share.linkHintShared") : t("share.linkHint")}</p>
       </section>
     {/if}
 
@@ -172,6 +305,12 @@
     <button onclick={onClose} disabled={busy}>{t("common.close")}</button>
     {#if mode === "full"}
       <button class="primary" onclick={exportFull} disabled={busy}>{busy ? t("share.fullBusy") : t("share.fullButton")}</button>
+    {:else if mode === "friends"}
+      {#if shared?.available && !event}
+        <button class="primary" onclick={publish} disabled={busy || !options.version.trim() || !sharedName.trim()}>
+          {busy ? t("shared.busy") : shared.published ? t("shared.publishVersion") : t("shared.publish")}
+        </button>
+      {/if}
     {:else if !event}
       <button class="primary" onclick={exportPack} disabled={busy || !options.version.trim()}>{busy ? t("common.loading") : t("pack.exportButton")}</button>
     {/if}
@@ -254,5 +393,21 @@
 
   .notice {
     color: var(--accent);
+  }
+
+  .warn {
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    font-size: 13px;
+  }
+
+  textarea {
+    resize: vertical;
+    font: inherit;
+  }
+
+  .stop {
+    align-self: flex-start;
   }
 </style>

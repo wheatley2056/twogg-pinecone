@@ -249,6 +249,46 @@ pub struct SharedSyncPack {
     pub owner: String,
 }
 
+/// Von einem Spieler geteiltes Modpack zum Abonnieren (`pinecone://pack/<id>`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedPack {
+    pub id: String,
+    pub name: String,
+    /// Spielername des Erstellers.
+    pub owner: String,
+    /// Der angemeldete Spieler hat das Pack erstellt.
+    pub mine: bool,
+    pub link: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    /// Ohne neue Version löscht der Server das Pack zu diesem Zeitpunkt.
+    pub expires_at: i64,
+    /// Neueste zuerst; ältere Versionen löscht der Server.
+    #[serde(default)]
+    pub versions: Vec<SharedPackVersion>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedPackVersion {
+    pub id: String,
+    pub version: String,
+    pub minecraft: String,
+    #[serde(default)]
+    pub loader: Option<String>,
+    #[serde(default)]
+    pub loader_version: Option<String>,
+    #[serde(default)]
+    pub changelog: String,
+    pub size: u64,
+    pub sha1: String,
+    pub published_at: i64,
+}
+
+/// Größte `.mrpack`-Datei, die der Server je Version annimmt.
+pub const MAX_SHARED_PACK_BYTES: u64 = 100 * 1024 * 1024;
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerSession {
@@ -295,6 +335,18 @@ impl TwoggClient {
         req: reqwest::RequestBuilder,
         url: &str,
     ) -> Result<T> {
+        self.send_or_gone(req, url, false)
+            .await?
+            .ok_or_else(|| Error::Invalid("TwoGG-Server: nicht gefunden".into()))
+    }
+
+    /// Wie `send`, aber `404` ergibt `Ok(None)`, wenn `gone_ok` gesetzt ist.
+    async fn send_or_gone<T: serde::de::DeserializeOwned>(
+        &self,
+        req: reqwest::RequestBuilder,
+        url: &str,
+        gone_ok: bool,
+    ) -> Result<Option<T>> {
         let resp = req
             .header("X-Pinecone-Client", format!("pinecone/{LAUNCHER_VERSION}"))
             .send()
@@ -314,12 +366,20 @@ impl TwoggClient {
             if status == reqwest::StatusCode::UNAUTHORIZED {
                 return Err(Error::Auth(format!("TwoGG-Server: {message}")));
             }
+            if gone_ok && status == reqwest::StatusCode::NOT_FOUND {
+                return Ok(None);
+            }
             return Err(Error::Invalid(format!("TwoGG-Server: {message}")));
         }
-        resp.json().await.map_err(|source| Error::Http {
+        // `204 No Content` (z. B. beim Löschen) hat keinen Körper: wie `null` behandeln.
+        let bytes = resp.bytes().await.map_err(|source| Error::Http {
             url: url.to_string(),
             source,
-        })
+        })?;
+        let body: &[u8] = if bytes.is_empty() { b"null" } else { &bytes };
+        serde_json::from_slice(body)
+            .map(Some)
+            .map_err(Error::json("Antwort des TwoGG-Servers"))
     }
 
     async fn send_empty(&self, req: reqwest::RequestBuilder, url: &str) -> Result<()> {
@@ -497,6 +557,96 @@ impl TwoggClient {
             .await
     }
 
+    /// Eigene geteilte Modpacks.
+    pub async fn shared_packs_mine(&self, token: &str) -> Result<Vec<SharedPack>> {
+        let url = format!("{}/api/v1/shared-packs", self.base);
+        self.send(self.http.get(&url).bearer_auth(token), &url)
+            .await
+    }
+
+    /// Geteiltes Modpack; `None`, wenn der Ersteller es gelöscht hat oder es abgelaufen ist.
+    pub async fn shared_pack(&self, token: &str, id: &str) -> Result<Option<SharedPack>> {
+        if !valid_id(id) {
+            return Err(Error::Invalid("Ungültiger Link".into()));
+        }
+        let url = format!("{}/api/v1/shared-packs/{id}", self.base);
+        self.send_or_gone(self.http.get(&url).bearer_auth(token), &url, true)
+            .await
+    }
+
+    /// Neues geteiltes Pack mit erster Version (`file` ist ein `.mrpack`).
+    pub async fn shared_pack_create(
+        &self,
+        token: &str,
+        name: &str,
+        changelog: &str,
+        file: Vec<u8>,
+    ) -> Result<SharedPack> {
+        let url = format!("{}/api/v1/shared-packs", self.base);
+        let form = shared_form(Some(name), changelog, file)?;
+        self.send(self.upload(&url, token, form), &url).await
+    }
+
+    /// Neue Version eines eigenen geteilten Packs veröffentlichen.
+    pub async fn shared_pack_publish(
+        &self,
+        token: &str,
+        id: &str,
+        name: Option<&str>,
+        changelog: &str,
+        file: Vec<u8>,
+    ) -> Result<SharedPack> {
+        if !valid_id(id) {
+            return Err(Error::Invalid("Ungültige Pack-ID".into()));
+        }
+        let url = format!("{}/api/v1/shared-packs/{id}/versions", self.base);
+        let form = shared_form(name, changelog, file)?;
+        self.send(self.upload(&url, token, form), &url).await
+    }
+
+    /// Eigenes geteiltes Pack löschen. Installierte Instanzen der Freunde bleiben.
+    pub async fn shared_pack_delete(&self, token: &str, id: &str) -> Result<()> {
+        if !valid_id(id) {
+            return Err(Error::Invalid("Ungültige Pack-ID".into()));
+        }
+        let url = format!("{}/api/v1/shared-packs/{id}", self.base);
+        let _: Option<serde_json::Value> = self
+            .send_or_gone(self.http.delete(&url).bearer_auth(token), &url, true)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn shared_download_link(
+        &self,
+        token: &str,
+        pack: &str,
+        version: &str,
+    ) -> Result<DownloadLink> {
+        if !valid_id(pack) || !valid_id(version) {
+            return Err(Error::Invalid("Ungültige Pack- oder Versions-ID".into()));
+        }
+        let url = format!(
+            "{}/api/v1/shared-packs/{pack}/versions/{version}/download",
+            self.base
+        );
+        self.send(self.http.post(&url).bearer_auth(token), &url)
+            .await
+    }
+
+    /// Uploads dürfen länger dauern als normale Anfragen.
+    fn upload(
+        &self,
+        url: &str,
+        token: &str,
+        form: reqwest::multipart::Form,
+    ) -> reqwest::RequestBuilder {
+        self.http
+            .post(url)
+            .bearer_auth(token)
+            .timeout(Duration::from_secs(15 * 60))
+            .multipart(form)
+    }
+
     pub async fn friend_accept(&self, token: &str, uuid: &str) -> Result<()> {
         let uuid = checked_uuid(uuid)?;
         let url = format!("{}/api/v1/friends/requests/{uuid}/accept", self.base);
@@ -586,6 +736,34 @@ impl TwoggClient {
         );
         self.send(self.http.post(&url), &url).await
     }
+}
+
+fn shared_form(
+    name: Option<&str>,
+    changelog: &str,
+    file: Vec<u8>,
+) -> Result<reqwest::multipart::Form> {
+    if file.len() as u64 > MAX_SHARED_PACK_BYTES {
+        return Err(Error::Invalid(format!(
+            "Das Pack ist zu groß zum Teilen ({} MB, höchstens {} MB). Lass große Ressourcenpakete oder Shader weg.",
+            file.len() / (1024 * 1024),
+            MAX_SHARED_PACK_BYTES / (1024 * 1024)
+        )));
+    }
+    let part = reqwest::multipart::Part::bytes(file)
+        .file_name("pack.mrpack")
+        .mime_str("application/x-modrinth-modpack+zip")
+        .map_err(|source| Error::Http {
+            url: String::new(),
+            source,
+        })?;
+    let mut form = reqwest::multipart::Form::new()
+        .text("changelog", changelog.trim().to_string())
+        .part("file", part);
+    if let Some(name) = name.map(str::trim).filter(|n| !n.is_empty()) {
+        form = form.text("name", name.to_string());
+    }
+    Ok(form)
 }
 
 fn checked_uuid(uuid: &str) -> Result<String> {

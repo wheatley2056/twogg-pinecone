@@ -1,7 +1,6 @@
 //! Pinecone-Freundesliste. Angemeldet wird mit dem aktiven Microsoft-Account (Mojang-Sitzung);
 //! den Sitzungsschlüssel des Pinecone-Servers merkt sich der Schlüsselbund je Account.
 
-use pinecone_core::Error;
 use pinecone_core::accounts::{KeyringStore, SecretStore};
 use pinecone_core::auth::AccountKind;
 use pinecone_core::twogg::{Activity, FriendList, ServerInfo, TwoggClient};
@@ -24,7 +23,7 @@ pub(crate) fn key(uuid: &str) -> String {
 }
 
 /// Sitzung am Pinecone-Server für den aktiven Account; `fresh` erzwingt eine neue Anmeldung.
-async fn session(state: &AppState, fresh: bool) -> CmdResult<String> {
+pub(crate) async fn session(state: &AppState, fresh: bool) -> CmdResult<String> {
     let active = state
         .accounts
         .load()
@@ -55,16 +54,17 @@ async fn session(state: &AppState, fresh: bool) -> CmdResult<String> {
 /// Führt eine Anfrage aus; ist die Sitzung abgelaufen, einmal neu anmelden.
 macro_rules! with_session {
     ($state:expr, |$token:ident| $body:expr) => {{
-        let $token = session($state, false).await?;
+        let $token = $crate::friends::session($state, false).await?;
         match $body.await {
-            Err(Error::Auth(_)) => {
-                let $token = session($state, true).await?;
-                $body.await.map_err(err)
+            Err(pinecone_core::Error::Auth(_)) => {
+                let $token = $crate::friends::session($state, true).await?;
+                $body.await.map_err($crate::commands::err)
             }
-            other => other.map_err(err),
+            other => other.map_err($crate::commands::err),
         }
     }};
 }
+pub(crate) use with_session;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

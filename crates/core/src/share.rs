@@ -2,7 +2,8 @@
 //!
 //! Ein Link verweist nur auf die Original-Quelle (Modrinth- oder CurseForge-Version), es werden
 //! keine Dateien übertragen. Eigene Änderungen am Profil teilt man als Datei (`.mrpack`-Export).
-//! `pinecone://pack/<code>` ist für den späteren Share-Dienst reserviert.
+//! `pinecone://pack/<id>` verweist auf ein von einem Spieler geteiltes Pack auf dem
+//! Pinecone-Server, das man abonnieren kann (neue Versionen kommen als Update).
 
 use std::fmt;
 
@@ -27,7 +28,7 @@ pub enum ShareLink {
         pack: String,
         version: Option<String>,
     },
-    /// Share-Code des (noch nicht vorhandenen) Share-Dienstes.
+    /// Von einem Spieler geteiltes Pack auf dem Pinecone-Server (zum Abonnieren).
     Code(String),
 }
 
@@ -56,6 +57,7 @@ impl ShareLink {
                 pack: pack_id.clone(),
                 version: Some(version_id.clone()),
             }),
+            PackSource::Shared { pack_id, .. } => Some(ShareLink::Code(pack_id.clone())),
             PackSource::File => None,
         }
     }

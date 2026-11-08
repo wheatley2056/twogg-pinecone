@@ -54,7 +54,9 @@
   const label = $derived(
     isTwogg(profile)
       ? t("instance.kindEvent")
-      : packInfo && packInfo.source !== "file"
+      : packInfo?.source === "shared"
+        ? t("instance.kindShared")
+        : packInfo && packInfo.source !== "file"
         ? t("instance.kindPack", { source: packInfo.source === "modrinth" ? "Modrinth" : packInfo.source === "curseforge" ? "CurseForge" : "TwoGG" })
         : t("instance.kindOwn"),
   );
