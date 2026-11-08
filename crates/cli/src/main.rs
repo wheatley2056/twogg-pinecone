@@ -32,7 +32,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 #[command(
     name = "pinecone",
     version,
-    about = "TwoGG Pinecone – Minecraft Launcher (CLI)"
+    about = "TwoGG Pinecone – Launcher für Minecraft (CLI)"
 )]
 struct Cli {
     /// Datenverzeichnis (Versionen, Libraries, Assets, Instanzen).
