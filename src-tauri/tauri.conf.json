@@ -36,8 +36,8 @@
     "copyright": "© TwoGG-Community",
     "license": "MIT OR Apache-2.0",
     "homepage": "https://github.com/wheatley2056/twogg-pinecone",
-    "shortDescription": "Minecraft-Launcher der TwoGG-Community",
-    "longDescription": "TwoGG Pinecone ist der Minecraft-Launcher der TwoGG-Community: Profile, Fabric und Quilt, Modrinth und CurseForge, Modpacks, Sync-Packs, Skins und Screenshots.",
+    "shortDescription": "Launcher für Minecraft aus der TwoGG-Community",
+    "longDescription": "TwoGG Pinecone ist der Launcher für Minecraft aus der TwoGG-Community: Profile, Fabric und Quilt, Modrinth und CurseForge, Modpacks, Sync-Packs, Skins und Screenshots.",
     "windows": {
       "nsis": {
         "installMode": "currentUser",

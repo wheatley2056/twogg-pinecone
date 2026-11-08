@@ -1,6 +1,6 @@
 [package]
 name = "pinecone-app"
-description = "TwoGG Pinecone – Minecraft Launcher (Desktop-App)"
+description = "TwoGG Pinecone – Launcher für Minecraft (Desktop-App)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

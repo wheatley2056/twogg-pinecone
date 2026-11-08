@@ -2,7 +2,7 @@ import type { MessageKey } from "./de";
 
 // Vollständigkeit wird beim Typprüfen erzwungen: Jeder deutsche Schlüssel braucht eine Übersetzung.
 const en: Record<MessageKey, string> = {
-  "app.subtitle": "Minecraft launcher",
+  "app.subtitle": "Launcher for Minecraft",
   "nav.dashboard": "Overview",
   "nav.profiles": "Instances",
   "nav.settings": "Settings",

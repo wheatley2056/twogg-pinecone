@@ -1,6 +1,6 @@
 // Deutsche Texte (Referenz). `{name}` wird beim Übersetzen ersetzt.
 const de = {
-  "app.subtitle": "Minecraft-Launcher",
+  "app.subtitle": "Launcher für Minecraft",
   "nav.dashboard": "Übersicht",
   "nav.profiles": "Instanzen",
   "nav.settings": "Einstellungen",

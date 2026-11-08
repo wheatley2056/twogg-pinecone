@@ -4,7 +4,7 @@
 
 # TwoGG Pinecone
 
-**The Minecraft launcher of the TwoGG community.**<br>
+**The launcher for Minecraft from the TwoGG community.**<br>
 Instances, mods and modpacks in one place, plus TwoGG events, event packs and your friends.
 
 [![Latest version](https://img.shields.io/github/v/release/wheatley2056/twogg-pinecone?include_prereleases&label=version&color=E9A23B)](https://github.com/wheatley2056/twogg-pinecone/releases/latest)
