@@ -318,7 +318,7 @@ export interface SearchArgs {
 export interface PackInfo {
   name: string;
   version: string;
-  source: "modrinth" | "curseforge" | "twogg" | "file";
+  source: "modrinth" | "curseforge" | "twogg" | "shared" | "file";
   /** Nur bei signierten Event-Packs. */
   event?: { required: boolean; allowExtraMods: boolean; recommendedMemoryMb: number | null } | null;
 }
@@ -406,8 +406,39 @@ export interface PackPreview {
 export interface PreviewResult {
   token: string;
   preview: PackPreview;
-  /** `instance` = vollständiger Instanz-Export (`.pinecone.zip`). */
-  source: "modrinth" | "curseforge" | "twogg" | "file" | "instance";
+  /** `instance` = vollständiger Instanz-Export (`.pinecone.zip`), `shared` = von einem Freund geteilt. */
+  source: "modrinth" | "curseforge" | "twogg" | "shared" | "file" | "instance";
+  /** Bei geteilten Packs: Spielername des Erstellers. */
+  owner?: string | null;
+}
+
+/** Von einem Spieler geteiltes Pack zum Abonnieren (`pinecone://pack/<id>`). */
+export interface SharedPack {
+  id: string;
+  name: string;
+  owner: string;
+  mine: boolean;
+  link: string;
+  createdAt: number;
+  updatedAt: number;
+  /** Ohne neue Version löscht der Server das Pack dann (Unix-Sekunden). */
+  expiresAt: number;
+  /** Neueste zuerst. */
+  versions: { id: string; version: string; minecraft: string; loader: string | null; changelog: string; size: number; publishedAt: number }[];
+}
+
+export interface SharedStatus {
+  /** `false` ohne Microsoft-Konto. */
+  available: boolean;
+  published: { packId: string; name: string; version: string; link: string; publishedAt: number } | null;
+  remote: SharedPack | null;
+  suggestedVersion: string;
+}
+
+export interface PublishRequest {
+  name: string;
+  changelog: string;
+  options: ExportOptions;
 }
 
 /** Vollständiger Export (F-54): was zusätzlich zu Mods, Configs und Einstellungen mitkommt. */

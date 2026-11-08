@@ -141,15 +141,28 @@ function addMockSkin(name: string, model: "classic" | "slim" = "classic") {
   return s;
 }
 
-function preview(token: string, source: "modrinth" | "curseforge" | "file") {
+function preview(token: string, source: "modrinth" | "curseforge" | "shared" | "file", owner: string | null = null) {
   return {
     token,
     source,
+    owner,
     preview: {
       name: "Fabulously Optimized", version: "14.1.0", summary: "Improve your graphics and performance with this simple modpack.",
       minecraft: "26.2", loader: { kind: "fabric" as const, version: "0.19.5" }, mods: 49, resourcepacks: 3, shaders: 0, otherFiles: 49,
       downloadSize: 44_900_000, archiveSize: 210_000, missing: [], blockedHosts: [],
     },
+  };
+}
+
+const mockPublished: Record<string, { packId: string; name: string; version: string; link: string; publishedAt: number }> = {
+  qol: { packId: "AB23CD45EF", name: "QoL Mods", version: "1.2", link: "pinecone://pack/AB23CD45EF", publishedAt: Math.floor(Date.now() / 1000) - 3 * 86400 },
+};
+
+function mockSharedPack(id: string, name: string, version: string) {
+  const t = Math.floor(Date.now() / 1000);
+  return {
+    id, name, owner: "Tobi", mine: true, link: `pinecone://pack/${id}`, createdAt: t - 30 * 86400, updatedAt: t, expiresAt: t + 180 * 86400,
+    versions: [{ id: "v-" + version, version, minecraft: "26.2", loader: "fabric", changelog: "", size: 12_400_000, publishedAt: t }],
   };
 }
 
@@ -446,11 +459,33 @@ Object.assign(api, {
   packPreviewLink: async (link: string) => {
     await wait(600);
     if (!link.startsWith("pinecone://") && !link.startsWith("https://modrinth.com/")) throw `Kein gültiger Modpack-Link: ${link}`;
+    if (link.startsWith("pinecone://pack/")) return preview(link, "shared", "Alice");
     return preview(link, link.includes("curseforge") ? "curseforge" : "modrinth");
   },
   packPreviewCancel: async () => {},
   packImportPending: async () => (await wait(800), { profile: profiles[0], missing: [] }),
   packShareLink: async (id: string) => (id === "fabric-test" ? "pinecone://modrinth/1KVo5zza/ssWn7YI0" : null),
+  // Geteilte Packs: „QoL Mods“ ist schon veröffentlicht, alle anderen noch nicht.
+  sharedPackStatus: async (id: string) => {
+    await wait(300);
+    const p = mockPublished[id] ?? null;
+    return {
+      available: true,
+      published: p,
+      remote: p ? mockSharedPack(p.packId, p.name, p.version) : null,
+      suggestedVersion: p ? p.version.replace(/(\d+)$/, (d) => String(Number(d) + 1)) : "1.0",
+    };
+  },
+  sharedPackPublish: async (id: string, request: { name: string; options: { version: string } }) => {
+    await wait(900);
+    const packId = mockPublished[id]?.packId ?? "K7QM2HXT9P";
+    mockPublished[id] = { packId, name: request.name, version: request.options.version, link: `pinecone://pack/${packId}`, publishedAt: now };
+    return mockSharedPack(packId, request.name, request.options.version);
+  },
+  sharedPackUnpublish: async (id: string) => {
+    await wait(400);
+    delete mockPublished[id];
+  },
   migratePlan: async (id: string, target: { minecraft: string; loader: "fabric" | "quilt" | null }) => {
     await wait(700);
     const p = profiles.find((x) => x.id === id)!;
